@@ -1,97 +1,96 @@
 package ch.teamorg.ui.theme
 
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// Dark Colors (Design Tokens)
-val BackgroundDark = Color(0xFF090912)
-val SurfaceDark = Color(0xFF13131F)
-val CardDark = Color(0xFF1C1C2E)
-val ForegroundDark = Color(0xFFF0F0FF)
-val MutedForegroundDark = Color(0xFF9090B0)
-val BorderDark = Color(0xFF2A2A40)
-val PrimaryBlue = Color(0xFF4F8EF7)
-val PrimaryForeground = Color(0xFFFFFFFF)
-val AccentOrange = Color(0xFFF97316)
-val DestructiveRed = Color(0xFFEF4444)
+// M3 baseline palette (Figma M3 Expressive redesign)
+val Primary = Color(0xFF6750A4)
+val OnPrimary = Color(0xFFFFFFFF)
+val PrimaryContainer = Color(0xFFEADDFF)
+val OnPrimaryContainer = Color(0xFF21005D)
+val Secondary = Color(0xFF625B71)
+val OnSecondary = Color(0xFFFFFFFF)
+val SecondaryContainer = Color(0xFFE8DEF8)
+val OnSecondaryContainer = Color(0xFF1D192B)
+val Tertiary = Color(0xFF7D5260)
+val OnTertiary = Color(0xFFFFFFFF)
+val TertiaryContainer = Color(0xFFFFD8E4)
+val OnTertiaryContainer = Color(0xFF31111D)
+val Error = Color(0xFFB3261E)
+val OnError = Color(0xFFFFFFFF)
+val ErrorContainer = Color(0xFFF9DEDC)
+val OnErrorContainer = Color(0xFF410E0B)
+val Surface = Color(0xFFFEF7FF)
+val OnSurface = Color(0xFF1D1B20)
+val SurfaceVariant = Color(0xFFE7E0EC)
+val OnSurfaceVariant = Color(0xFF49454F)
+val SurfaceContainerLowest = Color(0xFFFFFFFF)
+val SurfaceContainerLow = Color(0xFFF7F2FA)
+val SurfaceContainer = Color(0xFFF3EDF7)
+val SurfaceContainerHigh = Color(0xFFECE6F0)
+val SurfaceContainerHighest = Color(0xFFE6E0E9)
+val Outline = Color(0xFF79747E)
+val OutlineVariant = Color(0xFFCAC4D0)
 
-// Status Colors
-val SuccessGreen = Color(0xFF22C55E)
-val WarningYellow = Color(0xFFFACC15)
-val ColorPurple = Color(0xFFA855F7)
-val ColorGold = Color(0xFFFACC15)
-val ColorGrey = Color(0xFF6B7280)
-
-val TeamorgDarkColorScheme = darkColorScheme(
-    primary = PrimaryBlue,
-    onPrimary = PrimaryForeground,
-    secondary = AccentOrange,
-    onSecondary = PrimaryForeground,
-    error = DestructiveRed,
-    onError = PrimaryForeground,
-    background = BackgroundDark,
-    onBackground = ForegroundDark,
-    surface = SurfaceDark,
-    onSurface = ForegroundDark,
-    surfaceVariant = CardDark,
-    onSurfaceVariant = MutedForegroundDark,
-    outline = BorderDark
-)
+// Status colors (attendance/responses)
+val StatusGoing = Color(0xFF2E7D32)
+val StatusGoingContainer = Color(0xFFDCEDC8)
+val StatusUnsure = Color(0xFF7A5C00)
+val StatusUnsureContainer = Color(0xFFFFF0C7)
+val StatusDeclined = Error
+val StatusDeclinedContainer = ErrorContainer
 
 val TeamorgLightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
-    onPrimary = PrimaryForeground,
-    secondary = AccentOrange,
-    onSecondary = PrimaryForeground,
-    error = DestructiveRed,
-    onError = PrimaryForeground,
-    background = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF0A0A1A),
-    surface = Color(0xFFF4F4F9),
-    onSurface = Color(0xFF0A0A1A),
-    surfaceVariant = Color(0xFFFFFFFF),
-    onSurfaceVariant = Color(0xFF6B7280),
-    outline = Color(0xFFE2E2F0)
+    primary = Primary,
+    onPrimary = OnPrimary,
+    primaryContainer = PrimaryContainer,
+    onPrimaryContainer = OnPrimaryContainer,
+    secondary = Secondary,
+    onSecondary = OnSecondary,
+    secondaryContainer = SecondaryContainer,
+    onSecondaryContainer = OnSecondaryContainer,
+    tertiary = Tertiary,
+    onTertiary = OnTertiary,
+    tertiaryContainer = TertiaryContainer,
+    onTertiaryContainer = OnTertiaryContainer,
+    error = Error,
+    onError = OnError,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer,
+    background = Surface,
+    onBackground = OnSurface,
+    surface = Surface,
+    onSurface = OnSurface,
+    surfaceVariant = SurfaceVariant,
+    onSurfaceVariant = OnSurfaceVariant,
+    surfaceContainerLowest = SurfaceContainerLowest,
+    surfaceContainerLow = SurfaceContainerLow,
+    surfaceContainer = SurfaceContainer,
+    surfaceContainerHigh = SurfaceContainerHigh,
+    surfaceContainerHighest = SurfaceContainerHighest,
+    outline = Outline,
+    outlineVariant = OutlineVariant
 )
 
 @Immutable
 data class TeamorgExtendedColors(
-    val success: Color,
-    val warning: Color,
-    val colorPurple: Color,
-    val colorGold: Color,
-    val colorGrey: Color,
-    val cardBackground: Color,
-)
-
-val LocalTeamorgExtendedColors = staticCompositionLocalOf {
-    TeamorgExtendedColors(
-        success = SuccessGreen,
-        warning = WarningYellow,
-        colorPurple = ColorPurple,
-        colorGold = ColorGold,
-        colorGrey = ColorGrey,
-        cardBackground = CardDark
-    )
-}
-
-val TeamorgDarkExtendedColors = TeamorgExtendedColors(
-    success = SuccessGreen,
-    warning = WarningYellow,
-    colorPurple = ColorPurple,
-    colorGold = ColorGold,
-    colorGrey = ColorGrey,
-    cardBackground = CardDark
+    val going: Color,
+    val goingContainer: Color,
+    val unsure: Color,
+    val unsureContainer: Color,
+    val declined: Color,
+    val declinedContainer: Color,
 )
 
 val TeamorgLightExtendedColors = TeamorgExtendedColors(
-    success = SuccessGreen,
-    warning = WarningYellow,
-    colorPurple = ColorPurple,
-    colorGold = ColorGold,
-    colorGrey = ColorGrey,
-    cardBackground = Color(0xFFFFFFFF)
+    going = StatusGoing,
+    goingContainer = StatusGoingContainer,
+    unsure = StatusUnsure,
+    unsureContainer = StatusUnsureContainer,
+    declined = StatusDeclined,
+    declinedContainer = StatusDeclinedContainer,
 )
+
+val LocalTeamorgExtendedColors = staticCompositionLocalOf { TeamorgLightExtendedColors }

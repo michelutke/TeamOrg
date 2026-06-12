@@ -4,17 +4,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 
+// Light only — dark mode not yet designed (M3 Expressive redesign, light palette)
 @Composable
 fun TeamorgTheme(
-    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) TeamorgDarkColorScheme else TeamorgLightColorScheme
-    val extendedColors = if (darkTheme) TeamorgDarkExtendedColors else TeamorgLightExtendedColors
-
-    CompositionLocalProvider(LocalTeamorgExtendedColors provides extendedColors) {
+    CompositionLocalProvider(LocalTeamorgExtendedColors provides TeamorgLightExtendedColors) {
         MaterialTheme(
-            colorScheme = colorScheme,
+            colorScheme = TeamorgLightColorScheme,
             typography = TeamorgTypography,
             shapes = TeamorgShapes,
             content = content
@@ -22,6 +19,5 @@ fun TeamorgTheme(
     }
 }
 
-// Convenience accessor for extended colors
 val MaterialTheme.extendedColors: TeamorgExtendedColors
     @Composable get() = LocalTeamorgExtendedColors.current
