@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { Search } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -92,11 +93,11 @@
 		}
 	}
 
-	function getRoleBadgeStyle(role: string): string {
-		if (role === 'SuperAdmin') return 'color: #4F8EF7; background: rgba(79,142,247,0.12);';
-		if (role === 'ClubManager') return 'color: #22C55E; background: rgba(34,197,94,0.12);';
-		if (role === 'Coach') return 'color: #FACC15; background: rgba(250,204,21,0.12);';
-		return 'color: #9090B0; background: rgba(144,144,176,0.12);';
+	function roleChipClasses(role: string): string {
+		if (role === 'SuperAdmin') return 'bg-primary-container text-on-primary-container';
+		if (role === 'ClubManager') return 'bg-success-container text-success';
+		if (role === 'Coach') return 'bg-tertiary-container text-on-tertiary-container';
+		return 'bg-surface-container-high text-on-surface-variant';
 	}
 </script>
 
@@ -104,34 +105,28 @@
 	<title>Users — TeamOrg Admin</title>
 </svelte:head>
 
-<div>
-	<h1 class="font-semibold mb-6" style="font-size: 20px; color: #F0F0FF;">Users</h1>
+<div class="flex flex-col gap-5">
+	<h1 class="font-display text-[30px] font-extrabold text-on-surface">Users</h1>
 
 	<!-- Search input -->
-	<div class="mb-6">
-		<input
-			type="text"
-			placeholder="Search by name or email..."
-			bind:value={searchInput}
-			oninput={onSearchInput}
-			aria-label="Search Users"
-			style="
-				width: 100%;
-				background-color: #1C1C2E;
-				border: 1px solid #2A2A40;
-				color: #F0F0FF;
-				font-size: 14px;
-				height: 40px;
-				padding: 0 16px;
-				border-radius: 6px;
-				outline: none;
-				box-sizing: border-box;
-			"
-			onfocus={(e) => ((e.currentTarget as HTMLInputElement).style.outline = '2px solid #4F8EF7')}
-			onblur={(e) => ((e.currentTarget as HTMLInputElement).style.outline = 'none')}
-		/>
-		<p style="font-size: 12px; color: #9090B0; margin-top: 6px;">
-			Search Users — type at least 2 characters
+	<div>
+		<div class="flex items-center gap-2.5 rounded-full bg-surface-container-high px-5 py-3">
+			<Search size={15} class="shrink-0 text-on-surface-variant" />
+			<input
+				type="text"
+				placeholder="Search by name or email…"
+				bind:value={searchInput}
+				oninput={onSearchInput}
+				aria-label="Search Users"
+				class="w-full border-none bg-transparent text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant"
+			/>
+		</div>
+		<p class="mt-2 text-[12px] text-on-surface-variant">
+			{#if data.query.length >= 2}
+				{data.users.totalCount} results for “{data.query}” · type at least 2 characters to search
+			{:else}
+				Type at least 2 characters to search
+			{/if}
 		</p>
 	</div>
 
@@ -139,102 +134,42 @@
 	{#if data.query.length >= 2}
 		{#if data.users.users.length === 0}
 			<!-- Empty state -->
-			<div
-				style="
-					background-color: #1C1C2E;
-					border: 1px solid #2A2A40;
-					border-radius: 8px;
-					padding: 48px 24px;
-					text-align: center;
-				"
-			>
-				<p style="font-size: 14px; color: #9090B0;">
+			<div class="rounded-3xl bg-surface-container-low px-6 py-12 text-center">
+				<p class="text-[14px] text-on-surface-variant">
 					No users found. Try a different name or email.
 				</p>
 			</div>
 		{:else}
-			<div
-				style="border: 1px solid #2A2A40; border-radius: 8px; overflow: hidden;"
-			>
-				<table style="width: 100%; border-collapse: collapse;">
-					<thead style="background-color: #13131F;">
+			<div class="overflow-hidden rounded-3xl bg-surface-container-low py-1">
+				<table class="w-full border-collapse">
+					<thead>
 						<tr>
-							<th
-								scope="col"
-								style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-							>
-								Name
-							</th>
-							<th
-								scope="col"
-								style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-							>
-								Email
-							</th>
-							<th
-								scope="col"
-								style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-							>
-								Clubs
-							</th>
-							<th
-								scope="col"
-								style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-							>
-								Roles
-							</th>
-							<th
-								scope="col"
-								style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-							>
-								Joined
-							</th>
+							<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Name</th>
+							<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Email</th>
+							<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Clubs</th>
+							<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Roles</th>
+							<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Joined</th>
 						</tr>
 					</thead>
 					<tbody>
 						{#each data.users.users as user}
 							<tr
-								style="
-									background-color: #1C1C2E;
-									border-top: 1px solid #2A2A40;
-									cursor: pointer;
-								"
+								class="cursor-pointer border-t border-outline-variant bg-white hover:bg-surface"
 								onclick={() => openUserDetail(user.id)}
-								onmouseenter={(e) =>
-									((e.currentTarget as HTMLElement).style.backgroundColor =
-										'rgba(255,255,255,0.03)')}
-								onmouseleave={(e) =>
-									((e.currentTarget as HTMLElement).style.backgroundColor = '#1C1C2E')}
 							>
-								<td style="padding: 12px 16px; font-size: 14px; color: #F0F0FF;">
-									{user.displayName}
-								</td>
-								<td style="padding: 12px 16px; font-size: 14px; color: #F0F0FF;">
-									{user.email}
-								</td>
-								<td style="padding: 12px 16px; font-size: 14px; color: #F0F0FF;">
-									{user.clubs?.join(', ') || '—'}
-								</td>
-								<td style="padding: 12px 16px;">
-									<div style="display: flex; flex-wrap: wrap; gap: 4px;">
-										{#each (user.roles || []) as role}
-											<span
-												style="
-													font-size: 12px;
-													font-weight: 600;
-													padding: 2px 8px;
-													border-radius: 4px;
-													{getRoleBadgeStyle(role)}
-												"
-											>
+								<td class="px-6 py-[13px] text-[14px] font-medium text-on-surface">{user.displayName}</td>
+								<td class="px-6 py-[13px] text-[14px] text-on-surface-variant">{user.email}</td>
+								<td class="px-6 py-[13px] text-[14px] text-on-surface-variant">{user.clubs?.join(', ') || '—'}</td>
+								<td class="px-6 py-[13px]">
+									<div class="flex flex-wrap gap-1">
+										{#each user.roles || [] as role}
+											<span class="rounded-full px-3 py-1 text-[11px] font-bold {roleChipClasses(role)}">
 												{role}
 											</span>
 										{/each}
 									</div>
 								</td>
-								<td style="padding: 12px 16px; font-size: 14px; color: #9090B0;">
-									{formatDate(user.joinedAt)}
-								</td>
+								<td class="px-6 py-[13px] text-[14px] text-on-surface-variant">{formatDate(user.joinedAt)}</td>
 							</tr>
 						{/each}
 					</tbody>
@@ -243,58 +178,42 @@
 
 			<!-- Pagination -->
 			{#if totalPages > 1}
-				<div
-					style="display: flex; align-items: center; gap: 12px; margin-top: 16px; justify-content: flex-end;"
-				>
+				<div class="flex items-center gap-2">
+					<p class="text-[13px] text-on-surface-variant">{data.users.totalCount} users</p>
+					<div class="flex-1"></div>
 					<button
 						type="button"
 						onclick={() => goToPage(data.page - 1)}
 						disabled={data.page <= 1}
-						style="
-							background: transparent;
-							border: 1px solid #2A2A40;
-							color: {data.page <= 1 ? '#9090B0' : '#F0F0FF'};
-							font-size: 14px;
-							padding: 8px 16px;
-							border-radius: 6px;
-							cursor: {data.page <= 1 ? 'not-allowed' : 'pointer'};
-						"
-					>
-						Previous
-					</button>
-					<span style="font-size: 14px; color: #9090B0;">
-						Page {data.page} of {totalPages}
-					</span>
+						class="flex size-9 items-center justify-center rounded-full border-none bg-transparent text-[13px] font-medium {data.page <= 1
+							? 'cursor-not-allowed text-outline-variant'
+							: 'cursor-pointer text-on-surface-variant hover:bg-surface-container-high'}"
+						aria-label="Previous page"
+					>‹</button>
+					{#each Array(totalPages) as _, i}
+						<button
+							type="button"
+							onclick={() => goToPage(i + 1)}
+							class="flex size-9 cursor-pointer items-center justify-center rounded-full border-none text-[13px] font-medium {data.page === i + 1
+								? 'bg-primary text-on-primary'
+								: 'bg-transparent text-on-surface-variant hover:bg-surface-container-high'}"
+						>{i + 1}</button>
+					{/each}
 					<button
 						type="button"
 						onclick={() => goToPage(data.page + 1)}
 						disabled={data.page >= totalPages}
-						style="
-							background: transparent;
-							border: 1px solid #2A2A40;
-							color: {data.page >= totalPages ? '#9090B0' : '#F0F0FF'};
-							font-size: 14px;
-							padding: 8px 16px;
-							border-radius: 6px;
-							cursor: {data.page >= totalPages ? 'not-allowed' : 'pointer'};
-						"
-					>
-						Next
-					</button>
+						class="flex size-9 items-center justify-center rounded-full border-none bg-transparent text-[13px] font-medium {data.page >= totalPages
+							? 'cursor-not-allowed text-outline-variant'
+							: 'cursor-pointer text-on-surface-variant hover:bg-surface-container-high'}"
+						aria-label="Next page"
+					>›</button>
 				</div>
 			{/if}
 		{/if}
 	{:else}
-		<div
-			style="
-				background-color: #1C1C2E;
-				border: 1px solid #2A2A40;
-				border-radius: 8px;
-				padding: 48px 24px;
-				text-align: center;
-			"
-		>
-			<p style="font-size: 14px; color: #9090B0;">
+		<div class="rounded-3xl bg-surface-container-low px-6 py-12 text-center">
+			<p class="text-[14px] text-on-surface-variant">
 				Enter at least 2 characters to search for users.
 			</p>
 		</div>
@@ -304,57 +223,24 @@
 <!-- User detail drawer -->
 {#if drawerOpen}
 	<!-- Backdrop -->
-	<div
-		style="
-			position: fixed;
-			inset: 0;
-			background: rgba(0,0,0,0.5);
-			z-index: 40;
-		"
-		onclick={closeDrawer}
-		role="presentation"
-	></div>
+	<div class="fixed inset-0 z-40 bg-black/40" onclick={closeDrawer} role="presentation"></div>
 
 	<!-- Drawer -->
 	<aside
-		style="
-			position: fixed;
-			top: 0;
-			right: 0;
-			height: 100%;
-			width: 400px;
-			background-color: #1C1C2E;
-			border-left: 1px solid #2A2A40;
-			z-index: 50;
-			padding: 24px;
-			overflow-y: auto;
-		"
+		class="fixed right-0 top-0 z-50 h-full w-[400px] overflow-y-auto rounded-l-[28px] bg-white p-6 shadow-[0px_8px_32px_0px_rgba(0,0,0,0.12)]"
 	>
 		<!-- Header -->
-		<div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px;">
+		<div class="mb-6 flex items-start justify-between">
 			<div>
 				{#if loadingDetail}
-					<p style="font-size: 14px; color: #9090B0;">Loading...</p>
+					<p class="text-[14px] text-on-surface-variant">Loading...</p>
 				{:else if selectedUser}
-					<h2 style="font-size: 20px; font-weight: 600; color: #F0F0FF; margin: 0 0 4px 0;">
+					<h2 class="mb-1 font-display text-[22px] font-extrabold text-on-surface">
 						{selectedUser.displayName}
 					</h2>
-					<p style="font-size: 14px; color: #9090B0; margin: 0;">
-						{selectedUser.email}
-					</p>
+					<p class="text-[14px] text-on-surface-variant">{selectedUser.email}</p>
 					{#if selectedUser.isSuperAdmin}
-						<span
-							style="
-								display: inline-block;
-								margin-top: 8px;
-								font-size: 12px;
-								font-weight: 600;
-								padding: 2px 8px;
-								border-radius: 4px;
-								color: #4F8EF7;
-								background: rgba(79,142,247,0.12);
-							"
-						>
+						<span class="mt-2 inline-block rounded-full bg-primary-container px-3 py-1 text-[11px] font-bold text-on-primary-container">
 							SuperAdmin
 						</span>
 					{/if}
@@ -364,20 +250,7 @@
 				type="button"
 				onclick={closeDrawer}
 				aria-label="Close user detail panel"
-				style="
-					background: transparent;
-					border: 1px solid #2A2A40;
-					color: #9090B0;
-					width: 32px;
-					height: 32px;
-					border-radius: 6px;
-					cursor: pointer;
-					font-size: 16px;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					flex-shrink: 0;
-				"
+				class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-[14px] text-on-surface-variant hover:bg-surface-container-low"
 			>
 				✕
 			</button>
@@ -385,35 +258,17 @@
 
 		{#if selectedUser}
 			<!-- Club Memberships -->
-			<div style="margin-bottom: 24px;">
-				<h3 style="font-size: 12px; font-weight: 600; color: #9090B0; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+			<div class="mb-6">
+				<h3 class="mb-3 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
 					Club Memberships
 				</h3>
 				{#if selectedUser.clubMemberships.length === 0}
-					<p style="font-size: 14px; color: #9090B0;">No club memberships.</p>
+					<p class="text-[14px] text-on-surface-variant">No club memberships.</p>
 				{:else}
 					{#each selectedUser.clubMemberships as membership}
-						<div
-							style="
-								display: flex;
-								align-items: center;
-								justify-content: space-between;
-								padding: 10px 12px;
-								background-color: #13131F;
-								border-radius: 6px;
-								margin-bottom: 6px;
-							"
-						>
-							<span style="font-size: 14px; color: #F0F0FF;">{membership.clubName}</span>
-							<span
-								style="
-									font-size: 12px;
-									font-weight: 600;
-									padding: 2px 8px;
-									border-radius: 4px;
-									{getRoleBadgeStyle(membership.role)}
-								"
-							>
+						<div class="mb-1.5 flex items-center justify-between rounded-2xl bg-surface-container-low px-4 py-2.5">
+							<span class="text-[14px] text-on-surface">{membership.clubName}</span>
+							<span class="rounded-full px-3 py-1 text-[11px] font-bold {roleChipClasses(membership.role)}">
 								{membership.role}
 							</span>
 						</div>
@@ -423,37 +278,19 @@
 
 			<!-- Team Memberships -->
 			<div>
-				<h3 style="font-size: 12px; font-weight: 600; color: #9090B0; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+				<h3 class="mb-3 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
 					Team Memberships
 				</h3>
 				{#if selectedUser.teamMemberships.length === 0}
-					<p style="font-size: 14px; color: #9090B0;">No team memberships.</p>
+					<p class="text-[14px] text-on-surface-variant">No team memberships.</p>
 				{:else}
 					{#each selectedUser.teamMemberships as membership}
-						<div
-							style="
-								display: flex;
-								align-items: center;
-								justify-content: space-between;
-								padding: 10px 12px;
-								background-color: #13131F;
-								border-radius: 6px;
-								margin-bottom: 6px;
-							"
-						>
+						<div class="mb-1.5 flex items-center justify-between rounded-2xl bg-surface-container-low px-4 py-2.5">
 							<div>
-								<p style="font-size: 14px; color: #F0F0FF; margin: 0;">{membership.teamName}</p>
-								<p style="font-size: 12px; color: #9090B0; margin: 2px 0 0 0;">{membership.clubName}</p>
+								<p class="text-[14px] text-on-surface">{membership.teamName}</p>
+								<p class="mt-0.5 text-[12px] text-on-surface-variant">{membership.clubName}</p>
 							</div>
-							<span
-								style="
-									font-size: 12px;
-									font-weight: 600;
-									padding: 2px 8px;
-									border-radius: 4px;
-									{getRoleBadgeStyle(membership.role)}
-								"
-							>
+							<span class="rounded-full px-3 py-1 text-[11px] font-bold {roleChipClasses(membership.role)}">
 								{membership.role}
 							</span>
 						</div>

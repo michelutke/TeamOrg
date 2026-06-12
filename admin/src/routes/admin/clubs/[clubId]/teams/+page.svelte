@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Plus } from 'lucide-svelte';
 	import type { PageData, ActionData } from './$types';
 
 	interface Props {
@@ -10,126 +11,96 @@
 
 	let showCreateForm = $state(false);
 
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-GB', {
-			day: '2-digit',
-			month: 'short',
-			year: 'numeric'
-		});
-	}
-
-	const inputStyle = `
-		width: 100%;
-		background-color: #1C1C2E;
-		border: 1px solid #2A2A40;
-		color: #F0F0FF;
-		font-size: 14px;
-		height: 40px;
-		padding: 0 16px;
-		border-radius: 6px;
-		outline: none;
-	`;
-
 	const activeTeams = $derived(data.teams.filter((t) => !t.archivedAt));
 	const archivedTeams = $derived(data.teams.filter((t) => t.archivedAt));
+
+	const inputClasses =
+		'w-full rounded-2xl border-none bg-surface-container-high px-[18px] py-3 text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary';
+	const labelClasses = 'mb-1 block text-[12px] font-medium text-on-surface-variant';
 </script>
 
 <svelte:head>
 	<title>Teams — {data.club.name} — TeamOrg Admin</title>
 </svelte:head>
 
-<!-- Create team -->
-{#if !showCreateForm}
-	<div class="mb-6">
+<div class="flex flex-col gap-6">
+	<!-- Page header -->
+	<div class="flex items-center justify-between">
+		<div class="flex flex-col gap-1">
+			<h1 class="font-display text-[30px] font-extrabold text-on-surface">
+				{data.club.name} — Teams
+			</h1>
+			{#if data.impersonating}
+				<p class="text-[13px] text-on-surface-variant">Club manager view</p>
+			{/if}
+		</div>
 		<button
 			type="button"
-			onclick={() => (showCreateForm = true)}
-			style="background-color: #4F8EF7; color: #FFFFFF; font-size: 14px; font-weight: 600; height: 40px; padding: 0 16px; border-radius: 6px; border: none; cursor: pointer;"
-		>Create Team</button>
+			onclick={() => (showCreateForm = !showCreateForm)}
+			class="flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary py-[13px] pl-[22px] pr-6 text-[14px] font-bold text-on-primary hover:opacity-90"
+		>
+			<Plus size={16} />
+			New team
+		</button>
 	</div>
-{:else}
-	<div
-		class="mb-6"
-		style="background-color: #1C1C2E; border: 1px solid #2A2A40; border-radius: 8px; padding: 24px;"
-	>
-		<h2 class="font-semibold mb-4" style="font-size: 16px; color: #F0F0FF;">New Team</h2>
-		{#if form?.error}
-			<p class="mb-3" style="font-size: 12px; color: #EF4444;">{form.error}</p>
-		{/if}
-		<form method="POST" action="?/create" class="flex gap-3 items-end">
-			<div style="flex: 1;">
-				<label for="team-name" class="block font-semibold mb-1" style="font-size: 12px; color: #F0F0FF;">Name</label>
-				<input id="team-name" name="name" type="text" required placeholder="e.g. U18 Boys" style={inputStyle} />
-			</div>
-			<div style="flex: 1;">
-				<label for="team-desc" class="block font-semibold mb-1" style="font-size: 12px; color: #F0F0FF;">Description</label>
-				<input id="team-desc" name="description" type="text" placeholder="Optional" style={inputStyle} />
-			</div>
-			<button
-				type="submit"
-				style="background-color: #4F8EF7; color: #FFFFFF; font-size: 14px; font-weight: 600; height: 40px; padding: 0 16px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap;"
-			>Create</button>
-			<button
-				type="button"
-				onclick={() => (showCreateForm = false)}
-				style="background: transparent; border: 1px solid #2A2A40; color: #F0F0FF; font-size: 14px; height: 40px; padding: 0 16px; border-radius: 6px; cursor: pointer; white-space: nowrap;"
-			>Cancel</button>
-		</form>
-	</div>
-{/if}
 
-<!-- Active teams -->
-{#if activeTeams.length === 0}
-	<div
-		style="background-color: #1C1C2E; border: 1px solid #2A2A40; border-radius: 8px; padding: 48px 24px; text-align: center;"
-	>
-		<p style="font-size: 14px; color: #9090B0;">No teams yet. Create one to get started.</p>
-	</div>
-{:else}
-	<div style="border: 1px solid #2A2A40; border-radius: 8px; overflow: hidden;">
-		<table style="width: 100%; border-collapse: collapse;">
-			<thead style="background-color: #13131F;">
-				<tr>
-					<th scope="col" style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;">Name</th>
-					<th scope="col" style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;">Description</th>
-					<th scope="col" style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;">Members</th>
-					<th scope="col" style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;">Created</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each activeTeams as team}
-					<tr
-						style="background-color: #1C1C2E; border-top: 1px solid #2A2A40; cursor: pointer;"
-						onclick={() => window.location.href = `/admin/clubs/${data.clubId}/teams/${team.id}`}
-						onmouseenter={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.03)')}
-						onmouseleave={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = '#1C1C2E')}
-					>
-						<td style="padding: 12px 16px; font-size: 14px; color: #F0F0FF;">{team.name}</td>
-						<td style="padding: 12px 16px; font-size: 14px; color: #9090B0;">{team.description || '—'}</td>
-						<td style="padding: 12px 16px; font-size: 14px; color: #F0F0FF;">{team.memberCount}</td>
-						<td style="padding: 12px 16px; font-size: 14px; color: #9090B0;">{formatDate(team.createdAt)}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
-{/if}
-
-<!-- Archived teams -->
-{#if archivedTeams.length > 0}
-	<div class="mt-8">
-		<h2 class="font-semibold mb-4" style="font-size: 16px; color: #9090B0;">Archived Teams</h2>
-		<div style="border: 1px solid #2A2A40; border-radius: 8px; overflow: hidden; opacity: 0.6;">
-			<table style="width: 100%; border-collapse: collapse;">
-				<tbody>
-					{#each archivedTeams as team}
-						<tr style="background-color: #1C1C2E; border-top: 1px solid #2A2A40;">
-							<td style="padding: 12px 16px; font-size: 14px; color: #9090B0;">{team.name}</td>
-							<td style="padding: 12px 16px; font-size: 14px; color: #9090B0;">{team.memberCount} members</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+	<!-- Create team form -->
+	{#if showCreateForm}
+		<div class="rounded-3xl bg-surface-container-low p-6">
+			<h2 class="mb-4 text-[17px] font-bold text-on-surface">New team</h2>
+			{#if form?.error}
+				<p class="mb-3 text-[12px] font-medium text-error">{form.error}</p>
+			{/if}
+			<form method="POST" action="?/create" class="flex items-end gap-3">
+				<div class="flex-1">
+					<label for="team-name" class={labelClasses}>Name</label>
+					<input id="team-name" name="name" type="text" required placeholder="e.g. U18 Boys" class={inputClasses} />
+				</div>
+				<div class="flex-1">
+					<label for="team-desc" class={labelClasses}>Description</label>
+					<input id="team-desc" name="description" type="text" placeholder="Optional" class={inputClasses} />
+				</div>
+				<button
+					type="submit"
+					class="cursor-pointer whitespace-nowrap rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90"
+				>Create</button>
+				<button
+					type="button"
+					onclick={() => (showCreateForm = false)}
+					class="cursor-pointer whitespace-nowrap rounded-full border border-outline-variant bg-transparent px-6 py-3 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
+				>Cancel</button>
+			</form>
 		</div>
-	</div>
-{/if}
+	{/if}
+
+	<!-- Team cards -->
+	{#if data.teams.length === 0}
+		<div class="rounded-3xl bg-surface-container-low px-6 py-12 text-center">
+			<p class="text-[14px] text-on-surface-variant">No teams yet. Create one to get started.</p>
+		</div>
+	{:else}
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			{#each [...activeTeams, ...archivedTeams] as team}
+				<div class="flex flex-col gap-2 rounded-[28px] bg-surface-container-low px-6 py-6 {team.archivedAt ? 'opacity-80' : ''}">
+					<div class="flex items-center gap-3">
+						<h2 class="text-[18px] font-bold text-on-surface">{team.name}</h2>
+						{#if team.archivedAt}
+							<span class="rounded-full bg-surface-container-high px-3 py-1 text-[11px] font-medium text-on-surface-variant">
+								Archived
+							</span>
+						{/if}
+					</div>
+					<p class="text-[14px] text-on-surface-variant">
+						{team.memberCount} members{team.description ? ` · ${team.description}` : ''}
+					</p>
+					<div class="mt-1 flex items-center gap-4">
+						<a
+							href="/admin/clubs/{data.clubId}/teams/{team.id}"
+							class="text-[14px] font-bold text-primary no-underline hover:underline"
+						>View ›</a>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
+</div>
