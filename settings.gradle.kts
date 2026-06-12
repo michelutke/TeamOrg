@@ -6,8 +6,12 @@ pluginManagement {
         gradlePluginPortal()
         google()
         mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/interactive")
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/interactive") {
+            content { includeGroupAndSubgroups("org.jetbrains") }
+        }
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev") {
+            content { includeGroupAndSubgroups("org.jetbrains") }
+        }
     }
 }
 
@@ -15,9 +19,15 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/interactive")
+        maven("https://jitpack.io") {
+            content { includeGroupAndSubgroups("com.github") }
+        }
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev") {
+            content { includeGroupAndSubgroups("org.jetbrains") }
+        }
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/interactive") {
+            content { includeGroupAndSubgroups("org.jetbrains") }
+        }
     }
 }
 
