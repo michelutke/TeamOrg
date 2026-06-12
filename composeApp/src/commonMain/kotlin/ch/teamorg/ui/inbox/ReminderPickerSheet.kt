@@ -9,12 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-
-private val PrimaryBlue = Color(0xFF4F8EF7)
-private val SheetBg = Color(0xFF13131F)
+import ch.teamorg.ui.theme.PillShape
 
 private data class Preset(val label: String, val minutes: Int)
 
@@ -45,8 +42,9 @@ fun ReminderPickerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SheetBg,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
             modifier = Modifier
@@ -74,7 +72,8 @@ fun ReminderPickerSheet(
                             hoursText = if (h > 0) h.toString() else ""
                             minutesText = if (m > 0) m.toString() else ""
                         },
-                        label = { Text(preset.label) }
+                        label = { Text(preset.label) },
+                        shape = PillShape
                     )
                 }
             }
@@ -111,14 +110,10 @@ fun ReminderPickerSheet(
                 enabled = isValid,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryBlue,
-                    disabledContainerColor = PrimaryBlue.copy(alpha = 0.4f)
-                )
+                    .height(57.dp),
+                shape = PillShape
             ) {
-                Text("Set Reminder", color = Color.White)
+                Text("Set Reminder", style = MaterialTheme.typography.titleMedium)
             }
 
             // No reminder (only for per-event override)

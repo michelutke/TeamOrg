@@ -4,20 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ch.teamorg.navigation.Screen
-
-private val BgPrimary = Color(0xFF090912)
-private val PrimaryBlue = Color(0xFF4F8EF7)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,27 +32,46 @@ fun InboxScreen(
     }
 
     Scaffold(
-        containerColor = BgPrimary,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Inbox") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgPrimary),
+                title = {
+                    Text(
+                        text = "Inbox",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
                 actions = {
                     if (state.notifications.isNotEmpty()) {
                         if (state.hasUnread) {
                             TextButton(onClick = { viewModel.markAllRead() }) {
-                                Text("Mark all read", color = PrimaryBlue)
+                                Text(
+                                    text = "Mark all read",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         } else {
                             TextButton(onClick = { showDeleteConfirm = true }) {
-                                Text("Delete all", color = Color(0xFFE57373))
+                                Text(
+                                    text = "Delete all",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                     }
                     IconButton(onClick = { onNavigate(Screen.NotificationSettings) }) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Notification settings"
+                            contentDescription = "Notification settings",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -64,6 +81,7 @@ fun InboxScreen(
         if (showDeleteConfirm) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = false },
+                shape = MaterialTheme.shapes.extraLarge,
                 title = { Text("Delete all notifications?") },
                 text = { Text("This will permanently remove all notifications from your inbox.") },
                 confirmButton = {
@@ -71,7 +89,7 @@ fun InboxScreen(
                         showDeleteConfirm = false
                         viewModel.deleteAll()
                     }) {
-                        Text("Delete", color = Color(0xFFE57373))
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
@@ -90,52 +108,76 @@ fun InboxScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(BgPrimary)
         ) {
             when {
                 state.isLoading && !isRefreshing && state.notifications.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        repeat(4) { SkeletonNotificationRow() }
                     }
                 }
                 state.error != null && state.notifications.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Card(modifier = Modifier.padding(16.dp)) {
+                        Surface(
+                            modifier = Modifier.padding(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            shape = MaterialTheme.shapes.large
+                        ) {
                             Text(
                                 text = "Could not load notifications. Pull to refresh.",
-                                modifier = Modifier.padding(16.dp)
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)
                             )
                         }
                     }
                 }
                 state.notifications.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Outlined.Notifications,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "No notifications",
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "You're all caught up.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 36.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Inbox,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(33.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Nothing here yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "New notifications will show up here.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(state.notifications, key = { it.id }) { notification ->
                             NotificationRow(
@@ -152,6 +194,48 @@ fun InboxScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SkeletonNotificationRow() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = RoundedCornerShape(22.dp)
+            )
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.medium
+                )
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(width = 180.dp, height = 12.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(6.dp)
+                    )
+            )
+            Box(
+                modifier = Modifier
+                    .size(width = 120.dp, height = 10.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(5.dp)
+                    )
+            )
         }
     }
 }
