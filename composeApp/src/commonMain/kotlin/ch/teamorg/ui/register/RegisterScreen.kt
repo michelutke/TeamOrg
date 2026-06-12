@@ -2,7 +2,9 @@ package ch.teamorg.ui.register
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -10,14 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
-import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.TeamorgTextField
+import ch.teamorg.ui.testTagsAsResourceId
+import ch.teamorg.ui.theme.PillShape
 
 @Composable
 fun RegisterScreen(
@@ -35,54 +37,58 @@ fun RegisterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF090912))
-            .padding(24.dp)
+            .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
             .testTagsAsResourceId()
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(top = 96.dp, bottom = 48.dp),
+            horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Create Account",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Text(
+                text = "Join your club in seconds.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            TeamorgTextField(
                 value = state.displayName,
                 onValueChange = { viewModel.onDisplayNameChange(it) },
-                label = { Text("Display Name") },
+                label = "Display Name",
                 modifier = Modifier.fillMaxWidth().testTag("tf_display_name"),
-                enabled = !state.isLoading,
-                singleLine = true
+                enabled = !state.isLoading
             )
 
-            OutlinedTextField(
+            TeamorgTextField(
                 value = state.email,
                 onValueChange = { viewModel.onEmailChange(it) },
-                label = { Text("Email") },
+                label = "Email",
                 modifier = Modifier.fillMaxWidth().testTag("tf_email"),
                 enabled = !state.isLoading,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
-            OutlinedTextField(
+            TeamorgTextField(
                 value = state.password,
                 onValueChange = { viewModel.onPasswordChange(it) },
-                label = { Text("Password") },
+                label = "Password",
                 modifier = Modifier.fillMaxWidth().testTag("tf_password"),
                 enabled = !state.isLoading,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true,
                 trailingIcon = {
                     IconButton(
                         onClick = { passwordVisible = !passwordVisible },
@@ -96,42 +102,45 @@ fun RegisterScreen(
                 }
             )
 
-            OutlinedTextField(
+            TeamorgTextField(
                 value = state.confirmPassword,
                 onValueChange = { viewModel.onConfirmPasswordChange(it) },
-                label = { Text("Confirm Password") },
+                label = "Confirm Password",
                 modifier = Modifier.fillMaxWidth().testTag("tf_confirm_password"),
                 enabled = !state.isLoading,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Button(
                 onClick = { viewModel.onRegisterClick() },
-                modifier = Modifier.fillMaxWidth().height(56.dp).testTag("btn_create_account"),
+                modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_create_account"),
                 enabled = !state.isLoading,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4F8EF7)
-                )
+                shape = PillShape
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Create Account")
+                    Text("Create Account", style = MaterialTheme.typography.titleMedium)
                 }
             }
 
             TextButton(
                 onClick = onNavigateToLogin,
                 enabled = !state.isLoading,
-                modifier = Modifier.testTag("btn_navigate_login")
+                modifier = Modifier.align(Alignment.CenterHorizontally).testTag("btn_navigate_login")
             ) {
-                Text("Already have an account? Sign in", color = Color(0xFF4F8EF7))
+                Text(
+                    "Already have an account? Sign in",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
 
@@ -140,6 +149,7 @@ fun RegisterScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 16.dp),
+                shape = MaterialTheme.shapes.medium,
                 containerColor = MaterialTheme.colorScheme.error
             ) {
                 Text(error)
