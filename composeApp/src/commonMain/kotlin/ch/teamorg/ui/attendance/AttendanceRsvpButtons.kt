@@ -3,7 +3,7 @@ package ch.teamorg.ui.attendance
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,18 +15,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-// RSVP state colors (from UI-SPEC)
-private val GoingSelectedBg = Color(0xFF065F46)
-private val GoingSelectedText = Color(0xFF22C55E)
-private val MaybeSelectedBg = Color(0xFF3D3400)
-private val MaybeSelectedText = Color(0xFFFACC15)
-private val DeclinedSelectedBg = Color(0xFF450A0A)
-private val DeclinedSelectedText = Color(0xFFEF4444)
-private val InactiveBg = Color(0xFF1F2937)
-private val InactiveText = Color(0xFF6B7280)
-private val DisabledBg = Color(0xFF13131F)
+import ch.teamorg.ui.theme.PillShape
+import ch.teamorg.ui.theme.extendedColors
 
 @Composable
 fun AttendanceRsvpButtons(
@@ -35,82 +25,68 @@ fun AttendanceRsvpButtons(
     maybeCount: Int,
     declinedCount: Int,
     deadlinePassed: Boolean,
-    compact: Boolean = false,          // true = 32dp for list cards, false = 48dp for detail
+    compact: Boolean = false,          // true = 36dp for list cards, false = 52dp for detail
     onSelect: (String) -> Unit         // "confirmed"|"unsure"|"declined"
 ) {
-    val height = if (compact) 32.dp else 48.dp
-    val cornerRadius = if (compact) 6.dp else 8.dp
-    val iconSize = if (compact) 14.sp else 16.sp
-    val countSize = 12.sp
+    val ext = MaterialTheme.extendedColors
+    val height = if (compact) 36.dp else 52.dp
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Going button
-        val goingSelected = currentResponse == "confirmed"
-        RsvpButton(
+        // Going (selected = filled green)
+        RsvpPill(
             modifier = Modifier.weight(1f),
             symbol = "✓",
             label = "Going",
             count = confirmedCount,
-            isSelected = goingSelected,
-            selectedBg = GoingSelectedBg,
-            selectedText = GoingSelectedText,
+            isSelected = currentResponse == "confirmed",
+            selectedBg = ext.going,
+            selectedText = Color.White,
             deadlinePassed = deadlinePassed,
             compact = compact,
-            height = height.value.toInt(),
-            cornerRadius = cornerRadius.value.toInt(),
-            iconSize = iconSize,
-            countSize = countSize,
+            height = height,
             onClick = { if (!deadlinePassed) onSelect("confirmed") },
             contentDesc = "Going"
         )
 
-        // Maybe button
-        val maybeSelected = currentResponse == "unsure"
-        RsvpButton(
-            modifier = Modifier.weight(1f),
-            symbol = "?",
-            label = "Maybe",
-            count = maybeCount,
-            isSelected = maybeSelected,
-            selectedBg = MaybeSelectedBg,
-            selectedText = MaybeSelectedText,
-            deadlinePassed = deadlinePassed,
-            compact = compact,
-            height = height.value.toInt(),
-            cornerRadius = cornerRadius.value.toInt(),
-            iconSize = iconSize,
-            countSize = countSize,
-            onClick = { if (!deadlinePassed) onSelect("unsure") },
-            contentDesc = "Maybe"
-        )
-
-        // Can't Go button
-        val declinedSelected = currentResponse == "declined" || currentResponse == "declined-auto"
-        RsvpButton(
+        // Decline (selected = tonal declined container)
+        RsvpPill(
             modifier = Modifier.weight(1f),
             symbol = "✗",
-            label = "Can't Go",
+            label = "Decline",
             count = declinedCount,
-            isSelected = declinedSelected,
-            selectedBg = DeclinedSelectedBg,
-            selectedText = DeclinedSelectedText,
+            isSelected = currentResponse == "declined" || currentResponse == "declined-auto",
+            selectedBg = ext.declinedContainer,
+            selectedText = ext.declined,
             deadlinePassed = deadlinePassed,
             compact = compact,
-            height = height.value.toInt(),
-            cornerRadius = cornerRadius.value.toInt(),
-            iconSize = iconSize,
-            countSize = countSize,
+            height = height,
             onClick = { if (!deadlinePassed) onSelect("declined") },
             contentDesc = "Can't Go"
+        )
+
+        // Unsure (selected = tonal unsure container)
+        RsvpPill(
+            modifier = Modifier.weight(1f),
+            symbol = "?",
+            label = "Unsure",
+            count = maybeCount,
+            isSelected = currentResponse == "unsure",
+            selectedBg = ext.unsureContainer,
+            selectedText = ext.unsure,
+            deadlinePassed = deadlinePassed,
+            compact = compact,
+            height = height,
+            onClick = { if (!deadlinePassed) onSelect("unsure") },
+            contentDesc = "Maybe"
         )
     }
 }
 
 @Composable
-private fun RsvpButton(
+private fun RsvpPill(
     modifier: Modifier,
     symbol: String,
     label: String,
@@ -120,29 +96,18 @@ private fun RsvpButton(
     selectedText: Color,
     deadlinePassed: Boolean,
     compact: Boolean,
-    height: Int,
-    cornerRadius: Int,
-    iconSize: androidx.compose.ui.unit.TextUnit,
-    countSize: androidx.compose.ui.unit.TextUnit,
+    height: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
     contentDesc: String
 ) {
-    val bg = when {
-        deadlinePassed -> DisabledBg
-        isSelected -> selectedBg
-        else -> InactiveBg
-    }
-    val textColor = when {
-        deadlinePassed -> InactiveText
-        isSelected -> selectedText
-        else -> InactiveText
-    }
+    val bg = if (isSelected) selectedBg else MaterialTheme.colorScheme.surfaceContainerHigh
+    val textColor = if (isSelected) selectedText else MaterialTheme.colorScheme.onSurfaceVariant
     val alpha = if (deadlinePassed) 0.5f else 1f
 
     Box(
         modifier = modifier
-            .height(height.dp)
-            .clip(RoundedCornerShape(cornerRadius.dp))
+            .height(height)
+            .clip(PillShape)
             .background(bg)
             .alpha(alpha)
             .then(if (!deadlinePassed) Modifier.clickable(onClick = onClick) else Modifier)
@@ -154,16 +119,36 @@ private fun RsvpButton(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(symbol, color = textColor, fontSize = iconSize, fontWeight = FontWeight.SemiBold)
-                Text(count.toString(), color = textColor, fontSize = countSize, fontWeight = FontWeight.SemiBold)
+                Text(
+                    symbol,
+                    color = textColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    count.toString(),
+                    color = textColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         } else {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(symbol, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Normal)
-                Text(label, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Normal)
+                Text(
+                    symbol,
+                    color = textColor,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    label,
+                    color = textColor,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }

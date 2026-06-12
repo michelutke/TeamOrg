@@ -1,22 +1,19 @@
 package ch.teamorg.ui.attendance
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.teamorg.domain.CheckInEntry
-
-private val ColorConfirmed = Color(0xFF22C55E)
-private val ColorMaybe = Color(0xFFFACC15)
-private val ColorDeclined = Color(0xFFEF4444)
-private val ColorNoResponse = Color(0xFF6B7280)
-private val TextMuted = Color(0xFF9090B0)
-private val TextPrimary = Color(0xFFF0F0FF)
+import ch.teamorg.ui.theme.extendedColors
 
 @Composable
 fun MemberResponseList(
@@ -52,48 +49,61 @@ fun MemberResponseList(
         s == null || s == "no-response"
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    val ext = MaterialTheme.extendedColors
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         if (confirmed.isNotEmpty()) {
-            ResponseSectionHeader(label = "CONFIRMED", count = confirmed.size, color = ColorConfirmed)
-            confirmed.forEach { entry ->
-                MemberResponseRow(
-                    entry = entry,
-                    isCoach = isCoach,
-                    onStatusTap = { status -> onOverrideTap(entry, status) }
-                )
+            ResponseSectionCard(label = "GOING", count = confirmed.size, color = ext.going) {
+                confirmed.forEach { entry ->
+                    MemberResponseRow(
+                        entry = entry,
+                        isCoach = isCoach,
+                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                    )
+                }
             }
         }
 
         if (maybe.isNotEmpty()) {
-            ResponseSectionHeader(label = "MAYBE", count = maybe.size, color = ColorMaybe)
-            maybe.forEach { entry ->
-                MemberResponseRow(
-                    entry = entry,
-                    isCoach = isCoach,
-                    onStatusTap = { status -> onOverrideTap(entry, status) }
-                )
+            ResponseSectionCard(label = "UNSURE", count = maybe.size, color = ext.unsure) {
+                maybe.forEach { entry ->
+                    MemberResponseRow(
+                        entry = entry,
+                        isCoach = isCoach,
+                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                    )
+                }
             }
         }
 
         if (declined.isNotEmpty()) {
-            ResponseSectionHeader(label = "DECLINED", count = declined.size, color = ColorDeclined)
-            declined.forEach { entry ->
-                MemberResponseRow(
-                    entry = entry,
-                    isCoach = isCoach,
-                    onStatusTap = { status -> onOverrideTap(entry, status) }
-                )
+            ResponseSectionCard(label = "DECLINED", count = declined.size, color = ext.declined) {
+                declined.forEach { entry ->
+                    MemberResponseRow(
+                        entry = entry,
+                        isCoach = isCoach,
+                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                    )
+                }
             }
         }
 
         if (noResponse.isNotEmpty()) {
-            ResponseSectionHeader(label = "NO RESPONSE", count = noResponse.size, color = ColorNoResponse)
-            noResponse.forEach { entry ->
-                MemberResponseRow(
-                    entry = entry,
-                    isCoach = isCoach,
-                    onStatusTap = { status -> onOverrideTap(entry, status) }
-                )
+            ResponseSectionCard(
+                label = "NO RESPONSE",
+                count = noResponse.size,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                noResponse.forEach { entry ->
+                    MemberResponseRow(
+                        entry = entry,
+                        isCoach = isCoach,
+                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                    )
+                }
             }
         }
 
@@ -102,20 +112,32 @@ fun MemberResponseList(
 }
 
 @Composable
-private fun ResponseSectionHeader(label: String, count: Int, color: Color) {
-    Row(
+private fun ResponseSectionCard(
+    label: String,
+    count: Int,
+    color: Color,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Text(
-            text = "$label  \u00b7  $count",
-            color = color,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.5.sp
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$label · $count",
+                color = color,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+        }
+        content()
     }
 }
 
@@ -129,16 +151,14 @@ private fun EmptyAttendanceState() {
     ) {
         Text(
             text = "No responses yet",
-            color = TextPrimary,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleMedium
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Team members haven't responded to this event.",
-            color = TextMuted,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

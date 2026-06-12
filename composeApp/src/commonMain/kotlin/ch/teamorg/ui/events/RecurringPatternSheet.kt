@@ -1,7 +1,6 @@
 package ch.teamorg.ui.events
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,30 +12,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import ch.teamorg.ui.theme.PillShape
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-// V1 color tokens
-private val BottomSheetBg = Color(0xFF13131F)
-private val CardBg = Color(0xFF1C1C2E)
-private val TextPrimary = Color(0xFFF8FAFC)
-private val TextMuted = Color(0xFF9090B0)
-private val AccentBlue = Color(0xFF4F8EF7)
-private val DividerColor = Color(0xFF2A2A40)
-private val SectionLabel = Color(0xFF6B7280)
-private val ToggleBg = Color(0xFF374151)
-
-private val WEEKDAY_LABELS = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
+private val WEEKDAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,18 +80,8 @@ fun RecurringPatternSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = BottomSheetBg,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 12.dp, bottom = 8.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(DividerColor)
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     ) {
         Column(
             modifier = Modifier
@@ -113,44 +91,32 @@ fun RecurringPatternSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Repeat Event",
-                    color = TextPrimary,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(CardBg)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("✕", color = TextPrimary, fontSize = 14.sp)
-                }
-            }
+            Text(
+                "Repeats",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
 
-            // Frequency row: "Every" + number input + Week/Month/Day toggle
+            // Frequency row: "Every" + number input + Week/Month/Day pills
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Every", color = TextPrimary, fontSize = 15.sp)
+                Text(
+                    "Every",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge
+                )
 
                 // Number input
                 Box(
                     modifier = Modifier
                         .width(52.dp)
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CardBg),
+                        .height(44.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {
                     BasicTextField(
@@ -161,11 +127,11 @@ fun RecurringPatternSheet(
                         },
                         singleLine = true,
                         textStyle = TextStyle(
-                            color = TextPrimary,
-                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = MaterialTheme.typography.bodyLarge.fontSize,
                             textAlign = TextAlign.Center
                         ),
-                        cursorBrush = SolidColor(AccentBlue),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -173,14 +139,17 @@ fun RecurringPatternSheet(
                     )
                 }
 
-                // Frequency unit chips
+                // Frequency unit pills
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("Week" to "week", "Month" to "month", "Day" to "day").forEach { (label, value) ->
                         val selected = frequencyUnit == value
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (selected) AccentBlue else CardBg)
+                                .clip(PillShape)
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceContainerHigh
+                                )
                                 .clickable {
                                     frequencyUnit = value
                                     patternType = when (value) {
@@ -189,27 +158,26 @@ fun RecurringPatternSheet(
                                         else -> "custom"
                                     }
                                 }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
                         ) {
                             Text(
                                 label,
-                                color = if (selected) Color.White else TextMuted,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
+                                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelLarge
                             )
                         }
                     }
                 }
             }
 
-            // "ON THESE DAYS" + 7 day circles (only for weekly)
+            // "Repeat on" + 7 day circles (only for weekly)
             if (frequencyUnit == "week") {
                 Text(
-                    "ON THESE DAYS",
-                    color = SectionLabel,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp
+                    "Repeat on",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -219,9 +187,12 @@ fun RecurringPatternSheet(
                         val selected = index in weekdays
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(44.dp)
                                 .clip(CircleShape)
-                                .background(if (selected) AccentBlue else CardBg)
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surfaceContainerHigh
+                                )
                                 .clickable {
                                     weekdays = if (index in weekdays) weekdays - index else weekdays + index
                                 },
@@ -229,64 +200,67 @@ fun RecurringPatternSheet(
                         ) {
                             Text(
                                 label,
-                                color = if (selected) Color.White else TextMuted,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
+                                color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
             }
 
-            // End date row
+            // Ends row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CardBg)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("\uD83D\uDCC5", fontSize = 16.sp)
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    if (hasEndDate && endDate != null) {
-                        val d = endDate!!
-                        "${d.dayOfMonth} ${d.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${d.year}"
-                    } else "Add end date",
-                    color = if (hasEndDate && endDate != null) TextPrimary else TextMuted,
-                    fontSize = 15.sp,
+                Column(
                     modifier = Modifier
                         .weight(1f)
                         .clickable {
                             if (hasEndDate) showEndDatePicker = true
                         }
-                )
+                ) {
+                    Text(
+                        "Ends",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        if (hasEndDate && endDate != null) {
+                            val d = endDate!!
+                            "${d.dayOfMonth} ${d.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${d.year}"
+                        } else "Never",
+                        color = if (hasEndDate && endDate != null) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
                 Switch(
                     checked = hasEndDate,
                     onCheckedChange = {
                         hasEndDate = it
                         if (it && endDate == null) showEndDatePicker = true
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedTrackColor = AccentBlue,
-                        uncheckedTrackColor = ToggleBg,
-                        uncheckedThumbColor = TextMuted,
-                        uncheckedBorderColor = Color.Transparent
-                    )
+                    }
                 )
             }
 
             // Summary
             Text(
                 summaryText,
-                color = AccentBlue,
-                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Apply button
+            // Done button
             Button(
                 onClick = {
                     val computedInterval = when (frequencyUnit) {
@@ -307,14 +281,16 @@ fun RecurringPatternSheet(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                    .height(57.dp),
+                shape = PillShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text(
-                    "Apply",
-                    color = Color.White,
-                    fontSize = 16.sp,
+                    "Done",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
             }

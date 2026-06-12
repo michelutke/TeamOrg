@@ -8,71 +8,51 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import ch.teamorg.domain.CheckInEntry
 import ch.teamorg.domain.EventWithTeams
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Alarm
 import ch.teamorg.ui.attendance.AttendanceRsvpButtons
 import ch.teamorg.ui.attendance.BegrundungSheet
-import ch.teamorg.ui.attendance.CoachOverrideSheet
 import ch.teamorg.ui.attendance.MemberResponseList
 import ch.teamorg.ui.attendance.ResponseDeadlineLabel
 import ch.teamorg.ui.inbox.ReminderPickerSheet
 import ch.teamorg.ui.inbox.formatLeadTime
+import ch.teamorg.ui.theme.PillShape
+import ch.teamorg.ui.theme.extendedColors
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-
-// Design tokens from V1 Pencil
-private val BgPrimary = Color(0xFF090912)
-private val CardBg = Color(0xFF1C1C2E)
-private val TextPrimary = Color(0xFFF8FAFC)
-private val TextLight = Color(0xFFE0E0FF)
-private val TextMuted = Color(0xFF9090B0)
-private val TextName = Color(0xFFF0F0FF)
-private val AccentBlue = Color(0xFF4F8EF7)
-private val DividerColor = Color(0xFF2A2A40)
-private val ColorConfirmed = Color(0xFF22C55E)
-private val ColorMaybe = Color(0xFFFACC15)
-private val ColorDeclined = Color(0xFFEF4444)
-private val ColorError = Color(0xFFEF4444)
-private val BtnGoingBg = Color(0xFF065F46)
-private val BtnInactiveBg = Color(0xFF1F2937)
-private val BtnMaybeBg = Color(0xFF3D3400)
-private val BtnDeclinedBg = Color(0xFF450A0A)
-private val InactiveText = Color(0xFF6B7280)
 
 private fun formatDay(instant: Instant): String {
     val l = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     val d = l.dayOfWeek.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
     val m = l.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-    return "$d, ${l.dayOfMonth} $m ${l.year}"
+    return "$d, ${l.dayOfMonth} $m"
 }
 
 private fun formatTime(instant: Instant): String {
     val l = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     return "${l.hour.toString().padStart(2, '0')}:${l.minute.toString().padStart(2, '0')}"
-}
-
-private fun formatTimeLine(start: Instant, end: Instant, meetup: Instant?): String {
-    val base = "${formatTime(start)} – ${formatTime(end)}"
-    return if (meetup != null) "$base  ·  Meet ${formatTime(meetup)}" else base
 }
 
 @Composable
@@ -97,49 +77,44 @@ fun EventDetailScreen(
     val isCancelled = state.event?.event?.status == "cancelled"
     val isSeries = state.event?.event?.seriesId != null
 
-    Column(modifier = Modifier.fillMaxSize().background(BgPrimary).windowInsetsPadding(WindowInsets.statusBars)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .windowInsetsPadding(WindowInsets.statusBars)
+    ) {
         // Header
         Row(
-            modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 20.dp),
+            modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Back button (circle)
-            Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(CardBg)
-                    .clickable { onBack() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("←", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
 
-            // Title
-            Text(
-                text = state.event?.event?.title ?: "Event",
-                color = TextPrimary,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                textAlign = TextAlign.Center
-            )
+            Spacer(modifier = Modifier.weight(1f))
 
             // Edit / more
             if (state.isCoach) {
                 Box {
-                    Icon(
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = "More options",
-                        tint = Color.White,
-                        modifier = Modifier.clickable { showMenu = true }
-                    )
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "More options",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         if (!isCancelled) {
                             DropdownMenuItem(text = { Text("Edit") }, onClick = { showMenu = false; onEdit() })
                             DropdownMenuItem(text = { Text("Duplicate") }, onClick = { showMenu = false; onDuplicate() })
                             DropdownMenuItem(
-                                text = { Text("Cancel event", color = ColorError) },
+                                text = { Text("Cancel event", color = MaterialTheme.colorScheme.error) },
                                 onClick = {
                                     showMenu = false
                                     if (isSeries) showCancelScopeSheet = true
@@ -148,7 +123,7 @@ fun EventDetailScreen(
                             )
                         } else {
                             DropdownMenuItem(
-                                text = { Text("Restore event", color = ColorConfirmed) },
+                                text = { Text("Restore event", color = MaterialTheme.extendedColors.going) },
                                 onClick = {
                                     showMenu = false
                                     if (isSeries) showUncancelScopeSheet = true
@@ -188,15 +163,12 @@ fun EventDetailScreen(
             )
         }
 
-        // Divider
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
-
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AccentBlue)
+                CircularProgressIndicator()
             }
             state.error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(state.error ?: "Error", color = ColorError)
+                Text(state.error ?: "Error", color = MaterialTheme.colorScheme.error)
             }
             state.event != null -> EventDetailBody(
                 ewt = state.event!!,
@@ -294,67 +266,41 @@ private fun EventDetailBody(
     val endLocal = event.endAt.toLocalDateTime(TimeZone.currentSystemDefault())
     val isMultiDay = startLocal.date != endLocal.date
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         // Cancelled banner
         if (isCancelled) {
             Box(
-                modifier = Modifier.fillMaxWidth().background(ColorError.copy(alpha = 0.15f))
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Text("This event has been cancelled", color = ColorError, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "This event has been cancelled",
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
 
-        // Meta section
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Date
-            MetaRow(icon = "📅", text = if (isMultiDay) "${formatDay(event.startAt)} – ${formatDay(event.endAt)}" else formatDay(event.startAt))
-            // Time
-            MetaRow(icon = "🕐", text = formatTimeLine(event.startAt, event.endAt, event.meetupAt))
-            // Location
-            val loc = event.location
-            if (loc != null) {
-                MetaRow(icon = "📍", text = loc)
-            }
-            // Team
-            if (ewt.matchedTeams.isNotEmpty()) {
-                MetaRow(icon = "👥", text = ewt.matchedTeams.joinToString(", ") { it.name })
-            }
-        }
-
-        // Divider
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
-
-        // Reminder row
-        val reminderText = when {
-            reminderLeadMinutes == null -> "Global default (2 h)"
-            reminderLeadMinutes == -1 -> "No reminder"
-            else -> formatLeadTime(reminderLeadMinutes)
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onReminderTap() }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Outlined.Alarm, contentDescription = null, tint = TextMuted, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(12.dp))
-            Text("Reminder", style = MaterialTheme.typography.bodyLarge, color = TextPrimary)
-            Spacer(Modifier.weight(1f))
-            Text(reminderText, style = MaterialTheme.typography.labelLarge, color = TextMuted)
-            Spacer(Modifier.width(4.dp))
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
-        }
-
-        // Divider
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+        // Hero card
+        HeroCard(
+            ewt = ewt,
+            isCoach = isCoach,
+            isMultiDay = isMultiDay,
+            responseDeadline = responseDeadline
+        )
 
         // RSVP buttons
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp)) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             AttendanceRsvpButtons(
                 currentResponse = myResponse,
                 confirmedCount = confirmedCount,
@@ -370,61 +316,303 @@ private fun EventDetailBody(
             }
         }
 
-        // Divider
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
+        // Description card
+        val description = event.description
+        if (!description.isNullOrBlank()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    "Description",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
 
-        // Member response list
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            MemberResponseList(
-                entries = checkInEntries,
-                isCoach = isCoach,
-                onOverrideTap = onOverrideTap
+        // Reminder row (no dedicated design — styled as M3 tonal list item)
+        val reminderText = when {
+            reminderLeadMinutes == null -> "Global default (2 h)"
+            reminderLeadMinutes == -1 -> "No reminder"
+            else -> formatLeadTime(reminderLeadMinutes)
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .clickable { onReminderTap() }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Alarm,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "Reminder",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                reminderText,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        // Member response list (grouped & sorted, tonal section cards)
+        MemberResponseList(
+            entries = checkInEntries,
+            isCoach = isCoach,
+            onOverrideTap = onOverrideTap
+        )
+    }
+}
+
+@Composable
+private fun HeroCard(
+    ewt: EventWithTeams,
+    isCoach: Boolean,
+    isMultiDay: Boolean,
+    responseDeadline: Instant?
+) {
+    val event = ewt.event
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Type chip
+        Box(
+            modifier = Modifier
+                .clip(PillShape)
+                .background(MaterialTheme.colorScheme.primary)
+                .padding(horizontal = 14.dp, vertical = 5.dp)
+        ) {
+            Text(
+                when (event.type) {
+                    "training" -> "Training"
+                    "match" -> "Match"
+                    else -> "Other"
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+
+        Text(
+            text = event.title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        if (isCoach) {
+            // Coach hero: compact info chips
+            CoachInfoChips(ewt = ewt, isMultiDay = isMultiDay)
+        } else {
+            // Player hero: structured icon tile rows
+            PlayerInfoTiles(ewt = ewt, isMultiDay = isMultiDay)
+        }
+
+        // Respond-by pill
+        if (responseDeadline != null) {
+            val l = responseDeadline.toLocalDateTime(TimeZone.currentSystemDefault())
+            val day = l.dayOfWeek.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+            val month = l.month.name.take(4).lowercase().replaceFirstChar { it.uppercase() }
+            val hm = "${l.hour.toString().padStart(2, '0')}:${l.minute.toString().padStart(2, '0')}"
+            Box(
+                modifier = Modifier
+                    .clip(PillShape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Outlined.Alarm,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        "Respond by $day ${l.dayOfMonth} $month, $hm",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerInfoTiles(ewt: EventWithTeams, isMultiDay: Boolean) {
+    val event = ewt.event
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            InfoTile(
+                icon = Icons.Outlined.CalendarToday,
+                label = "Date",
+                value = if (isMultiDay) "${formatDay(event.startAt)} – ${formatDay(event.endAt)}"
+                else formatDay(event.startAt),
+                modifier = Modifier.weight(1f)
+            )
+            InfoTile(
+                icon = Icons.Outlined.Schedule,
+                label = "Time",
+                value = "${formatTime(event.startAt)} – ${formatTime(event.endAt)}",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        val meetupAt = event.meetupAt
+        if (meetupAt != null) {
+            InfoTile(
+                icon = Icons.Outlined.Flag,
+                label = "Meetup",
+                value = formatTime(meetupAt)
+            )
+        }
+        val loc = event.location
+        if (loc != null) {
+            InfoTile(
+                icon = Icons.Outlined.Place,
+                label = "Location",
+                value = loc
+            )
+        }
+        if (ewt.matchedTeams.isNotEmpty()) {
+            InfoTile(
+                icon = Icons.Outlined.Groups,
+                label = "Team",
+                value = ewt.matchedTeams.joinToString(", ") { it.name }
             )
         }
     }
 }
 
 @Composable
-private fun MetaRow(icon: String, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(icon, fontSize = 14.sp)
-        Text(text, color = TextLight, fontSize = 14.sp)
-    }
-}
-
-@Composable
-private fun RsvpButton(
-    symbol: String,
+private fun InfoTile(
+    icon: ImageVector,
     label: String,
-    bgColor: Color,
-    textColor: Color,
+    value: String,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .height(48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(symbol, color = textColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = textColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 @Composable
-private fun SectionHeader(label: String, count: String, color: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            "$label  ·  $count",
-            color = color,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.5.sp
-        )
+private fun CoachInfoChips(ewt: EventWithTeams, isMultiDay: Boolean) {
+    val event = ewt.event
+    @Composable
+    fun InfoChip(icon: ImageVector, text: String) {
+        Row(
+            modifier = Modifier
+                .clip(PillShape)
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoChip(
+                Icons.Outlined.CalendarToday,
+                if (isMultiDay) "${formatDay(event.startAt)} – ${formatDay(event.endAt)}"
+                else formatDay(event.startAt)
+            )
+            InfoChip(Icons.Outlined.Schedule, "${formatTime(event.startAt)} – ${formatTime(event.endAt)}")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val meetupAt = event.meetupAt
+            if (meetupAt != null) {
+                InfoChip(Icons.Outlined.Flag, "Meet ${formatTime(meetupAt)}")
+            }
+            val loc = event.location
+            if (loc != null) {
+                InfoChip(Icons.Outlined.Place, loc)
+            }
+        }
     }
 }

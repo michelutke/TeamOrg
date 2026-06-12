@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,16 +14,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import ch.teamorg.domain.CheckInEntry
-
-private val TextPrimary = Color(0xFFF0F0FF)
-private val TextMuted = Color(0xFF9090B0)
-private val ColorGrey = Color(0xFF6B7280)
-private val CardBg = Color(0xFF1C1C2E)
-private val InactiveBg = Color(0xFF1F2937)
-private val InactiveText = Color(0xFF6B7280)
+import ch.teamorg.ui.theme.extendedColors
 
 @Composable
 fun MemberResponseRow(
@@ -30,11 +25,12 @@ fun MemberResponseRow(
     isCoach: Boolean,
     onStatusTap: (String) -> Unit    // "present"|"absent"|"excused"
 ) {
+    val ext = MaterialTheme.extendedColors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 20.dp),
+            .heightIn(min = 56.dp)
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Avatar (40dp circle with initials)
@@ -48,13 +44,13 @@ fun MemberResponseRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(CardBg),
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = initials.ifEmpty { "?" },
-                color = TextMuted,
-                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -66,45 +62,44 @@ fun MemberResponseRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = entry.userName,
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Normal
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                // Auto-declined indicator
-                if (entry.response?.abwesenheitRuleId != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Auto-declined",
-                        color = ColorGrey,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal
-                    )
-                }
                 // Coach override indicator
                 val entryRecord = entry.record
                 if (entryRecord != null && entryRecord.setBy != entry.userId) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "✎",
-                        color = TextMuted,
-                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.semantics { contentDescription = "Coach override" }
                     )
                 }
             }
+            // Auto-decline annotation + reason
+            val isAutoDeclined = entry.response?.abwesenheitRuleId != null
             val reason = entry.record?.note ?: entry.response?.reason
-            if (!reason.isNullOrBlank()) {
+            val annotation = when {
+                isAutoDeclined && !reason.isNullOrBlank() -> "Auto-declined · $reason"
+                isAutoDeclined -> "Auto-declined"
+                !reason.isNullOrBlank() -> reason
+                else -> null
+            }
+            if (annotation != null) {
                 Text(
-                    text = reason,
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 1
+                    text = annotation,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        // Coach override buttons
+        // Coach override mini controls
         if (isCoach) {
             val currentStatus = entry.record?.status
                 ?: when (entry.response?.status) {
@@ -113,24 +108,24 @@ fun MemberResponseRow(
                     "unsure" -> "excused"
                     else -> null
                 }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CoachStatusButton(
                     symbol = "✓",
-                    color = Color(0xFF22C55E),
+                    color = ext.going,
                     isSelected = currentStatus == "present",
                     contentDesc = "Set present",
                     onClick = { onStatusTap("present") }
                 )
                 CoachStatusButton(
                     symbol = "✗",
-                    color = Color(0xFFEF4444),
+                    color = ext.declined,
                     isSelected = currentStatus == "absent",
                     contentDesc = "Set absent",
                     onClick = { onStatusTap("absent") }
                 )
                 CoachStatusButton(
-                    symbol = "~",
-                    color = Color(0xFFFACC15),
+                    symbol = "?",
+                    color = ext.unsure,
                     isSelected = currentStatus == "excused",
                     contentDesc = "Set excused",
                     onClick = { onStatusTap("excused") }
@@ -148,11 +143,11 @@ private fun CoachStatusButton(
     contentDesc: String,
     onClick: () -> Unit
 ) {
-    val bg = if (isSelected) color.copy(alpha = 0.2f) else InactiveBg
-    val textColor = if (isSelected) color else InactiveText
+    val bg = if (isSelected) color else MaterialTheme.colorScheme.surfaceContainerHigh
+    val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     Box(
         modifier = Modifier
-            .size(28.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .background(bg)
             .clickable(onClick = onClick)
@@ -162,7 +157,7 @@ private fun CoachStatusButton(
         Text(
             text = symbol,
             color = textColor,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
     }
