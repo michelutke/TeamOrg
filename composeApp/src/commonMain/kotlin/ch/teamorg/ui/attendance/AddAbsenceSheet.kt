@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -24,15 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.teamorg.domain.AbwesenheitRule
 import ch.teamorg.domain.CreateAbwesenheitRequest
+import ch.teamorg.ui.theme.PillShape
 import kotlinx.datetime.LocalDate
-
-private val SheetBg = Color(0xFF13131F)
-private val CardBg = Color(0xFF1C1C2E)
-private val TextPrimary = Color(0xFFF0F0FF)
-private val TextMuted = Color(0xFF9090B0)
-private val DividerColor = Color(0xFF2A2A40)
-private val AccentOrange = Color(0xFFF97316)
-private val AccentBlue = Color(0xFF4F8EF7)
 
 private data class ReasonPreset(
     val key: String,
@@ -84,17 +76,17 @@ fun AddAbsenceSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SheetBg,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         modifier = Modifier.fillMaxHeight(),
         dragHandle = {
             Box(
                 modifier = Modifier
                     .padding(top = 12.dp, bottom = 8.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(DividerColor)
+                    .width(40.dp)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.outlineVariant)
             )
         }
     ) {
@@ -107,37 +99,39 @@ fun AddAbsenceSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = title,
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.semantics { contentDescription = "Close" }
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = TextMuted)
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
-
-            HorizontalDivider(color = DividerColor, thickness = 1.dp)
 
             // Scrollable content
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Reason section
-                SectionLabel("REASON")
-                Spacer(Modifier.height(4.dp))
+                SectionLabel("Reason")
+                Spacer(Modifier.height(2.dp))
 
                 // 2x3 grid of reason tiles
                 val rows = REASON_PRESETS.chunked(3)
@@ -162,7 +156,7 @@ fun AddAbsenceSheet(
                 Column(modifier = Modifier.animateContentSize()) {
                     if (selectedReason == "injury") {
                         Spacer(Modifier.height(4.dp))
-                        SectionLabel("AFFECTED AREA")
+                        SectionLabel("Affected area")
                         Spacer(Modifier.height(8.dp))
                         BodyPartGrid(
                             selectedParts = selectedBodyParts,
@@ -180,41 +174,27 @@ fun AddAbsenceSheet(
                 Spacer(Modifier.height(4.dp))
 
                 // Type section
-                SectionLabel("TYPE")
-                Spacer(Modifier.height(8.dp))
+                SectionLabel("Rule type")
+                Spacer(Modifier.height(2.dp))
 
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        onClick = { ruleType = "recurring" },
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
                         selected = ruleType == "recurring",
-                        colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = AccentBlue.copy(alpha = 0.15f),
-                            activeContentColor = AccentBlue,
-                            inactiveContainerColor = CardBg,
-                            inactiveContentColor = TextMuted
-                        )
-                    ) {
-                        Text("Recurring")
-                    }
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        onClick = { ruleType = "period" },
+                        onClick = { ruleType = "recurring" },
+                        label = { Text("Recurring weekly") },
+                        shape = PillShape
+                    )
+                    FilterChip(
                         selected = ruleType == "period",
-                        colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = AccentBlue.copy(alpha = 0.15f),
-                            activeContentColor = AccentBlue,
-                            inactiveContainerColor = CardBg,
-                            inactiveContentColor = TextMuted
-                        )
-                    ) {
-                        Text("Period")
-                    }
+                        onClick = { ruleType = "period" },
+                        label = { Text("Period") },
+                        shape = PillShape
+                    )
                 }
 
                 if (ruleType == "recurring") {
-                    SectionLabel("DAYS")
-                    Spacer(Modifier.height(4.dp))
+                    SectionLabel("Days")
+                    Spacer(Modifier.height(2.dp))
                     WeekdaySelector(
                         selectedDays = selectedWeekdays,
                         onToggle = { day ->
@@ -226,8 +206,8 @@ fun AddAbsenceSheet(
                         }
                     )
                     Spacer(Modifier.height(8.dp))
-                    SectionLabel("END DATE (OPTIONAL)")
-                    Spacer(Modifier.height(4.dp))
+                    SectionLabel("End date (optional)")
+                    Spacer(Modifier.height(2.dp))
                     DatePickerField(
                         value = endDate,
                         placeholder = "Select end date",
@@ -246,7 +226,7 @@ fun AddAbsenceSheet(
                         )
                         DatePickerField(
                             value = endDate,
-                            placeholder = "To",
+                            placeholder = "Until",
                             onClick = { showEndDatePicker = true },
                             modifier = Modifier.weight(1f)
                         )
@@ -276,18 +256,16 @@ fun AddAbsenceSheet(
                     enabled = selectedReason.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .height(57.dp),
+                    shape = PillShape,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentOrange,
-                        disabledContainerColor = AccentOrange.copy(alpha = 0.4f)
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text(
                         text = "Save Rule",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -319,10 +297,9 @@ fun AddAbsenceSheet(
 private fun SectionLabel(text: String) {
     Text(
         text = text,
-        color = TextMuted,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.5.sp
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold
     )
 }
 
@@ -333,31 +310,29 @@ private fun DatePickerField(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable { onClick() }
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            placeholder = {
-                Text(
-                    text = placeholder,
-                    color = TextMuted,
-                    fontSize = 14.sp
-                )
+        Text(
+            text = placeholder,
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = value.ifBlank { "Select date" },
+            color = if (value.isBlank()) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSurface
             },
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = true,
-            enabled = false,
-            shape = RoundedCornerShape(8.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledBorderColor = DividerColor,
-                disabledTextColor = TextPrimary,
-                disabledPlaceholderColor = TextMuted,
-                disabledContainerColor = Color.Transparent
-            )
+            fontSize = 16.sp
         )
     }
 }
