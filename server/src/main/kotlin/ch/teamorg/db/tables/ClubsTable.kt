@@ -11,6 +11,7 @@ object ClubsTable : Table("clubs") {
     val sportType = text("sport_type").default("volleyball")
     val location = text("location").nullable()
     val logoPath = text("logo_path").nullable()
+    val status = text("status").default("active")
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
 

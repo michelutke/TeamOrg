@@ -14,6 +14,9 @@ interface UserRepository {
     fun existsByEmail(email: String): Boolean
     fun getPasswordHash(email: String): String?
     fun updateAvatarUrl(userId: UUID, avatarUrl: String?): User
+    fun findAll(page: Int, pageSize: Int): List<User>
+    fun countAll(): Long
+    fun searchByNameOrEmail(query: String): List<User>
 }
 
 class UserRepositoryImpl : UserRepository {
@@ -62,6 +65,28 @@ class UserRepositoryImpl : UserRepository {
         UsersTable.selectAll().where { UsersTable.id eq userId }
             .map(::rowToUser)
             .single()
+    }
+
+    override fun findAll(page: Int, pageSize: Int): List<User> = transaction {
+        UsersTable.selectAll()
+            .orderBy(UsersTable.createdAt, SortOrder.DESC)
+            .limit(pageSize, offset = ((page - 1) * pageSize).toLong())
+            .map(::rowToUser)
+    }
+
+    override fun countAll(): Long = transaction {
+        UsersTable.selectAll().count()
+    }
+
+    override fun searchByNameOrEmail(query: String): List<User> = transaction {
+        val lowerQuery = "%${query.lowercase()}%"
+        UsersTable.selectAll()
+            .where {
+                (UsersTable.displayName.lowerCase() like lowerQuery) or
+                (UsersTable.email.lowerCase() like lowerQuery)
+            }
+            .orderBy(UsersTable.createdAt, SortOrder.DESC)
+            .map(::rowToUser)
     }
 
     private fun rowToUser(row: ResultRow) = User(

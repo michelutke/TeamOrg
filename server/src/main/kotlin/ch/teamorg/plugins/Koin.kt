@@ -36,6 +36,8 @@ fun appModule(environment: ApplicationEnvironment) = module {
     }
     single<NotificationRepository> { NotificationRepositoryImpl() }
     single { NotificationDispatcher(get(), get()) }
+    single<AuditLogRepository> { AuditLogRepositoryImpl() }
+    single<AdminRepository> { AdminRepositoryImpl() }
 }
 
 fun Application.configureKoin() {

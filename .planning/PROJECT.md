@@ -121,20 +121,27 @@ Every phase must:
 
 ## Requirements
 
-### Validated
-- [x] Auth (email/password, JWT, roles from DB) — Validated in Phase 01
-- [x] Team management (clubs, teams, invite, roles) — Validated in Phase 02
-- [x] Event scheduling (create, edit, cancel, recurring, subgroups) — Validated in Phase 03
-- [x] Attendance tracking (confirm/decline, J+S reports, offline) — Validated in Phase 04
-- [x] Push notifications + in-app inbox — Validated in Phase 05
+### Validated (v1.0)
+- [x] Auth (email/password, JWT, roles from DB) — v1.0
+- [x] Team management (clubs, teams, invite, roles) — v1.0
+- [x] Event scheduling (create, edit, cancel, recurring, subgroups) — v1.0
+- [x] Attendance tracking (confirm/decline, J+S reports, offline) — v1.0
+- [x] Push notifications + in-app inbox — v1.0
+- [x] Super-admin panel (clubs, users, audit log, impersonation) — v1.0
 
 ### Active
-- [ ] Super-admin panel (clubs, users, audit log, impersonation)
+(None — v1.0 shipped. Next milestone TBD via `/gsd:new-milestone`)
 
 ### Out of Scope
 - Main app web client — ADR-001 unresolved
 - OAuth / magic link — V2
 - External job queue — V2 if scale demands
 
+## Current State
+
+v1.0 MVP shipped 2026-04-07. All 62 requirements satisfied across 9 phases (53 plans).
+Codebase: ~28k Kotlin, ~2.7k Svelte/TS, 10 Flyway migrations (V1–V10), SQLDelight offline cache.
+Apps build and run on Android + iOS. Ktor backend serves mobile + SvelteKit admin panel.
+
 ---
-*Last updated: 2026-04-01 after Phase 05.2 completion — auth retroactive verification (62/62 v1 requirements now satisfied)*
+*Last updated: 2026-04-07 after v1.0 milestone completion*
