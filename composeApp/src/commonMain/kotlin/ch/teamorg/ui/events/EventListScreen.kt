@@ -110,7 +110,7 @@ fun EventListScreen(
             if (state.isCoach) {
                 ExtendedFloatingActionButton(
                     onClick = onCreateClick,
-                    modifier = Modifier.padding(bottom = 48.dp),
+                    modifier = Modifier.padding(bottom = 96.dp),
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = ch.teamorg.ui.theme.PillShape,

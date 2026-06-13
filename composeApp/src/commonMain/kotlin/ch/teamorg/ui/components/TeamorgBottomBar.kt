@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Inbox
@@ -51,8 +50,11 @@ fun TeamorgBottomBar(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        FloatingNavItem(Screen.Events, "Events", Icons.Default.Event, currentRoute == Screen.Events.route, onNavigate)
-        FloatingNavItem(Screen.Calendar, "Calendar", Icons.Default.CalendarMonth, currentRoute == Screen.Calendar.route, onNavigate)
+        FloatingNavItem(
+            Screen.Events, "Events", Icons.Default.Event,
+            currentRoute == Screen.Events.route || currentRoute == Screen.Calendar.route,
+            onNavigate
+        )
         FloatingNavItem(Screen.Teams, "Teams", Icons.Default.Groups, currentRoute == Screen.Teams.route, onNavigate)
         FloatingNavItem(
             Screen.Inbox, "Inbox", Icons.Default.Inbox, currentRoute == Screen.Inbox.route, onNavigate,

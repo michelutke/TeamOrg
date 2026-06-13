@@ -384,7 +384,7 @@ fun PlayerProfileScreen(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = if (isNavProfile) 80.dp else 24.dp),
+                    .padding(end = 20.dp, bottom = if (isNavProfile) 112.dp else 24.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(20.dp)

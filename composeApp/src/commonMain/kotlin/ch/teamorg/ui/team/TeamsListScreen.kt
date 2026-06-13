@@ -34,7 +34,7 @@ fun TeamsListScreen(
             if (state.isClubManager) {
                 FloatingActionButton(
                     onClick = { viewModel.showCreateSheet() },
-                    modifier = Modifier.testTag("fab_create_team").padding(bottom = 48.dp),
+                    modifier = Modifier.testTag("fab_create_team").padding(bottom = 96.dp),
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(20.dp)
