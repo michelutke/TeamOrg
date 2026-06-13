@@ -24,9 +24,11 @@ Builds a signed release APK and uploads it to [Updraft](https://getupdraft.com).
 
 ## 2. Backend + Admin → Coolify (Docker)
 
-Workflow: `.github/workflows/deploy-coolify.yml`
+Deployment is driven by **Coolify's native Git integration** — link this repo to a
+Coolify resource and enable auto-deploy on push. Coolify pulls the repo and builds
+the images itself; no GitHub Actions workflow is involved.
 
-Coolify pulls this repo and builds the images itself from:
+Coolify builds from:
 
 - `server/Dockerfile` — Ktor backend (build context = repo root). `:server` has no
   dependency on `:shared`/`:composeApp`, so it builds with configuration-on-demand
@@ -34,21 +36,12 @@ Coolify pulls this repo and builds the images itself from:
 - `admin/Dockerfile` — SvelteKit admin (`@sveltejs/adapter-node`, build context = `admin/`).
 - `docker-compose.yml` — wires both services together.
 
-The workflow only **triggers** the deploy via Coolify's webhook; the build happens
-on the Coolify host.
-
-**Required secrets:**
-
-| Secret | Purpose |
-|---|---|
-| `COOLIFY_WEBHOOK` | Coolify resource deploy webhook URL |
-| `COOLIFY_TOKEN` | Coolify API token (Bearer) |
-
 ### Coolify setup
 
-1. Provision a **PostgreSQL** managed database in Coolify. Run Flyway migrations on
-   boot (the server applies them at startup).
-2. Create a **Docker Compose** resource pointing at this repo / `docker-compose.yml`.
+1. Provision a **PostgreSQL** managed database in Coolify. Flyway migrations are
+   applied by the server at startup.
+2. Create a resource from this repo, set the build pack to **Docker Compose** pointing
+   at `docker-compose.yml`, and enable **auto-deploy** on your release branch.
 3. Set environment variables on the resource:
 
    | Variable | Service | Notes |
@@ -62,8 +55,8 @@ on the Coolify host.
 
 4. Point domains at the `server` (8080) and `admin` (3000) services; Coolify
    terminates TLS and reverse-proxies.
-5. Copy the resource's **deploy webhook URL** and an **API token** into the GitHub
-   secrets above.
+
+Pushes to the configured branch trigger an automatic rebuild + redeploy.
 
 Uploaded files persist in the `uploads` named volume (`/app/uploads` in the server
 container).
