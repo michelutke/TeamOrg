@@ -1,0 +1,41 @@
+# Coolify deployment for the TeamOrg backend + admin web.
+# Coolify reads this compose file, builds both images from source, and injects
+# the environment variables / domains configured in its UI.
+#
+# Postgres is NOT defined here — provision it as a managed database in Coolify
+# and pass its connection string via DATABASE_URL.
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      # Set these in the Coolify resource (do not hardcode secrets):
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      ONESIGNAL_APP_ID: ${ONESIGNAL_APP_ID}
+      ONESIGNAL_API_KEY: ${ONESIGNAL_API_KEY}
+    ports:
+      - "8080"
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    environment:
+      # API_URL points at the backend; ORIGIN is the public admin URL (required
+      # by SvelteKit form actions behind a proxy).
+      API_URL: ${API_URL}
+      ORIGIN: ${ORIGIN}
+    ports:
+      - "3000"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  uploads:

@@ -1,0 +1,26 @@
+# Root context (server image build) — keep the build slim.
+.git
+.github
+.claude
+.gradle
+build
+**/build
+*/build
+.kotlin
+**/.kotlin
+iosApp
+composeApp/src
+shared/src
+admin/node_modules
+admin/.svelte-kit
+admin/build
+node_modules
+**/*.apk
+**/*.aab
+local.properties
+*.jks
+*.keystore
+.idea
+.DS_Store
+docs
+.planning
