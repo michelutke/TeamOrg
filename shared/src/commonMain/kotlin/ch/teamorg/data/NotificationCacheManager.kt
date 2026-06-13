@@ -7,7 +7,9 @@ import kotlinx.datetime.Instant
 class NotificationCacheManager(private val db: TeamorgDb) {
     private val queries get() = db.notificationQueries
 
-    fun saveNotifications(notifications: List<Notification>) {
+    // Local cache must degrade gracefully — a missing/stale schema or a malformed
+    // timestamp must never propagate out and crash the app (e.g. uncaught on iOS).
+    fun saveNotifications(notifications: List<Notification>) = runCatching {
         notifications.forEach { n ->
             queries.upsertNotification(
                 id = n.id,
@@ -20,10 +22,10 @@ class NotificationCacheManager(private val db: TeamorgDb) {
                 created_at = parseIsoToEpochMillis(n.createdAt)
             )
         }
-    }
+    }.let { }
 
-    fun getCachedNotifications(limit: Long, offset: Long): List<Notification> {
-        return queries.getNotifications(limit, offset).executeAsList().map { row ->
+    fun getCachedNotifications(limit: Long, offset: Long): List<Notification> = runCatching {
+        queries.getNotifications(limit, offset).executeAsList().map { row ->
             Notification(
                 id = row.id,
                 type = row.type,
@@ -35,17 +37,17 @@ class NotificationCacheManager(private val db: TeamorgDb) {
                 createdAt = epochMillisToIso(row.created_at)
             )
         }
-    }
+    }.getOrDefault(emptyList())
 
-    fun getUnreadCount(): Long = queries.getUnreadCount().executeAsOne()
+    fun getUnreadCount(): Long = runCatching { queries.getUnreadCount().executeAsOne() }.getOrDefault(0L)
 
-    fun markRead(id: String) { queries.markRead(id) }
+    fun markRead(id: String) { runCatching { queries.markRead(id) } }
 
-    fun markAllRead() { queries.markAllRead() }
+    fun markAllRead() { runCatching { queries.markAllRead() } }
 
-    fun clearAll() { queries.deleteAll() }
+    fun clearAll() { runCatching { queries.deleteAll() } }
 
-    fun cleanup(olderThanMillis: Long) { queries.deleteOlderThan(olderThanMillis) }
+    fun cleanup(olderThanMillis: Long) { runCatching { queries.deleteOlderThan(olderThanMillis) } }
 
     private fun parseIsoToEpochMillis(iso: String): Long =
         Instant.parse(iso).toEpochMilliseconds()
