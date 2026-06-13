@@ -1,6 +1,7 @@
 package ch.teamorg.ui.inbox
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -12,14 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-private val BgPrimary = Color(0xFF090912)
-private val MutedForeground = Color(0xFF9090B0)
-private val PrimaryBlue = Color(0xFF4F8EF7)
+import ch.teamorg.ui.theme.PillShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,11 +27,19 @@ fun NotificationSettingsScreen(
     var showReminderPicker by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = BgPrimary,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Notification Settings") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgPrimary),
+                title = {
+                    Text(
+                        text = "Notifications",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -61,21 +65,23 @@ fun NotificationSettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(BgPrimary)
                 .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Team picker
             if (state.teams.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.teams) { team ->
                         FilterChip(
                             selected = state.selectedTeamId == team.teamId,
                             onClick = { viewModel.selectTeam(team.teamId) },
-                            label = { Text(team.teamName) }
+                            label = { Text(team.teamName) },
+                            shape = PillShape
                         )
                     }
                 }
@@ -84,77 +90,63 @@ fun NotificationSettingsScreen(
             val settings = state.settings
             if (settings != null) {
                 // Events section
-                SectionHeader("Events")
-                ToggleRow(
-                    label = "New event",
-                    checked = settings.eventsNew,
-                    onCheckedChange = { viewModel.updateSetting("eventsNew", it) }
-                )
-                ToggleRow(
-                    label = "Event changes",
-                    checked = settings.eventsEdit,
-                    onCheckedChange = { viewModel.updateSetting("eventsEdit", it) }
-                )
-                ToggleRow(
-                    label = "Cancellations",
-                    checked = settings.eventsCancel,
-                    onCheckedChange = { viewModel.updateSetting("eventsCancel", it) }
-                )
-
-                // Reminders section
-                SectionHeader("Reminders")
-                ToggleRow(
-                    label = "Event reminders",
-                    checked = settings.remindersEnabled,
-                    onCheckedChange = { viewModel.updateSetting("remindersEnabled", it) }
-                )
-                if (settings.remindersEnabled) {
-                    LeadTimeRow(
-                        leadMinutes = settings.reminderLeadMinutes,
-                        onClick = { showReminderPicker = true }
+                SettingsCard {
+                    ToggleRow(
+                        label = "New events",
+                        checked = settings.eventsNew,
+                        onCheckedChange = { viewModel.updateSetting("eventsNew", it) }
+                    )
+                    ToggleRow(
+                        label = "Event changes",
+                        checked = settings.eventsEdit,
+                        onCheckedChange = { viewModel.updateSetting("eventsEdit", it) }
+                    )
+                    ToggleRow(
+                        label = "Event cancellations",
+                        checked = settings.eventsCancel,
+                        onCheckedChange = { viewModel.updateSetting("eventsCancel", it) }
                     )
                 }
 
-                // Responses section (coach only)
-                if (state.isCoach) {
-                    SectionHeader("Responses")
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Notify me",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f)
+                // Reminders section
+                SectionHeader("Reminders")
+                SettingsCard {
+                    ToggleRow(
+                        label = "Event reminders",
+                        checked = settings.remindersEnabled,
+                        onCheckedChange = { viewModel.updateSetting("remindersEnabled", it) }
+                    )
+                    if (settings.remindersEnabled) {
+                        LeadTimeRow(
+                            leadMinutes = settings.reminderLeadMinutes,
+                            onClick = { showReminderPicker = true }
                         )
                     }
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    ) {
-                        SegmentedButton(
-                            selected = settings.coachResponseMode == "per_response",
-                            onClick = { viewModel.updateSetting("coachResponseMode", "per_response") },
-                            shape = SegmentedButtonDefaults.itemShape(0, 2)
-                        ) { Text("Per response") }
-                        SegmentedButton(
-                            selected = settings.coachResponseMode == "summary",
-                            onClick = { viewModel.updateSetting("coachResponseMode", "summary") },
-                            shape = SegmentedButtonDefaults.itemShape(1, 2)
-                        ) { Text("Pre-event summary") }
-                    }
+                }
 
-                    // Absences section (coach only)
-                    SectionHeader("Absences")
-                    ToggleRow(
-                        label = "Absence notifications",
-                        checked = settings.absencesEnabled,
-                        onCheckedChange = { viewModel.updateSetting("absencesEnabled", it) }
-                    )
+                // Coach mode
+                if (state.isCoach) {
+                    SectionHeader("Coach mode")
+                    SettingsCard {
+                        RadioRow(
+                            title = "Every response",
+                            subtitle = "Get notified on each confirm / decline / unsure",
+                            selected = settings.coachResponseMode == "per_response",
+                            onClick = { viewModel.updateSetting("coachResponseMode", "per_response") }
+                        )
+                        RadioRow(
+                            title = "Summary before event",
+                            subtitle = "One list of missing responses before each event",
+                            selected = settings.coachResponseMode == "summary",
+                            onClick = { viewModel.updateSetting("coachResponseMode", "summary") }
+                        )
+                        ToggleRow(
+                            label = "Player absences",
+                            subtitle = "Notify me when an absence affects an event",
+                            checked = settings.absencesEnabled,
+                            onCheckedChange = { viewModel.updateSetting("absencesEnabled", it) }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -177,12 +169,27 @@ fun NotificationSettingsScreen(
 }
 
 @Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.large
+            )
+            .padding(horizontal = 18.dp, vertical = 6.dp),
+        content = content
+    )
+}
+
+@Composable
 private fun SectionHeader(title: String) {
     Text(
-        text = title.uppercase(),
+        text = title,
         style = MaterialTheme.typography.labelMedium,
-        color = MutedForeground,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 4.dp)
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
     )
 }
 
@@ -190,24 +197,66 @@ private fun SectionHeader(title: String) {
 private fun ToggleRow(
     label: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .heightIn(min = 56.dp)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
+    }
+}
+
+@Composable
+private fun RadioRow(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -217,20 +266,23 @@ private fun LeadTimeRow(leadMinutes: Int, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Default lead time",
-            style = MaterialTheme.typography.bodyLarge,
+            text = "Lead time",
+            style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f)
         )
-        TextButton(onClick = onClick) {
-            Text(
-                text = formatLeadTime(leadMinutes),
-                color = PrimaryBlue
-            )
-        }
+        Text(
+            text = formatLeadTime(leadMinutes),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.secondaryContainer, PillShape)
+                .clickable { onClick() }
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
     }
 }
 

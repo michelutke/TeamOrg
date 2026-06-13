@@ -31,6 +31,14 @@
 		data.log.totalCount > 0 ? Math.ceil(data.log.totalCount / data.log.pageSize) : 1
 	);
 
+	const pageNumbers = $derived.by(() => {
+		const start = Math.max(1, Math.min(data.page - 2, totalPages - 4));
+		const end = Math.min(totalPages, start + 4);
+		const pages: number[] = [];
+		for (let p = start; p <= end; p++) pages.push(p);
+		return pages;
+	});
+
 	function applyFilters() {
 		const params = new URLSearchParams($page.url.searchParams);
 		params.set('page', '1');
@@ -91,261 +99,127 @@
 		return targetType || targetId || '—';
 	}
 
-	const inputStyle = `
-		background-color: #1C1C2E;
-		border: 1px solid #2A2A40;
-		color: #F0F0FF;
-		font-size: 14px;
-		height: 40px;
-		padding: 0 16px;
-		border-radius: 6px;
-		outline: none;
-	`;
+	function actionChipClasses(action: string): string {
+		if (action.startsWith('impersonation')) return 'bg-tertiary-container text-on-tertiary-container';
+		if (action.includes('manager')) return 'bg-primary-container text-on-primary-container';
+		if (action.includes('delete') || action.includes('deactivate') || action.includes('archive'))
+			return 'bg-error-container text-error';
+		return 'bg-secondary-container text-on-secondary-container';
+	}
+
+	const chipClasses =
+		'flex items-center gap-1.5 rounded-full bg-surface-container-high px-4 py-2 text-[13px] text-on-surface-variant';
 </script>
 
 <svelte:head>
 	<title>Audit Log — TeamOrg Admin</title>
 </svelte:head>
 
-<div>
-	<h1 class="font-semibold mb-6" style="font-size: 20px; color: #F0F0FF;">Audit Log</h1>
+<div class="flex flex-col gap-5">
+	<div class="flex items-baseline justify-between">
+		<h1 class="font-display text-[30px] font-extrabold text-on-surface">Audit log</h1>
+		<p class="text-[12px] text-on-surface-variant">Immutable · retained 2 years</p>
+	</div>
 
-	<!-- Filter bar -->
-	<div
-		style="
-			background-color: #1C1C2E;
-			border: 1px solid #2A2A40;
-			border-radius: 8px;
-			padding: 16px;
-			margin-bottom: 24px;
-		"
-	>
-		<div
-			style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;"
+	<!-- Filter chip bar -->
+	<div class="flex flex-wrap items-center gap-3">
+		<label class={chipClasses}>
+			Action:
+			<select
+				bind:value={filterAction}
+				onchange={applyFilters}
+				class="cursor-pointer border-none bg-transparent text-[13px] font-bold text-on-surface outline-none"
+			>
+				{#each ACTION_OPTIONS as opt}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+		</label>
+
+		<label class={chipClasses}>
+			Actor:
+			<input
+				type="text"
+				placeholder="All admins"
+				bind:value={filterActor}
+				onchange={applyFilters}
+				class="w-[140px] border-none bg-transparent text-[13px] font-bold text-on-surface outline-none placeholder:font-medium placeholder:text-on-surface-variant"
+			/>
+		</label>
+
+		<label class={chipClasses}>
+			From:
+			<input
+				type="date"
+				bind:value={filterStartDate}
+				onchange={applyFilters}
+				class="cursor-pointer border-none bg-transparent text-[13px] font-bold text-on-surface outline-none"
+			/>
+		</label>
+
+		<label class={chipClasses}>
+			To:
+			<input
+				type="date"
+				bind:value={filterEndDate}
+				onchange={applyFilters}
+				class="cursor-pointer border-none bg-transparent text-[13px] font-bold text-on-surface outline-none"
+			/>
+		</label>
+
+		<button
+			type="button"
+			onclick={clearFilters}
+			class="cursor-pointer rounded-full border-none bg-transparent px-4 py-2 text-[13px] font-bold text-primary hover:bg-primary-container/50"
 		>
-			<!-- Action type dropdown -->
-			<div>
-				<label
-					for="filter-action"
-					style="display: block; font-size: 12px; font-weight: 600; color: #9090B0; margin-bottom: 4px;"
-				>
-					Action Type
-				</label>
-				<select
-					id="filter-action"
-					bind:value={filterAction}
-					style="{inputStyle} width: 100%; cursor: pointer;"
-				>
-					{#each ACTION_OPTIONS as opt}
-						<option value={opt.value}>{opt.label}</option>
-					{/each}
-				</select>
-			</div>
-
-			<!-- Actor email -->
-			<div>
-				<label
-					for="filter-actor"
-					style="display: block; font-size: 12px; font-weight: 600; color: #9090B0; margin-bottom: 4px;"
-				>
-					Actor Email
-				</label>
-				<input
-					id="filter-actor"
-					type="text"
-					placeholder="Filter by actor email..."
-					bind:value={filterActor}
-					style="{inputStyle} width: 100%; box-sizing: border-box;"
-					onfocus={(e) =>
-						((e.currentTarget as HTMLInputElement).style.outline = '2px solid #4F8EF7')}
-					onblur={(e) => ((e.currentTarget as HTMLInputElement).style.outline = 'none')}
-				/>
-			</div>
-
-			<!-- Start date -->
-			<div>
-				<label
-					for="filter-start"
-					style="display: block; font-size: 12px; font-weight: 600; color: #9090B0; margin-bottom: 4px;"
-				>
-					Start Date
-				</label>
-				<input
-					id="filter-start"
-					type="date"
-					bind:value={filterStartDate}
-					style="{inputStyle} width: 100%; box-sizing: border-box;"
-					onfocus={(e) =>
-						((e.currentTarget as HTMLInputElement).style.outline = '2px solid #4F8EF7')}
-					onblur={(e) => ((e.currentTarget as HTMLInputElement).style.outline = 'none')}
-				/>
-			</div>
-
-			<!-- End date -->
-			<div>
-				<label
-					for="filter-end"
-					style="display: block; font-size: 12px; font-weight: 600; color: #9090B0; margin-bottom: 4px;"
-				>
-					End Date
-				</label>
-				<input
-					id="filter-end"
-					type="date"
-					bind:value={filterEndDate}
-					style="{inputStyle} width: 100%; box-sizing: border-box;"
-					onfocus={(e) =>
-						((e.currentTarget as HTMLInputElement).style.outline = '2px solid #4F8EF7')}
-					onblur={(e) => ((e.currentTarget as HTMLInputElement).style.outline = 'none')}
-				/>
-			</div>
-		</div>
-
-		<!-- Filter actions -->
-		<div style="display: flex; gap: 8px;">
-			<button
-				type="button"
-				onclick={applyFilters}
-				style="
-					background-color: #4F8EF7;
-					color: #FFFFFF;
-					font-size: 14px;
-					font-weight: 600;
-					height: 40px;
-					padding: 0 16px;
-					border-radius: 6px;
-					border: none;
-					cursor: pointer;
-				"
-			>
-				Apply Filters
-			</button>
-			<button
-				type="button"
-				onclick={clearFilters}
-				style="
-					background: transparent;
-					color: #F0F0FF;
-					font-size: 14px;
-					height: 40px;
-					padding: 0 16px;
-					border-radius: 6px;
-					border: 1px solid #2A2A40;
-					cursor: pointer;
-				"
-			>
-				Clear Filters
-			</button>
-		</div>
+			Clear filters
+		</button>
 	</div>
 
 	<!-- Data table -->
 	{#if data.log.entries.length === 0}
-		<div
-			style="
-				background-color: #1C1C2E;
-				border: 1px solid #2A2A40;
-				border-radius: 8px;
-				padding: 48px 24px;
-				text-align: center;
-			"
-		>
-			<p style="font-size: 14px; color: #9090B0;">
+		<div class="rounded-3xl bg-surface-container-low px-6 py-12 text-center">
+			<p class="text-[14px] text-on-surface-variant">
 				No audit events match your filters. Adjust the date range or action type.
 			</p>
 		</div>
 	{:else}
-		<div style="border: 1px solid #2A2A40; border-radius: 8px; overflow: hidden;">
-			<table style="width: 100%; border-collapse: collapse;">
-				<thead style="background-color: #13131F;">
+		<div class="overflow-hidden rounded-3xl bg-surface-container-low py-1">
+			<table class="w-full border-collapse">
+				<thead>
 					<tr>
-						<th
-							scope="col"
-							style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-						>
-							Timestamp
-						</th>
-						<th
-							scope="col"
-							style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-						>
-							Actor
-						</th>
-						<th
-							scope="col"
-							style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-						>
-							Action
-						</th>
-						<th
-							scope="col"
-							style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-						>
-							Target
-						</th>
-						<th
-							scope="col"
-							style="padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #9090B0;"
-						>
-							Details
-						</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Timestamp</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Actor</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Action</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Target</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Details</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each data.log.entries as entry}
-						<tr
-							style="
-								background-color: #1C1C2E;
-								border-top: 1px solid #2A2A40;
-							"
-							onmouseenter={(e) =>
-								((e.currentTarget as HTMLElement).style.backgroundColor =
-									'rgba(255,255,255,0.03)')}
-							onmouseleave={(e) =>
-								((e.currentTarget as HTMLElement).style.backgroundColor = '#1C1C2E')}
-						>
-							<td style="padding: 12px 16px; font-size: 14px; color: #9090B0; white-space: nowrap;">
+						<tr class="border-t border-outline-variant bg-white hover:bg-surface">
+							<td class="whitespace-nowrap px-6 py-[13px] text-[14px] text-on-surface-variant">
 								{formatTimestamp(entry.timestamp)}
 							</td>
-							<td style="padding: 12px 16px; font-size: 14px; color: #F0F0FF;">
-								<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+							<td class="px-6 py-[13px] text-[14px] text-on-surface-variant">
+								<div class="flex flex-wrap items-center gap-2">
 									{entry.actorEmail}
 									{#if entry.impersonationContext}
-										<span
-											style="
-												font-size: 12px;
-												font-weight: 600;
-												padding: 2px 8px;
-												border-radius: 4px;
-												color: #F97316;
-												background: rgba(249,115,22,0.12);
-											"
-										>
+										<span class="rounded-full bg-tertiary-container px-3 py-1 text-[11px] font-bold text-on-tertiary-container">
 											Impersonated
 										</span>
 									{/if}
 								</div>
 							</td>
-							<td style="padding: 12px 16px; font-size: 14px; color: #F0F0FF;">
-								<span
-									style="
-										font-size: 12px;
-										font-weight: 600;
-										padding: 2px 8px;
-										border-radius: 4px;
-										color: #9090B0;
-										background: rgba(144,144,176,0.12);
-									"
-								>
+							<td class="px-6 py-[13px]">
+								<span class="rounded-full px-3 py-1 text-[11px] font-bold {actionChipClasses(entry.action)}">
 									{entry.action}
 								</span>
 							</td>
-							<td style="padding: 12px 16px; font-size: 14px; color: #9090B0;">
+							<td class="px-6 py-[13px] text-[14px] font-medium text-on-surface">
 								{formatTarget(entry.targetType, entry.targetId)}
 							</td>
-							<td
-								style="padding: 12px 16px; font-size: 14px; color: #9090B0; max-width: 300px; word-break: break-all;"
-							>
+							<td class="max-w-[300px] break-all px-6 py-[13px] text-[14px] text-on-surface-variant">
 								{formatDetails(entry.details)}
 							</td>
 						</tr>
@@ -355,46 +229,40 @@
 		</div>
 
 		<!-- Pagination -->
-		{#if totalPages > 1}
-			<div
-				style="display: flex; align-items: center; gap: 12px; margin-top: 16px; justify-content: flex-end;"
-			>
+		<div class="flex items-center gap-2">
+			<p class="text-[13px] text-on-surface-variant">
+				{data.log.totalCount} entries · {data.log.pageSize} per page
+			</p>
+			<div class="flex-1"></div>
+			{#if totalPages > 1}
 				<button
 					type="button"
 					onclick={() => goToPage(data.page - 1)}
 					disabled={data.page <= 1}
-					style="
-						background: transparent;
-						border: 1px solid #2A2A40;
-						color: {data.page <= 1 ? '#9090B0' : '#F0F0FF'};
-						font-size: 14px;
-						padding: 8px 16px;
-						border-radius: 6px;
-						cursor: {data.page <= 1 ? 'not-allowed' : 'pointer'};
-					"
-				>
-					Previous
-				</button>
-				<span style="font-size: 14px; color: #9090B0;">
-					Page {data.page} of {totalPages}
-				</span>
+					class="flex size-9 items-center justify-center rounded-full border-none bg-transparent text-[13px] font-medium {data.page <= 1
+						? 'cursor-not-allowed text-outline-variant'
+						: 'cursor-pointer text-on-surface-variant hover:bg-surface-container-high'}"
+					aria-label="Previous page"
+				>‹</button>
+				{#each pageNumbers as p}
+					<button
+						type="button"
+						onclick={() => goToPage(p)}
+						class="flex size-9 cursor-pointer items-center justify-center rounded-full border-none text-[13px] font-medium {data.page === p
+							? 'bg-primary text-on-primary'
+							: 'bg-transparent text-on-surface-variant hover:bg-surface-container-high'}"
+					>{p}</button>
+				{/each}
 				<button
 					type="button"
 					onclick={() => goToPage(data.page + 1)}
 					disabled={data.page >= totalPages}
-					style="
-						background: transparent;
-						border: 1px solid #2A2A40;
-						color: {data.page >= totalPages ? '#9090B0' : '#F0F0FF'};
-						font-size: 14px;
-						padding: 8px 16px;
-						border-radius: 6px;
-						cursor: {data.page >= totalPages ? 'not-allowed' : 'pointer'};
-					"
-				>
-					Next
-				</button>
-			</div>
-		{/if}
+					class="flex size-9 items-center justify-center rounded-full border-none bg-transparent text-[13px] font-medium {data.page >= totalPages
+						? 'cursor-not-allowed text-outline-variant'
+						: 'cursor-pointer text-on-surface-variant hover:bg-surface-container-high'}"
+					aria-label="Next page"
+				>›</button>
+			{/if}
+		</div>
 	{/if}
 </div>

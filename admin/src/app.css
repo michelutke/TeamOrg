@@ -1,9 +1,10 @@
 @import 'tailwindcss';
+@config '../tailwind.config.ts';
 
 body {
-	background-color: #090912;
-	color: #F0F0FF;
-	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+	background-color: #ffffff;
+	color: #1d1b20;
+	font-family: 'Roboto Flex', Roboto, ui-sans-serif, system-ui, sans-serif;
 }
 
 * {

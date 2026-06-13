@@ -1,8 +1,10 @@
 package ch.teamorg.ui.team
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -10,8 +12,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.SubGroup
+import ch.teamorg.ui.theme.PillShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,16 +31,21 @@ fun SubGroupSheet(
     var showAddField by remember { mutableStateOf(false) }
     var newGroupName by remember { mutableStateOf("") }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 40.dp)
         ) {
             Text(
-                "Sub-groups",
+                "Subgroups",
                 style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -50,7 +60,7 @@ fun SubGroupSheet(
 
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(subGroups, key = { it.id }) { subGroup ->
                     SubGroupRow(
@@ -69,6 +79,7 @@ fun SubGroupSheet(
                     placeholder = { Text("Sub-group name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
                     trailingIcon = {
                         Row {
                             TextButton(
@@ -87,14 +98,21 @@ fun SubGroupSheet(
             }
 
             if (isCoachOrManager && !showAddField) {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
                     onClick = { showAddField = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(57.dp),
+                    shape = PillShape
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Sub-group")
+                    Text(
+                        "New subgroup",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -109,27 +127,37 @@ private fun SubGroupRow(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(subGroup.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "${subGroup.memberCount} member${if (subGroup.memberCount == 1) "" else "s"}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                subGroup.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                "${subGroup.memberCount} member${if (subGroup.memberCount == 1) "" else "s"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (isCoachOrManager) {
+            IconButton(onClick = { showDeleteDialog = true }) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete sub-group",
+                    tint = MaterialTheme.colorScheme.error
                 )
-            }
-            if (isCoachOrManager) {
-                IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete sub-group",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
             }
         }
     }
@@ -137,7 +165,8 @@ private fun SubGroupRow(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Sub-group") },
+            shape = RoundedCornerShape(28.dp),
+            title = { Text("Delete Sub-group", fontWeight = FontWeight.Bold) },
             text = { Text("Delete \"${subGroup.name}\"? This cannot be undone.") },
             confirmButton = {
                 TextButton(

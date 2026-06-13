@@ -1,11 +1,13 @@
 package ch.teamorg.ui.inbox
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -16,78 +18,109 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.Notification
 
-private val CardBg = Color(0xFF1C1C2E)
-private val PrimaryBlue = Color(0xFF4F8EF7)
-private val MutedForeground = Color(0xFF9090B0)
+private val RowShape = RoundedCornerShape(22.dp)
 
 @Composable
 fun NotificationRow(
     notification: Notification,
     onClick: () -> Unit
 ) {
-    val iconTint = if (!notification.isRead) PrimaryBlue else MutedForeground
     val typeIcon = notificationIcon(notification.type)
+    val (iconContainer, iconTint) = notificationIconColors(notification.type)
+
+    val containerModifier = if (!notification.isRead) {
+        Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow, RowShape)
+    } else {
+        Modifier
+            .background(MaterialTheme.colorScheme.surface, RowShape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RowShape)
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardBg)
+            .clip(RowShape)
+            .then(containerModifier)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Icon(
-            imageVector = typeIcon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(20.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(iconContainer, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = typeIcon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(19.dp)
+            )
+        }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = notification.title,
-                style = MaterialTheme.typography.labelSmall,
-                color = MutedForeground
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (!notification.isRead) FontWeight.Bold else FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
             )
             if (notification.body.isNotBlank()) {
                 Text(
                     text = notification.body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFF0F0FF),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2
                 )
             }
+        }
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             Text(
                 text = formatRelativeTime(notification.createdAt),
                 style = MaterialTheme.typography.labelSmall,
-                color = MutedForeground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        if (!notification.isRead) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(PrimaryBlue)
-            )
-        } else {
-            Spacer(modifier = Modifier.size(8.dp))
+            if (!notification.isRead) {
+                Box(
+                    modifier = Modifier
+                        .size(9.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
         }
     }
 }
 
 private fun notificationIcon(type: String): ImageVector = when (type) {
     "event_new" -> Icons.Outlined.Event
-    "event_edit" -> Icons.Outlined.EditNote
-    "event_cancel" -> Icons.Outlined.EventBusy
+    "event_edit" -> Icons.Outlined.Edit
+    "event_cancel" -> Icons.Outlined.Block
     "reminder" -> Icons.Outlined.Alarm
-    "response" -> Icons.Outlined.HowToVote
+    "response" -> Icons.AutoMirrored.Outlined.Reply
     "absence" -> Icons.Outlined.EventBusy
     else -> Icons.Outlined.Notifications
+}
+
+@Composable
+private fun notificationIconColors(type: String): Pair<Color, Color> {
+    val scheme = MaterialTheme.colorScheme
+    return when (type) {
+        "event_new" -> scheme.primaryContainer to scheme.onPrimaryContainer
+        "event_edit", "response" -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        "reminder" -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+        "event_cancel", "absence" -> scheme.errorContainer to scheme.onErrorContainer
+        else -> scheme.surfaceContainerHigh to scheme.onSurfaceVariant
+    }
 }
 
 fun formatRelativeTime(isoTimestamp: String): String {

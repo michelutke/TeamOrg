@@ -68,6 +68,8 @@ class NotificationRepositoryImpl(
             Result.failure(Exception("Offline — cannot mark notification as read"))
         } catch (e: IOException) {
             Result.failure(Exception("Offline — cannot mark notification as read"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Could not mark notification as read"))
         }
     }
 
@@ -82,6 +84,8 @@ class NotificationRepositoryImpl(
             Result.failure(Exception("Offline — cannot mark all read"))
         } catch (e: IOException) {
             Result.failure(Exception("Offline — cannot mark all read"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Could not mark all read"))
         }
     }
 
@@ -104,6 +108,8 @@ class NotificationRepositoryImpl(
             Result.failure(Exception("Offline — cannot load notification settings"))
         } catch (e: IOException) {
             Result.failure(Exception("Offline — cannot load notification settings"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Could not load notification settings"))
         }
     }
 
@@ -123,6 +129,8 @@ class NotificationRepositoryImpl(
             Result.failure(Exception("Offline — cannot update notification settings"))
         } catch (e: IOException) {
             Result.failure(Exception("Offline — cannot update notification settings"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Could not update notification settings"))
         }
     }
 
@@ -135,6 +143,8 @@ class NotificationRepositoryImpl(
             Result.failure(Exception("Offline — cannot load reminder override"))
         } catch (e: IOException) {
             Result.failure(Exception("Offline — cannot load reminder override"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Could not load reminder override"))
         }
     }
 
@@ -151,6 +161,8 @@ class NotificationRepositoryImpl(
             Result.failure(Exception("Offline — cannot set reminder override"))
         } catch (e: IOException) {
             Result.failure(Exception("Offline — cannot set reminder override"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Could not set reminder override"))
         }
     }
 }

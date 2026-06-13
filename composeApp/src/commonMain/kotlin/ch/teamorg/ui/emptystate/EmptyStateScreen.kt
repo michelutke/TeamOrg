@@ -2,19 +2,22 @@ package ch.teamorg.ui.emptystate
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.GroupAdd
-import androidx.compose.material.icons.filled.Sports
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
-import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.TeamorgTextField
+import ch.teamorg.ui.testTagsAsResourceId
+import ch.teamorg.ui.theme.PillShape
 
 @Composable
 fun EmptyStateScreen(
@@ -36,101 +39,115 @@ fun EmptyStateScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF090912))
-            .padding(24.dp)
+            .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
             .testTagsAsResourceId()
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(top = 48.dp, bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(32.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // 1. Welcome Section
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // Illustration stand-in
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = CircleShape,
+                modifier = Modifier.size(120.dp)
             ) {
-                Text(
-                    text = "Welcome to Teamorg",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White
-                )
-                Text(
-                    text = "You're not part of a team yet.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Gray
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Groups,
+                        contentDescription = null,
+                        modifier = Modifier.size(56.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
 
-            // 2. Join a team Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A24))
+            Text(
+                text = "Welcome to Teamorg",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "You're not part of a team yet.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Create a club — primary CTA
+            Button(
+                onClick = { viewModel.onCreateClubClick() },
+                modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_setup_club"),
+                shape = PillShape
+            ) {
+                Text("Set up your club", style = MaterialTheme.typography.titleMedium)
+            }
+
+            // Join a team — invite redemption card
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.GroupAdd, contentDescription = null, tint = Color(0xFF4F8EF7))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Join a team", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                    }
-                    Text("Got an invite link from your coach?", color = Color.Gray)
-                    OutlinedTextField(
+                    Text(
+                        "Join a team",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Got an invite link from your coach?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TeamorgTextField(
                         value = state.inviteLink,
                         onValueChange = { viewModel.onInviteLinkChange(it) },
-                        label = { Text("Paste invite link") },
-                        modifier = Modifier.fillMaxWidth().testTag("tf_invite_link"),
-                        singleLine = true
+                        label = "Paste invite link",
+                        modifier = Modifier.fillMaxWidth().testTag("tf_invite_link")
                     )
-                    Button(
+                    FilledTonalButton(
                         onClick = { viewModel.onJoinTeamClick() },
-                        modifier = Modifier.fillMaxWidth().testTag("btn_join_team"),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F8EF7))
+                        modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_join_team"),
+                        shape = PillShape
                     ) {
-                        Text("Join Team")
+                        Text("Join Team", style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
 
-            // 3. Create a club Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A24))
+            // Share your profile
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Sports, contentDescription = null, tint = Color(0xFFF97316))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Create a club", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                    }
-                    Text("Starting a new club for your organization?", color = Color.Gray)
-                    Button(
-                        onClick = { viewModel.onCreateClubClick() },
-                        modifier = Modifier.fillMaxWidth().testTag("btn_setup_club"),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF97316))
-                    ) {
-                        Text("Set up your club")
-                    }
-                }
-            }
-
-            // 4. Share your profile Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A24))
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("Let a coach add you", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                    Text("Share your profile link so a coach can find you:", color = Color.Gray)
+                    Text(
+                        "Let a coach add you",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Share your profile link so a coach can find you:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -139,14 +156,18 @@ fun EmptyStateScreen(
                             text = state.profileLink,
                             modifier = Modifier.weight(1f).padding(8.dp),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.LightGray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1
                         )
                         IconButton(
                             onClick = { viewModel.onProfileLinkCopied() },
                             modifier = Modifier.testTag("btn_copy_profile_link")
                         ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color(0xFF4F8EF7))
+                            Icon(
+                                Icons.Default.ContentCopy,
+                                contentDescription = "Copy",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
@@ -157,6 +178,7 @@ fun EmptyStateScreen(
         state.error?.let { error ->
             Snackbar(
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+                shape = MaterialTheme.shapes.medium,
                 containerColor = MaterialTheme.colorScheme.error,
                 action = { TextButton(onClick = { viewModel.dismissMessages() }) { Text("Dismiss") } }
             ) { Text(error) }
@@ -165,6 +187,7 @@ fun EmptyStateScreen(
         state.infoMessage?.let { info ->
             Snackbar(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+                shape = MaterialTheme.shapes.medium,
                 action = { TextButton(onClick = { viewModel.dismissMessages() }) { Text("OK") } }
             ) { Text(info) }
         }

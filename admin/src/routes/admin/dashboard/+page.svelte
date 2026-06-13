@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Building2, Users, Calendar, UserPlus } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -10,24 +9,24 @@
 
 	const statCards = $derived([
 		{
-			label: 'Total Clubs',
+			label: 'Total clubs',
 			value: data.stats.totalClubs,
-			icon: Building2
+			classes: 'bg-primary-container text-on-primary-container'
 		},
 		{
-			label: 'Total Users',
+			label: 'Total users',
 			value: data.stats.totalUsers,
-			icon: Users
+			classes: 'bg-secondary-container text-on-secondary-container'
 		},
 		{
-			label: 'Active Events Today',
+			label: 'Active events today',
 			value: data.stats.activeEventsToday,
-			icon: Calendar
+			classes: 'bg-tertiary-container text-on-tertiary-container'
 		},
 		{
-			label: 'Recent Sign-ups',
+			label: 'Recent sign-ups',
 			value: data.stats.recentSignups.length,
-			icon: UserPlus
+			classes: 'bg-surface-container-high text-on-surface'
 		}
 	]);
 
@@ -44,90 +43,48 @@
 	<title>Dashboard — TeamOrg Admin</title>
 </svelte:head>
 
-<h1 class="font-semibold mb-6" style="font-size: 20px; color: #F0F0FF;">Dashboard</h1>
+<div class="flex flex-col gap-6">
+	<h1 class="font-display text-[30px] font-extrabold text-on-surface">Dashboard</h1>
 
-<!-- Stat widgets grid -->
-<div
-	class="grid gap-6 mb-8"
-	style="grid-template-columns: repeat(4, 1fr);"
->
-	{#each statCards as card}
-		<div
-			class="flex flex-col gap-3"
-			style="background-color: #1C1C2E; padding: 24px; border-radius: 8px; border: 1px solid #2A2A40;"
-		>
-			<card.icon size={20} color="#4F8EF7" />
-			<div>
-				<p class="font-semibold" style="font-size: 28px; color: #F0F0FF; line-height: 1.15;">
-					{card.value}
-				</p>
-				<p class="font-semibold" style="font-size: 12px; color: #9090B0; margin-top: 4px;">
-					{card.label}
-				</p>
+	<!-- Stat widgets grid -->
+	<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+		{#each statCards as card}
+			<div class="flex flex-col gap-1 rounded-[28px] p-6 {card.classes}">
+				<p class="font-display text-[36px] font-extrabold leading-tight">{card.value}</p>
+				<p class="text-[13px] font-medium">{card.label}</p>
 			</div>
-		</div>
-	{/each}
-</div>
-
-<!-- Recent Sign-ups table -->
-<div style="background-color: #1C1C2E; border-radius: 8px; border: 1px solid #2A2A40; overflow: hidden;">
-	<div class="px-6 py-4" style="border-bottom: 1px solid #2A2A40;">
-		<h2 class="font-semibold" style="font-size: 16px; color: #F0F0FF;">Recent Sign-ups</h2>
+		{/each}
 	</div>
 
-	{#if data.stats.recentSignups && data.stats.recentSignups.length > 0}
-		<table class="w-full" style="border-collapse: collapse;">
-			<thead>
-				<tr style="background-color: #13131F;">
-					<th
-						scope="col"
-						class="text-left font-semibold"
-						style="font-size: 12px; color: #9090B0; padding: 10px 16px;"
-					>Name</th>
-					<th
-						scope="col"
-						class="text-left font-semibold"
-						style="font-size: 12px; color: #9090B0; padding: 10px 16px;"
-					>Email</th>
-					<th
-						scope="col"
-						class="text-left font-semibold"
-						style="font-size: 12px; color: #9090B0; padding: 10px 16px;"
-					>Joined</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.stats.recentSignups as user, i}
-					<tr
-						style="
-							background-color: #1C1C2E;
-							border-top: 1px solid #2A2A40;
-						"
-					>
-						<td style="font-size: 14px; color: #F0F0FF; padding: 12px 16px;">{user.displayName}</td>
-						<td style="font-size: 14px; color: #9090B0; padding: 12px 16px;">{user.email}</td>
-						<td style="font-size: 14px; color: #9090B0; padding: 12px 16px;">{formatDate(user.createdAt)}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	{:else}
-		<div class="px-6 py-8 text-center">
-			<p style="font-size: 14px; color: #9090B0;">No recent sign-ups.</p>
+	<!-- Recent Sign-ups table -->
+	<div class="overflow-hidden rounded-3xl bg-surface-container-low py-2">
+		<div class="px-6 pb-1.5 pt-2.5">
+			<h2 class="text-[13px] font-bold text-on-surface">Recent sign-ups</h2>
 		</div>
-	{/if}
+
+		{#if data.stats.recentSignups && data.stats.recentSignups.length > 0}
+			<table class="w-full border-collapse">
+				<thead>
+					<tr>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Name</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Email</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Joined</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.stats.recentSignups as user}
+						<tr class="border-t border-outline-variant bg-white">
+							<td class="px-6 py-3.5 text-[14px] font-medium text-on-surface">{user.displayName}</td>
+							<td class="px-6 py-3.5 text-[14px] text-on-surface-variant">{user.email}</td>
+							<td class="px-6 py-3.5 text-[14px] text-on-surface-variant">{formatDate(user.createdAt)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{:else}
+			<div class="border-t border-outline-variant bg-white px-6 py-8 text-center">
+				<p class="text-[14px] text-on-surface-variant">No recent sign-ups.</p>
+			</div>
+		{/if}
+	</div>
 </div>
-
-<style>
-	@media (max-width: 1023px) {
-		div[style*="repeat(4, 1fr)"] {
-			grid-template-columns: repeat(2, 1fr) !important;
-		}
-	}
-
-	@media (max-width: 767px) {
-		div[style*="repeat(4, 1fr)"] {
-			grid-template-columns: 1fr !important;
-		}
-	}
-</style>

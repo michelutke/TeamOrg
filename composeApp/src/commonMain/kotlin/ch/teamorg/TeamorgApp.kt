@@ -97,7 +97,7 @@ fun TeamorgApp(
         }
 
         Box(
-            modifier = Modifier.fillMaxSize().background(Color(0xFF090912))
+            modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
         ) {
             // Content takes full screen — no layout shift from bottom bar
             AppNavigation(
@@ -113,13 +113,15 @@ fun TeamorgApp(
                 enter = slideInVertically { it },
                 exit = slideOutVertically { it }
             ) {
-                TeamorgBottomBar(
-                    currentRoute = currentScreen.route,
-                    onNavigate = { screen ->
-                        backStack.add(screen)
-                    },
-                    unreadCount = unreadCount
-                )
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TeamorgBottomBar(
+                        currentRoute = currentScreen.route,
+                        onNavigate = { screen ->
+                            backStack.add(screen)
+                        },
+                        unreadCount = unreadCount
+                    )
+                }
             }
         }
     }

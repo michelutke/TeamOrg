@@ -7,38 +7,25 @@
 	}
 
 	let { form }: Props = $props();
-
-	function onFocus(e: Event) {
-		const el = e.currentTarget as HTMLInputElement;
-		el.style.borderColor = '#4F8EF7';
-		el.style.boxShadow = '0 0 0 2px rgba(79,142,247,0.3)';
-	}
-
-	function onBlur(e: Event) {
-		const el = e.currentTarget as HTMLInputElement;
-		el.style.borderColor = '#2A2A40';
-		el.style.boxShadow = 'none';
-	}
 </script>
 
 <svelte:head>
 	<title>Admin Login — TeamOrg</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center" style="background-color: #090912;">
+<div class="flex min-h-screen items-center justify-center bg-surface-container-low">
 	<div
-		class="w-full max-w-sm"
-		style="background-color: #1C1C2E; padding: 24px; border-radius: 8px; border: 1px solid #2A2A40; max-width: 384px; width: 100%;"
+		class="flex w-full max-w-[440px] flex-col items-center gap-4 rounded-[32px] bg-white px-10 py-12 shadow-[0px_8px_32px_0px_rgba(0,0,0,0.08)]"
 	>
-		<h1 class="text-center font-semibold mb-6" style="font-size: 20px; color: #F0F0FF;">
-			TeamOrg Admin
-		</h1>
+		<div class="flex size-16 items-center justify-center rounded-3xl bg-primary-container">
+			<span class="text-[22px] font-bold text-on-primary-container">TO</span>
+		</div>
+		<h1 class="font-display text-[26px] font-extrabold text-on-surface">Teamorg Admin</h1>
+		<p class="text-[13px] text-on-surface-variant">Super admin access only</p>
 
-		<form method="POST" use:enhance>
-			<div class="mb-4">
-				<label for="email" class="block mb-1 font-semibold" style="font-size: 12px; color: #F0F0FF;">
-					Email
-				</label>
+		<form method="POST" use:enhance class="flex w-full flex-col gap-4">
+			<label class="flex w-full flex-col gap-1 rounded-2xl bg-surface-container-high px-[18px] py-[10px]">
+				<span class="text-[11px] font-medium text-primary">Email</span>
 				<input
 					id="email"
 					name="email"
@@ -46,72 +33,31 @@
 					autocomplete="email"
 					required
 					value={form?.email ?? ''}
-					onfocus={onFocus}
-					onblur={onBlur}
-					style="
-						background-color: #1C1C2E;
-						border: 1px solid #2A2A40;
-						color: #F0F0FF;
-						font-size: 14px;
-						height: 40px;
-						padding: 0 16px;
-						border-radius: 6px;
-						outline: none;
-						width: 100%;
-						box-sizing: border-box;
-					"
+					class="w-full border-none bg-transparent text-[16px] text-on-surface outline-none"
 				/>
-			</div>
+			</label>
 
-			<div class="mb-6">
-				<label for="password" class="block mb-1 font-semibold" style="font-size: 12px; color: #F0F0FF;">
-					Password
-				</label>
+			<label class="flex w-full flex-col gap-1 rounded-2xl bg-surface-container-high px-[18px] py-[10px]">
+				<span class="text-[11px] font-medium text-primary">Password</span>
 				<input
 					id="password"
 					name="password"
 					type="password"
 					autocomplete="current-password"
 					required
-					onfocus={onFocus}
-					onblur={onBlur}
-					style="
-						background-color: #1C1C2E;
-						border: 1px solid #2A2A40;
-						color: #F0F0FF;
-						font-size: 14px;
-						height: 40px;
-						padding: 0 16px;
-						border-radius: 6px;
-						outline: none;
-						width: 100%;
-						box-sizing: border-box;
-					"
+					class="w-full border-none bg-transparent text-[16px] text-on-surface outline-none"
 				/>
-			</div>
+			</label>
 
 			{#if form?.error}
-				<p class="mb-4 text-center" style="font-size: 12px; color: #EF4444;">
-					{form.error}
-				</p>
+				<p class="text-center text-[12px] font-medium text-error">{form.error}</p>
 			{/if}
 
 			<button
 				type="submit"
-				class="w-full font-semibold"
-				style="
-					background-color: #4F8EF7;
-					color: #FFFFFF;
-					font-size: 14px;
-					height: 40px;
-					border: none;
-					border-radius: 6px;
-					cursor: pointer;
-					padding: 0 16px;
-					width: 100%;
-				"
+				class="w-full cursor-pointer rounded-full border-none bg-primary py-4 text-[15px] font-bold text-on-primary hover:opacity-90"
 			>
-				Sign In
+				Sign in
 			</button>
 		</form>
 	</div>

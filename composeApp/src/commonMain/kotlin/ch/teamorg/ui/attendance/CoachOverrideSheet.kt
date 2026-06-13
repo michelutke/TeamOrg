@@ -4,9 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,23 +18,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val SheetBg = Color(0xFF13131F)
-private val CardBg = Color(0xFF1C1C2E)
-private val TextPrimary = Color(0xFFF0F0FF)
-private val TextMuted = Color(0xFF9090B0)
-private val DividerColor = Color(0xFF2A2A40)
-private val AccentBlue = Color(0xFF4F8EF7)
-
-// Status button colors
-private val PresentSelectedBg = Color(0xFF065F46)
-private val PresentSelectedText = Color(0xFF22C55E)
-private val AbsentSelectedBg = Color(0xFF450A0A)
-private val AbsentSelectedText = Color(0xFFEF4444)
-private val ExcusedSelectedBg = Color(0xFF3D3400)
-private val ExcusedSelectedText = Color(0xFFFACC15)
-private val InactiveBg = Color(0xFF1F2937)
-private val InactiveText = Color(0xFF6B7280)
+import ch.teamorg.ui.theme.PillShape
+import ch.teamorg.ui.theme.extendedColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,58 +37,78 @@ fun CoachOverrideSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SheetBg,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         dragHandle = {
             Box(
                 modifier = Modifier
                     .padding(top = 12.dp, bottom = 8.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(DividerColor)
+                    .width(40.dp)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.outlineVariant)
             )
         }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // Header
+            // Header: avatar + name
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(bottom = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(PillShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val initials = playerName
+                        .split(" ")
+                        .filter { it.isNotBlank() }
+                        .take(2)
+                        .joinToString("") { it.first().uppercase() }
+                    Text(
+                        text = initials,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Text(
                     text = playerName,
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.semantics { contentDescription = "Close" }
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = TextMuted)
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            HorizontalDivider(color = DividerColor, thickness = 1.dp)
-            Spacer(Modifier.height(16.dp))
-
             // Status label
             Text(
-                text = "STATUS",
-                color = TextMuted,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.5.sp
+                text = "Set status",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
 
@@ -116,8 +121,7 @@ fun CoachOverrideSheet(
                     label = "Present",
                     description = "Mark as Present",
                     selected = selectedStatus == "present",
-                    selectedBg = PresentSelectedBg,
-                    selectedText = PresentSelectedText,
+                    accentColor = MaterialTheme.extendedColors.going,
                     modifier = Modifier.weight(1f),
                     onClick = { selectedStatus = "present" }
                 )
@@ -125,8 +129,7 @@ fun CoachOverrideSheet(
                     label = "Absent",
                     description = "Mark as Absent",
                     selected = selectedStatus == "absent",
-                    selectedBg = AbsentSelectedBg,
-                    selectedText = AbsentSelectedText,
+                    accentColor = MaterialTheme.extendedColors.declined,
                     modifier = Modifier.weight(1f),
                     onClick = { selectedStatus = "absent" }
                 )
@@ -134,8 +137,7 @@ fun CoachOverrideSheet(
                     label = "Excused",
                     description = "Mark as Excused",
                     selected = selectedStatus == "excused",
-                    selectedBg = ExcusedSelectedBg,
-                    selectedText = ExcusedSelectedText,
+                    accentColor = MaterialTheme.extendedColors.unsure,
                     modifier = Modifier.weight(1f),
                     onClick = { selectedStatus = "excused" }
                 )
@@ -143,36 +145,21 @@ fun CoachOverrideSheet(
 
             Spacer(Modifier.height(16.dp))
 
-            // Note label
-            Text(
-                text = "NOTE (OPTIONAL)",
-                color = TextMuted,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.5.sp
-            )
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
+            TextField(
                 value = note,
                 onValueChange = { note = it },
-                placeholder = {
-                    Text(
-                        text = "Add a note...",
-                        color = TextMuted,
-                        fontSize = 14.sp
-                    )
-                },
+                label = { Text("Note (optional)") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentBlue,
-                    unfocusedBorderColor = DividerColor,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    cursorColor = AccentBlue
-                ),
-                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, color = TextPrimary)
+                shape = RoundedCornerShape(18.dp),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary
+                )
             )
 
             Spacer(Modifier.height(16.dp))
@@ -183,18 +170,16 @@ fun CoachOverrideSheet(
                 enabled = selectedStatus != null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(12.dp),
+                    .height(57.dp),
+                shape = PillShape,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentBlue,
-                    disabledContainerColor = AccentBlue.copy(alpha = 0.4f)
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(
                     text = "Save Override",
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -206,25 +191,32 @@ private fun StatusButton(
     label: String,
     description: String,
     selected: Boolean,
-    selectedBg: Color,
-    selectedText: Color,
+    accentColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val shape = if (selected) PillShape else RoundedCornerShape(16.dp)
     Box(
         modifier = modifier
             .height(48.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) selectedBg else InactiveBg)
+            .clip(shape)
+            .background(if (selected) accentColor else MaterialTheme.colorScheme.surface)
+            .then(
+                if (!selected) Modifier.border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    shape = shape
+                ) else Modifier
+            )
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            color = if (selected) selectedText else InactiveText,
+            color = if (selected) Color.White else accentColor,
             fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Bold
         )
     }
 }
