@@ -4,6 +4,10 @@
 #
 # Postgres is NOT defined here — provision it as a managed database in Coolify
 # and pass its connection string via DATABASE_URL.
+#
+# The `coolify` network is Coolify's predefined network where standalone managed
+# databases live. Joining it lets `server` resolve the Postgres container by its
+# internal hostname (the value in the DB's "Postgres URL (internal)" field).
 
 services:
   server:
@@ -20,6 +24,9 @@ services:
       - "8080"
     volumes:
       - uploads:/app/uploads
+    networks:
+      - default
+      - coolify
     restart: unless-stopped
 
   admin:
@@ -35,7 +42,14 @@ services:
       - "3000"
     depends_on:
       - server
+    networks:
+      - default
     restart: unless-stopped
+
+networks:
+  # Provisioned by Coolify; shared with standalone managed databases.
+  coolify:
+    external: true
 
 volumes:
   uploads:
