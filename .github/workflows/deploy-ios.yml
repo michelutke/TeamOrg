@@ -32,8 +32,8 @@ jobs:
 
       - name: Create local.properties
         run: |
-          echo "API_BASE_URL=${{ vars.API_BASE_URL }}" >> local.properties
-          echo "onesignal.appId=${{ vars.ONESIGNAL_APP_ID }}" >> local.properties
+          echo "API_BASE_URL=${{ secrets.API_BASE_URL }}" >> local.properties
+          echo "onesignal.appId=${{ secrets.ONESIGNAL_APP_ID }}" >> local.properties
 
       - name: Build for iOS Simulator (no code signing)
         run: |
