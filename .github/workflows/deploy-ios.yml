@@ -1,0 +1,54 @@
+name: Build iOS
+
+# Build-only for now: no Apple Developer account yet, so the app is compiled for
+# the simulator with code signing disabled just to verify it builds. When an Apple
+# account is available, add signing + a TestFlight/Updraft upload step (see bottom).
+
+on:
+  push:
+    branches:
+      - main
+      - production
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compile iOS app (unsigned simulator build)
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Create local.properties
+        run: |
+          echo "API_BASE_URL=${{ vars.API_BASE_URL }}" >> local.properties
+          echo "onesignal.appId=${{ vars.ONESIGNAL_APP_ID }}" >> local.properties
+
+      - name: Build for iOS Simulator (no code signing)
+        run: |
+          xcodebuild build \
+            -workspace iosApp/iosApp.xcworkspace \
+            -scheme iosApp-Workspace \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+# --- TODO when Apple Developer account is ready -------------------------------
+# 1. Set TEAM_ID in iosApp/Configuration/Config.xcconfig (or via xcconfig secret).
+# 2. Add an App Store Connect API key (issuer id, key id, .p8) as secrets.
+# 3. Replace the build step with an archive + export of a signed .ipa, then either:
+#    - upload to TestFlight via `xcrun altool`/`xcrun notarytool` or fastlane pilot, or
+#    - PUT the .ipa to Updraft (same curl pattern as deploy-android.yml).
+# -----------------------------------------------------------------------------

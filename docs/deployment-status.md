@@ -50,11 +50,15 @@ Set in GitHub → Settings → Secrets and variables → Actions:
 Then either run the **"Deploy Android to Updraft"** workflow manually on branch
 `ci/release-pipelines` (Actions → Run workflow), or merge PR #16 to fire it from `main`.
 
-### 2. iOS (not started)
-- Apple-gated: needs Apple Developer team ID + App Store Connect API key.
-- App reads `API_BASE_URL` from `Info.plist` (currently defaults to `localhost:8080`) →
-  set it to `https://server.teamorg.michelutke.com`.
-- Distribute via Xcode → TestFlight, or scaffold a Fastlane + TestFlight lane (offered, not yet built).
+### 2. iOS (build-only pipeline scaffolded)
+- Workflow `.github/workflows/deploy-ios.yml` compiles the app for the iOS
+  Simulator with `CODE_SIGNING_ALLOWED=NO` — verifies it builds, no signing/distribution.
+  Runs on `macos-15`, JDK 21 (gradle build phase compiles the KMP framework).
+  Optional: its failure blocks nothing (no branch protection requires it).
+- Apple-gated for distribution: needs Apple Developer team ID + App Store Connect API key.
+  - Set `TEAM_ID` in `iosApp/Configuration/Config.xcconfig` (empty now).
+  - Then swap the build step for an archive + signed `.ipa` export → TestFlight or Updraft
+    (TODO block at bottom of the workflow file lists the steps).
 
 ### 3. Merge PR #16
 Once Android secrets are in and verified, merge to make everything live on `main`.
