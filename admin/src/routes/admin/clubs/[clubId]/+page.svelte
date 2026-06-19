@@ -119,6 +119,12 @@
 
 	<!-- Managers card -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
+		{#if data.managerNotFound}
+			<div class="mb-4 rounded-2xl bg-error-container/60 px-4 py-3 text-[13px] text-error">
+				No registered user with email <strong>{data.managerNotFound}</strong> — manager not
+				assigned. They must create an account first, then add them below.
+			</div>
+		{/if}
 		<div class="mb-4 flex items-center justify-between">
 			<h2 class="font-display text-[20px] font-bold text-on-surface">Managers</h2>
 			{#if !showAddManagerForm}
