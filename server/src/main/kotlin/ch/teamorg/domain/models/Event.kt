@@ -80,9 +80,11 @@ data class CreateEventRequest(
 @Serializable
 data class RecurringPattern(
     val patternType: String,
-    val weekdays: List<Short>?,
-    val intervalDays: Int?,
-    @Serializable(with = LocalDateSerializer::class) val seriesEndDate: LocalDate?
+    // Nullable fields need defaults: the client omits them when null (kotlinx drops
+    // nulls), so without defaults deserialization fails with MissingFieldException.
+    val weekdays: List<Short>? = null,
+    val intervalDays: Int? = null,
+    @Serializable(with = LocalDateSerializer::class) val seriesEndDate: LocalDate? = null
 )
 
 @Serializable
