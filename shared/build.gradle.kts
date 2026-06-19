@@ -70,6 +70,20 @@ kotlin {
     }
 }
 
+// Resolve API_BASE_URL from (in order): env var, gradle property, local.properties,
+// then the provided default. local.properties is gitignored, so it never leaks into builds.
+fun resolveApiBaseUrl(default: String): String {
+    System.getenv("API_BASE_URL")?.takeIf { it.isNotBlank() }?.let { return it }
+    (project.findProperty("API_BASE_URL") as String?)?.takeIf { it.isNotBlank() }?.let { return it }
+    rootProject.file("local.properties").takeIf { it.exists() }
+        ?.readLines()
+        ?.firstOrNull { it.startsWith("API_BASE_URL=") }
+        ?.substringAfter("=")
+        ?.takeIf { it.isNotBlank() }
+        ?.let { return it }
+    return default
+}
+
 android {
     namespace = "ch.teamorg.shared"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -79,16 +93,14 @@ android {
     }
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
-        buildConfigField("String", "API_BASE_URL", "\"${System.getenv("API_BASE_URL") ?: project.findProperty("API_BASE_URL") ?: "https://api.teamorg.app"}\"")
+        buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("https://api.teamorg.app")}\"")
     }
     buildTypes {
         debug {
-            val localUrl = System.getenv("API_BASE_URL") ?: project.findProperty("API_BASE_URL")
-            buildConfigField("String", "API_BASE_URL", "\"${localUrl ?: "http://10.0.2.2:8080"}\"")
+            buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("http://10.0.2.2:8080")}\"")
         }
         release {
-            val prodUrl = System.getenv("API_BASE_URL") ?: project.findProperty("API_BASE_URL")
-            buildConfigField("String", "API_BASE_URL", "\"${prodUrl ?: "https://api.teamorg.app"}\"")
+            buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("https://api.teamorg.app")}\"")
         }
     }
     buildFeatures {
