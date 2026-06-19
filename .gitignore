@@ -25,3 +25,6 @@ server/uploads/
 # Release keystore
 composeApp/release.jks
 google-services.json
+
+# Local deployment secrets handoff (never commit)
+docs/deploy-secrets.local.md

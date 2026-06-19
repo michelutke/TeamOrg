@@ -25,7 +25,27 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Create local.properties
-        run: echo "API_BASE_URL=${{ vars.API_BASE_URL }}" >> local.properties
+        run: |
+          echo "API_BASE_URL=${{ secrets.API_BASE_URL }}" >> local.properties
+          echo "onesignal.appId=${{ secrets.ONESIGNAL_APP_ID }}" >> local.properties
+
+      - name: Create google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "Using google-services.json from secret."
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > composeApp/google-services.json
+          else
+            echo "No GOOGLE_SERVICES_JSON_BASE64 secret set — writing placeholder (push notifications won't work)."
+            cat > composeApp/google-services.json << 'GSEOF'
+          {
+            "project_info": { "project_number": "000000000000", "project_id": "teamorg-ci", "storage_bucket": "teamorg-ci.appspot.com" },
+            "client": [{ "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "ch.teamorg" } }, "oauth_client": [], "api_key": [{ "current_key": "placeholder-key" }], "services": { "appinvite_service": { "other_platform_oauth_client": [] } } }],
+            "configuration_version": "1"
+          }
+          GSEOF
+          fi
 
       - name: Decode Keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > composeApp/release.jks
