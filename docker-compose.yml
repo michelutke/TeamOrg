@@ -27,6 +27,11 @@ services:
     networks:
       - default
       - coolify
+    # Server is on two networks (default + coolify-for-Postgres). Without this label
+    # Coolify's Traefik can't decide which IP to route to and the request hangs.
+    # Pin it to the coolify network, which Traefik is also attached to.
+    labels:
+      - traefik.docker.network=coolify
     restart: unless-stopped
 
   admin:
