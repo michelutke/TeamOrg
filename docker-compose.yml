@@ -49,6 +49,11 @@ services:
       - server
     networks:
       - default
+      - coolify
+    # Coolify attaches this service to the coolify network too, so (like server)
+    # it ends up multi-homed. Pin Traefik to the coolify network or routing hangs -> 504.
+    labels:
+      - traefik.docker.network=coolify
     restart: unless-stopped
 
 networks:
