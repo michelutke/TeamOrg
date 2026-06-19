@@ -8,7 +8,9 @@ _Last updated: 2026-06-17. Continue from "Next steps". Sensitive values are in
 ### ✅ Backend + Admin — LIVE on Coolify
 - Deployed via Coolify **native Git integration** (auto-deploy on push to the release branch). No GitHub Actions involved for Coolify.
 - Builds from `server/Dockerfile`, `admin/Dockerfile`, `docker-compose.yml`.
-- **Server:** `https://server.teamorg.michelutke.com` (Ktor, container port 8080). Root path returns 404 by design — only API routes exist.
+- **Server:** canonical domain is now `https://server.teamorg.ch` (the Android app's `API_BASE_URL` secret points here). Ktor, container port 8080. Root path returns 404 by design — only API routes exist.
+  - ⚠️ TODO in Coolify: add `https://server.teamorg.ch:8080` as a domain on the server service (currently the `.ch` HTTPS request hangs after TLS — no proxy route). Old domain `https://server.teamorg.michelutke.com` still configured.
+  - ⚠️ As of 2026-06-19 the server returns 503 "no available server" (no healthy container) — check Coolify deploy/container logs; likely `DATABASE_URL` or a failed deploy.
 - **Admin:** `https://admin.teamorg.michelutke.com` (SvelteKit adapter-node, container port 3000). Login works.
 - **Postgres:** Coolify-managed, image `postgres:18-alpine`, name `postgres`, user `admin`, initial DB `postgres`.
 - **Super-admin account created:** `teamorg@michelutke.com` (registered via `/auth/register`, then `is_super_admin` flipped in the DB).
