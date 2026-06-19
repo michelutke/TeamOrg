@@ -2,9 +2,10 @@ import { apiPost, apiPatch, apiDelete } from '$lib/server/api';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const { impersonating } = await parent();
 	if (impersonating) throw redirect(302, `/admin/clubs/${params.clubId}/teams`);
+	return { managerNotFound: url.searchParams.get('managerNotFound') };
 };
 
 export const actions: Actions = {

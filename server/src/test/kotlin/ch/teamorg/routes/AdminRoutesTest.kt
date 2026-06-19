@@ -13,12 +13,14 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AdminRoutesTest : IntegrationTestBase() {
@@ -231,6 +233,54 @@ class AdminRoutesTest : IntegrationTestBase() {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
         }.body<ClubDetail>()
         assertTrue(detailAfterRemove.managers.none { it.email == "clubmanager@test.com" })
+    }
+
+    @Test
+    fun `create club with unknown managerEmail returns managerNotFound without assigning`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val auth = registerSuperAdmin(client, "sa-mgr-missing@test.com")
+
+        val response = client.post("/admin/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubAdminRequest("Orphan Club", "volleyball", "Chur", "ghost@test.com"))
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        val body = response.body<JsonObject>()
+        assertEquals(false, body["managerAssigned"]?.jsonPrimitive?.content?.toBoolean())
+        assertEquals("ghost@test.com", body["managerNotFoundEmail"]?.jsonPrimitive?.content)
+
+        val clubId = body["id"]?.jsonPrimitive?.content
+        val detail = client.get("/admin/clubs/$clubId") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+        }.body<ClubDetail>()
+        assertTrue(detail.managers.isEmpty())
+    }
+
+    @Test
+    fun `create club with existing managerEmail assigns manager`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val auth = registerSuperAdmin(client, "sa-mgr-present@test.com")
+        client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("real-mgr@test.com", "password123", "Real Manager"))
+        }
+
+        val response = client.post("/admin/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubAdminRequest("Assigned Club", "volleyball", "Sion", "real-mgr@test.com"))
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        val body = response.body<JsonObject>()
+        assertEquals(true, body["managerAssigned"]?.jsonPrimitive?.content?.toBoolean())
+        assertNull(body["managerNotFoundEmail"]?.jsonPrimitive?.contentOrNull)
+
+        val clubId = body["id"]?.jsonPrimitive?.content
+        val detail = client.get("/admin/clubs/$clubId") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+        }.body<ClubDetail>()
+        assertTrue(detail.managers.any { it.email == "real-mgr@test.com" })
     }
 
     @Test

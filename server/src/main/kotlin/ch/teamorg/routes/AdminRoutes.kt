@@ -2,6 +2,7 @@ package ch.teamorg.routes
 
 import ch.teamorg.domain.repositories.AdminRepository
 import ch.teamorg.domain.repositories.AuditLogRepository
+import ch.teamorg.domain.repositories.ClubListItem
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.requireSuperAdmin
 import io.ktor.http.*
@@ -32,6 +33,33 @@ data class UpdateClubAdminRequest(
 
 @Serializable
 data class AddManagerRequest(val email: String)
+
+@Serializable
+data class CreateClubAdminResponse(
+    val id: String,
+    val name: String,
+    val sportType: String,
+    val location: String?,
+    val status: String,
+    val teamCount: Long,
+    val memberCount: Long,
+    val createdAt: String,
+    val managerAssigned: Boolean,
+    val managerNotFoundEmail: String? = null
+) {
+    constructor(club: ClubListItem, managerAssigned: Boolean, managerNotFoundEmail: String?) : this(
+        id = club.id,
+        name = club.name,
+        sportType = club.sportType,
+        location = club.location,
+        status = club.status,
+        teamCount = club.teamCount,
+        memberCount = club.memberCount,
+        createdAt = club.createdAt,
+        managerAssigned = managerAssigned,
+        managerNotFoundEmail = managerNotFoundEmail
+    )
+}
 
 fun Route.adminRoutes() {
     val adminRepository by inject<AdminRepository>()
@@ -94,10 +122,13 @@ fun Route.adminRoutes() {
                         details = """{"name":"${request.name}"}"""
                     )
 
+                    var managerAssigned = false
+                    var managerNotFoundEmail: String? = null
                     if (!request.managerEmail.isNullOrBlank()) {
                         val manager = userRepository.findByEmail(request.managerEmail)
                         if (manager != null) {
                             adminRepository.addClubManager(UUID.fromString(club.id), UUID.fromString(manager.id))
+                            managerAssigned = true
                             auditLogRepository.log(
                                 actorId = UUID.fromString(user.id),
                                 actorEmail = user.email,
@@ -106,10 +137,15 @@ fun Route.adminRoutes() {
                                 targetId = club.id,
                                 details = """{"managerUserId":"${manager.id}","managerEmail":"${request.managerEmail}"}"""
                             )
+                        } else {
+                            managerNotFoundEmail = request.managerEmail
                         }
                     }
 
-                    call.respond(HttpStatusCode.Created, club)
+                    call.respond(
+                        HttpStatusCode.Created,
+                        CreateClubAdminResponse(club, managerAssigned, managerNotFoundEmail)
+                    )
                 }
             }
 

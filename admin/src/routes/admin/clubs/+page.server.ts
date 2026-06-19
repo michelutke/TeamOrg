@@ -36,12 +36,14 @@ export const actions: Actions = {
 
 		if (!name) return fail(400, { error: 'Club name required' });
 
-		const club = await apiPost<{ id: string }>('/admin/clubs', locals.adminToken!, {
-			name,
-			sportType,
-			location,
-			managerEmail
-		});
-		throw redirect(302, `/admin/clubs/${club.id}`);
+		const club = await apiPost<{ id: string; managerNotFoundEmail: string | null }>(
+			'/admin/clubs',
+			locals.adminToken!,
+			{ name, sportType, location, managerEmail }
+		);
+		const dest = club.managerNotFoundEmail
+			? `/admin/clubs/${club.id}?managerNotFound=${encodeURIComponent(club.managerNotFoundEmail)}`
+			: `/admin/clubs/${club.id}`;
+		throw redirect(302, dest);
 	}
 };
