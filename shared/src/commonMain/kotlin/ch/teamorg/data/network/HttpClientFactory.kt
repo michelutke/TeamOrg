@@ -23,8 +23,10 @@ object HttpClientFactory {
                 })
             }
 
-            install(Logging) {
-                level = LogLevel.ALL
+            if (ApiConfig.enableNetworkLogging) {
+                install(Logging) {
+                    level = LogLevel.ALL
+                }
             }
 
             install(DefaultRequest) {

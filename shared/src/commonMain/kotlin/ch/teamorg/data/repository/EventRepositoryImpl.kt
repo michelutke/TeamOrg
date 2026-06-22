@@ -19,6 +19,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.utils.io.errors.IOException
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -85,33 +86,45 @@ class EventRepositoryImpl(
 
     override suspend fun createEvent(request: CreateEventRequest): Result<Event> {
         return try {
-            val event: Event = httpClient.post("/events") {
+            val response = httpClient.post("/events") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
-            Result.success(event)
+            }
+            if (response.status.isSuccess()) {
+                Result.success(response.body())
+            } else {
+                Result.failure(Exception("Couldn't create event (${response.status.value}). Please try again."))
+            }
         } catch (e: ConnectTimeoutException) {
             Result.failure(Exception("You're offline. Connect to create events."))
         } catch (e: HttpRequestTimeoutException) {
             Result.failure(Exception("You're offline. Connect to create events."))
         } catch (e: IOException) {
             Result.failure(Exception("You're offline. Connect to create events."))
+        } catch (e: Exception) {
+            Result.failure(Exception("Couldn't create event. Please try again."))
         }
     }
 
     override suspend fun editEvent(id: String, request: EditEventRequest): Result<Event> {
         return try {
-            val response: EventWithTeams = httpClient.patch("/events/$id") {
+            val response = httpClient.patch("/events/$id") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
-            Result.success(response.event)
+            }
+            if (response.status.isSuccess()) {
+                Result.success(response.body<EventWithTeams>().event)
+            } else {
+                Result.failure(Exception("Couldn't save changes (${response.status.value}). Please try again."))
+            }
         } catch (e: ConnectTimeoutException) {
             Result.failure(Exception("You're offline. Connect to save changes."))
         } catch (e: HttpRequestTimeoutException) {
             Result.failure(Exception("You're offline. Connect to save changes."))
         } catch (e: IOException) {
             Result.failure(Exception("You're offline. Connect to save changes."))
+        } catch (e: Exception) {
+            Result.failure(Exception("Couldn't save changes. Please try again."))
         }
     }
 

@@ -73,6 +73,37 @@ class EventRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `POST events recurring with omitted weekdays and intervalDays returns 201`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val auth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("event_recurring@example.com", "password123", "EventUser"))
+        }.body<AuthResponse>()
+
+        // Mirrors exactly what the app sends for a weekly series: the recurring object
+        // omits weekdays and intervalDays (kotlinx drops nulls). The server's
+        // RecurringPattern must default these or call.receive throws -> 500 -> app crash.
+        val rawBody = """
+            {
+              "title": "Weekly Training",
+              "type": "training",
+              "startAt": "2026-04-01T10:00:00Z",
+              "endAt": "2026-04-01T12:00:00Z",
+              "recurring": { "patternType": "weekly", "seriesEndDate": "2026-06-01" }
+            }
+        """.trimIndent()
+
+        val response = client.post("/events") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(rawBody)
+        }
+
+        assertEquals(HttpStatusCode.Created, response.status)
+    }
+
+    @Test
     fun `GET users me events returns list of events`() = withTeamorgTestApplication {
         val client = createJsonClient()
 
