@@ -90,5 +90,6 @@ npm run dev            # http://localhost:5173
 - **Fill in legal pages**: `landing/src/routes/impressum/+page.svelte` and
   `datenschutz/+page.svelte` contain `[bracketed]` placeholders (operator name, address,
   UID, hosting location) — replace before going public.
-- **Fonts**: Google Sans Flex + Roboto Flex load from Google Fonts CDN. For stricter
-  Swiss/EU privacy, self-host the woff2 files and drop the `fonts.googleapis.com` link.
+- **Fonts**: Google Sans Flex + Roboto Flex are **self-hosted** (`landing/static/fonts/`,
+  `@font-face` in `app.css`) — no requests to Google. To refresh, re-download the latin /
+  latin-ext woff2 from the Google Fonts css2 endpoint.

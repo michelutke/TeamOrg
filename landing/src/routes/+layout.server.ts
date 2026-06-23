@@ -6,7 +6,7 @@ import type { LayoutServerLoad } from './$types';
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 export const load: LayoutServerLoad = async ({ url, cookies }) => {
-	// Language switch via ?lang=de|en — persist in a cookie, then redirect to a
+	// Language switch via ?lang=de|en - persist in a cookie, then redirect to a
 	// clean URL so the choice sticks and the param doesn't linger.
 	const requested = url.searchParams.get('lang');
 	if (requested) {

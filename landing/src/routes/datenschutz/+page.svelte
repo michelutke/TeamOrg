@@ -19,17 +19,23 @@
 		{#if de}
 			<p>
 				Diese Datenschutzerklärung informiert über die Bearbeitung von Personendaten im Zusammenhang
-				mit der Website teamorg.ch, gemäss dem schweizerischen Datenschutzgesetz (revDSG) und –
-				soweit anwendbar – der DSGVO.
+				mit der Website teamorg.ch, gemäss dem schweizerischen Datenschutzgesetz (revDSG) und, soweit anwendbar, der DSGVO.
 			</p>
 
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">1. Verantwortliche Stelle</h2>
 				<p class="mt-2">
-					[Name / Firma], [Strasse Nr.], [PLZ Ort], Schweiz.<br />
+					Michel Utke<br />
+					Web: <a href="https://michelutke.com" rel="noopener" class="text-primary hover:underline"
+						>michelutke.com</a
+					><br />
 					Kontakt: <a href="mailto:info@teamorg.ch" class="text-primary hover:underline"
 						>info@teamorg.ch</a
 					>
+				</p>
+				<p class="mt-3 text-[14px]">
+					Die Inhalte dieser Website werden von Michel Utke verwaltet. Die Postadresse wird auf
+					Anfrage per E-Mail bekanntgegeben.
 				</p>
 			</section>
 
@@ -58,19 +64,30 @@
 						Daten (u. a. IP-Adresse, Browserinformationen) an Cloudflare übermittelt werden.
 					</li>
 					<li>
-						<strong>Hosting:</strong> Die Website wird auf einem Server in [Standort/Provider, z. B.
-						Schweiz/EU] betrieben. Dabei fallen technisch notwendige Server-Logs an.
+						<strong>Hosting (Hetzner, Deutschland):</strong> Die Website wird bei Hetzner in
+						Nürnberg (Deutschland, EU) betrieben. Dabei fallen technisch notwendige Server-Logs an.
 					</li>
 					<li>
-						<strong>Schriftarten (Google Fonts):</strong> Die Schriften werden von Servern von Google
-						geladen, wobei deine IP-Adresse übermittelt wird. [Optional: künftig selbst gehostet, um
-						diese Übermittlung zu vermeiden.]
+						<strong>Schriftarten:</strong> Schriften werden lokal von teamorg.ch ausgeliefert
+						(selbst gehostet). Es werden keine Daten an Drittanbieter wie Google Fonts übermittelt.
 					</li>
 				</ul>
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">4. Cookies</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">4. Bekanntgabe ins Ausland</h2>
+				<p class="mt-2">
+					Proton und Infomaniak verarbeiten die Daten in der <strong>Schweiz</strong>; das Hosting
+					erfolgt bei Hetzner in <strong>Deutschland (EU)</strong>. Cloudflare (Turnstile) hat seinen
+					Sitz in den <strong>USA</strong>; dabei können technische Daten in die USA übermittelt
+					werden. Diese Übermittlung stützt sich auf das Swiss-U.S. Data Privacy Framework bzw. auf
+					Standardvertragsklauseln als Garantie für ein angemessenes Datenschutzniveau
+					(Art.&nbsp;16 revDSG).
+				</p>
+			</section>
+
+			<section>
+				<h2 class="text-[17px] font-bold text-on-surface">5. Cookies</h2>
 				<p class="mt-2">
 					Wir setzen lediglich ein funktionales Cookie (<code>lang</code>), das deine
 					Sprachauswahl speichert. Es dient nicht der Analyse oder Werbung. Tracking- oder
@@ -79,7 +96,7 @@
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">5. Aufbewahrung</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">6. Aufbewahrung</h2>
 				<p class="mt-2">
 					Anfragen werden so lange aufbewahrt, wie es zur Bearbeitung sowie zur Erfüllung
 					gesetzlicher Pflichten erforderlich ist, und anschliessend gelöscht.
@@ -87,7 +104,7 @@
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">6. Deine Rechte</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">7. Deine Rechte</h2>
 				<p class="mt-2">
 					Du hast im Rahmen des anwendbaren Rechts das Recht auf Auskunft, Berichtigung, Löschung
 					und Einschränkung der Bearbeitung deiner Personendaten sowie das Recht, eine Einwilligung
@@ -99,7 +116,7 @@
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">7. Änderungen</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">8. Änderungen</h2>
 				<p class="mt-2">
 					Wir können diese Datenschutzerklärung anpassen. Massgebend ist die jeweils auf dieser
 					Seite veröffentlichte Fassung.
@@ -115,10 +132,17 @@
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">1. Controller</h2>
 				<p class="mt-2">
-					[Name / Company], [Street No.], [Postal code City], Switzerland.<br />
+					Michel Utke<br />
+					Web: <a href="https://michelutke.com" rel="noopener" class="text-primary hover:underline"
+						>michelutke.com</a
+					><br />
 					Contact: <a href="mailto:info@teamorg.ch" class="text-primary hover:underline"
 						>info@teamorg.ch</a
 					>
+				</p>
+				<p class="mt-3 text-[14px]">
+					The content of this website is managed by Michel Utke. The postal address is available on
+					request by email.
 				</p>
 			</section>
 
@@ -146,18 +170,29 @@
 						be transmitted to Cloudflare.
 					</li>
 					<li>
-						<strong>Hosting:</strong> the website runs on a server in [location/provider, e.g.
-						Switzerland/EU], producing technically necessary server logs.
+						<strong>Hosting (Hetzner, Germany):</strong> the website runs on a server at Hetzner in
+						Nuremberg (Germany, EU), producing technically necessary server logs.
 					</li>
 					<li>
-						<strong>Fonts (Google Fonts):</strong> fonts are loaded from Google servers, which
-						transmits your IP address. [Optional: to be self-hosted in future to avoid this.]
+						<strong>Fonts:</strong> fonts are served locally from teamorg.ch (self-hosted). No data is
+						transmitted to third parties such as Google Fonts.
 					</li>
 				</ul>
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">4. Cookies</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">4. Disclosure abroad</h2>
+				<p class="mt-2">
+					Proton and Infomaniak process the data in <strong>Switzerland</strong>; hosting is provided
+					by Hetzner in <strong>Germany (EU)</strong>. Cloudflare (Turnstile) is based in the
+					<strong>USA</strong>; technical data may therefore be transferred to the USA. This transfer
+					relies on the Swiss-U.S. Data Privacy Framework or on standard contractual clauses as a
+					safeguard for an adequate level of data protection (Art.&nbsp;16 revFADP).
+				</p>
+			</section>
+
+			<section>
+				<h2 class="text-[17px] font-bold text-on-surface">5. Cookies</h2>
 				<p class="mt-2">
 					We only set one functional cookie (<code>lang</code>) that stores your language choice. It
 					is not used for analytics or advertising. No tracking or analytics cookies are used.
@@ -165,7 +200,7 @@
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">5. Retention</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">6. Retention</h2>
 				<p class="mt-2">
 					Enquiries are kept for as long as needed to process them and to meet legal obligations,
 					then deleted.
@@ -173,7 +208,7 @@
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">6. Your rights</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">7. Your rights</h2>
 				<p class="mt-2">
 					Subject to applicable law, you have the right to access, rectify, delete and restrict the
 					processing of your personal data, and to withdraw consent. Contact <a
@@ -184,7 +219,7 @@
 			</section>
 
 			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">7. Changes</h2>
+				<h2 class="text-[17px] font-bold text-on-surface">8. Changes</h2>
 				<p class="mt-2">
 					We may update this privacy policy. The version published on this page applies.
 				</p>

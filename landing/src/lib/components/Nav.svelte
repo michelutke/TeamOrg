@@ -46,12 +46,16 @@
 			>
 				<a
 					href="?lang=de"
+				data-sveltekit-reload
+				data-sveltekit-preload-data="off"
 					class="rounded-full px-3 py-1.5 transition-colors {lang === 'de'
 						? 'bg-primary font-bold text-on-primary'
 						: 'text-on-surface-variant hover:text-on-surface'}">DE</a
 				>
 				<a
 					href="?lang=en"
+				data-sveltekit-reload
+				data-sveltekit-preload-data="off"
 					class="rounded-full px-3 py-1.5 transition-colors {lang === 'en'
 						? 'bg-primary font-bold text-on-primary'
 						: 'text-on-surface-variant hover:text-on-surface'}">EN</a
@@ -96,12 +100,16 @@
 				>
 					<a
 						href="?lang=de"
+				data-sveltekit-reload
+				data-sveltekit-preload-data="off"
 						class="rounded-full px-3 py-1.5 {lang === 'de'
 							? 'bg-primary font-bold text-on-primary'
 							: 'text-on-surface-variant'}">DE</a
 					>
 					<a
 						href="?lang=en"
+				data-sveltekit-reload
+				data-sveltekit-preload-data="off"
 						class="rounded-full px-3 py-1.5 {lang === 'en'
 							? 'bg-primary font-bold text-on-primary'
 							: 'text-on-surface-variant'}">EN</a
