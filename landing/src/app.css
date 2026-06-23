@@ -1,0 +1,79 @@
+@import 'tailwindcss';
+@config '../tailwind.config.ts';
+
+:root {
+	color-scheme: light;
+}
+
+body {
+	background-color: #fbfaf7;
+	color: #1f1b16;
+	font-family: 'Roboto Flex', Roboto, ui-sans-serif, system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+/* Google Sans Flex — variable display font (see google-fonts link in app.html). */
+.font-display {
+	font-family: 'Google Sans Flex', 'Roboto Flex', Roboto, ui-sans-serif, system-ui, sans-serif;
+	font-optical-sizing: auto;
+	font-style: normal;
+	font-variation-settings:
+		'slnt' 0,
+		'wdth' 100,
+		'GRAD' 0,
+		'ROND' 0;
+}
+
+/* ── Scroll-reveal micro-animation ──────────────────────────────
+   Elements tagged with `data-reveal` fade + rise into view. Toggled
+   by the IntersectionObserver in +layout.svelte (adds .is-visible). */
+[data-reveal] {
+	opacity: 0;
+	transform: translateY(24px);
+	transition:
+		opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+		transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+	transition-delay: var(--reveal-delay, 0ms);
+	will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+	opacity: 1;
+	transform: none;
+}
+
+/* Soft floating loop for the hero phone mockups. */
+@keyframes float-soft {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-10px);
+	}
+}
+.animate-float {
+	animation: float-soft 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-reveal] {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
+	.animate-float {
+		animation: none;
+	}
+	* {
+		scroll-behavior: auto !important;
+	}
+}
+
+html {
+	scroll-behavior: smooth;
+}
