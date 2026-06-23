@@ -51,6 +51,9 @@ fun Route.contactRoutes() {
             MailerBuilder
                 .withSMTPServer(smtpHost, smtpPort, smtpUser, smtpPass)
                 .withTransportStrategy(strategy)
+                // Without explicit timeouts jakarta-mail blocks forever if the SMTP
+                // host/port is unreachable, which hangs the request. Fail fast instead.
+                .withSessionTimeout(10000)
                 .buildMailer()
         } else {
             null

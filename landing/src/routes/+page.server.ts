@@ -14,7 +14,9 @@ async function verifyTurnstile(token: string, ip: string | null): Promise<boolea
 		if (ip) body.set('remoteip', ip);
 		const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
 			method: 'POST',
-			body
+			body,
+			// Never let the verify call hang the form submission.
+			signal: AbortSignal.timeout(8000)
 		});
 		const data = (await res.json()) as { success?: boolean };
 		return data.success === true;
@@ -56,7 +58,10 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 					...(env.CONTACT_SHARED_SECRET ? { 'X-Contact-Secret': env.CONTACT_SHARED_SECRET } : {})
 				},
-				body: JSON.stringify({ club, name, email, members, message })
+				body: JSON.stringify({ club, name, email, members, message }),
+				// Bound the backend call so the form can't get stuck "sending" if the
+				// server (or its SMTP send) is slow or unreachable.
+				signal: AbortSignal.timeout(15000)
 			});
 			if (!res.ok) {
 				return fail(502, { error: 'server', values });
