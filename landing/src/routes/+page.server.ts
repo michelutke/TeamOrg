@@ -36,7 +36,7 @@ export const actions: Actions = {
 
 		const values = { club, name, email, members, message };
 
-		// Bot honeypot — silently accept so the bot thinks it succeeded.
+		// Bot honeypot - silently accept so the bot thinks it succeeded.
 		if (honeypot) return { success: true };
 
 		if (!club || !name || !message || !EMAIL_RE.test(email)) {

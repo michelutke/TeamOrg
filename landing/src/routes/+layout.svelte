@@ -10,7 +10,7 @@
 
 	// The layout persists across client-side navigations, so onMount only fires once.
 	// We re-scan for [data-reveal] elements after every navigation (afterNavigate) so
-	// pages rendered after a back/forward navigation also get revealed — otherwise their
+	// pages rendered after a back/forward navigation also get revealed - otherwise their
 	// text stays stuck at opacity:0.
 	let io: IntersectionObserver | null = null;
 	let reduceMotion = false;
@@ -21,7 +21,7 @@
 			document.querySelectorAll('[data-reveal]').forEach((el) => el.classList.add('is-visible'));
 			return;
 		}
-		if (!io) return; // observer not ready yet — onMount will call this again
+		if (!io) return; // observer not ready yet - onMount will call this again
 		document
 			.querySelectorAll('[data-reveal]:not(.is-visible)')
 			.forEach((el) => io!.observe(el));

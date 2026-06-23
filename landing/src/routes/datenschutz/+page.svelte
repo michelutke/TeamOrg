@@ -19,17 +19,23 @@
 		{#if de}
 			<p>
 				Diese Datenschutzerklärung informiert über die Bearbeitung von Personendaten im Zusammenhang
-				mit der Website teamorg.ch, gemäss dem schweizerischen Datenschutzgesetz (revDSG) und –
-				soweit anwendbar – der DSGVO.
+				mit der Website teamorg.ch, gemäss dem schweizerischen Datenschutzgesetz (revDSG) und, soweit anwendbar, der DSGVO.
 			</p>
 
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">1. Verantwortliche Stelle</h2>
 				<p class="mt-2">
-					[Vorname Nachname], [Strasse Nr.], [PLZ Ort], Schweiz.<br />
+					Michel Utke<br />
+					Web: <a href="https://michelutke.com" rel="noopener" class="text-primary hover:underline"
+						>michelutke.com</a
+					><br />
 					Kontakt: <a href="mailto:info@teamorg.ch" class="text-primary hover:underline"
 						>info@teamorg.ch</a
 					>
+				</p>
+				<p class="mt-3 text-[14px]">
+					Die Inhalte dieser Website werden von Michel Utke verwaltet. Die Postadresse wird auf
+					Anfrage per E-Mail bekanntgegeben.
 				</p>
 			</section>
 
@@ -58,13 +64,12 @@
 						Daten (u. a. IP-Adresse, Browserinformationen) an Cloudflare übermittelt werden.
 					</li>
 					<li>
-						<strong>Hosting:</strong> Die Website wird auf einem Server in [Standort/Provider, z. B.
-						Schweiz/EU] betrieben. Dabei fallen technisch notwendige Server-Logs an.
+						<strong>Hosting (Hetzner, Deutschland):</strong> Die Website wird bei Hetzner in
+						Nürnberg (Deutschland, EU) betrieben. Dabei fallen technisch notwendige Server-Logs an.
 					</li>
 					<li>
-						<strong>Schriftarten (Google Fonts, Google – USA):</strong> Die Schriften werden von
-						Servern von Google geladen, wobei deine IP-Adresse übermittelt wird. [Optional: künftig
-						selbst gehostet, um diese Übermittlung zu vermeiden.]
+						<strong>Schriftarten:</strong> Schriften werden lokal von teamorg.ch ausgeliefert
+						(selbst gehostet). Es werden keine Daten an Drittanbieter wie Google Fonts übermittelt.
 					</li>
 				</ul>
 			</section>
@@ -72,10 +77,11 @@
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">4. Bekanntgabe ins Ausland</h2>
 				<p class="mt-2">
-					Proton und Infomaniak verarbeiten die Daten in der <strong>Schweiz</strong>. Cloudflare und
-					Google haben ihren Sitz in den <strong>USA</strong>; dabei können Personendaten in die USA
-					übermittelt werden. Die Übermittlung stützt sich auf das Swiss-U.S. Data Privacy Framework
-					bzw. auf Standardvertragsklauseln als Garantie für ein angemessenes Datenschutzniveau
+					Proton und Infomaniak verarbeiten die Daten in der <strong>Schweiz</strong>; das Hosting
+					erfolgt bei Hetzner in <strong>Deutschland (EU)</strong>. Cloudflare (Turnstile) hat seinen
+					Sitz in den <strong>USA</strong>; dabei können technische Daten in die USA übermittelt
+					werden. Diese Übermittlung stützt sich auf das Swiss-U.S. Data Privacy Framework bzw. auf
+					Standardvertragsklauseln als Garantie für ein angemessenes Datenschutzniveau
 					(Art.&nbsp;16 revDSG).
 				</p>
 			</section>
@@ -126,10 +132,17 @@
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">1. Controller</h2>
 				<p class="mt-2">
-					[Name / Company], [Street No.], [Postal code City], Switzerland.<br />
+					Michel Utke<br />
+					Web: <a href="https://michelutke.com" rel="noopener" class="text-primary hover:underline"
+						>michelutke.com</a
+					><br />
 					Contact: <a href="mailto:info@teamorg.ch" class="text-primary hover:underline"
 						>info@teamorg.ch</a
 					>
+				</p>
+				<p class="mt-3 text-[14px]">
+					The content of this website is managed by Michel Utke. The postal address is available on
+					request by email.
 				</p>
 			</section>
 
@@ -157,13 +170,12 @@
 						be transmitted to Cloudflare.
 					</li>
 					<li>
-						<strong>Hosting:</strong> the website runs on a server in [location/provider, e.g.
-						Switzerland/EU], producing technically necessary server logs.
+						<strong>Hosting (Hetzner, Germany):</strong> the website runs on a server at Hetzner in
+						Nuremberg (Germany, EU), producing technically necessary server logs.
 					</li>
 					<li>
-						<strong>Fonts (Google Fonts, Google – USA):</strong> fonts are loaded from Google
-						servers, which transmits your IP address. [Optional: to be self-hosted in future to
-						avoid this.]
+						<strong>Fonts:</strong> fonts are served locally from teamorg.ch (self-hosted). No data is
+						transmitted to third parties such as Google Fonts.
 					</li>
 				</ul>
 			</section>
@@ -171,11 +183,11 @@
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">4. Disclosure abroad</h2>
 				<p class="mt-2">
-					Proton and Infomaniak process the data in <strong>Switzerland</strong>. Cloudflare and
-					Google are based in the <strong>USA</strong>; personal data may therefore be transferred to
-					the USA. The transfer relies on the Swiss-U.S. Data Privacy Framework or on standard
-					contractual clauses as a safeguard for an adequate level of data protection
-					(Art.&nbsp;16 revFADP).
+					Proton and Infomaniak process the data in <strong>Switzerland</strong>; hosting is provided
+					by Hetzner in <strong>Germany (EU)</strong>. Cloudflare (Turnstile) is based in the
+					<strong>USA</strong>; technical data may therefore be transferred to the USA. This transfer
+					relies on the Swiss-U.S. Data Privacy Framework or on standard contractual clauses as a
+					safeguard for an adequate level of data protection (Art.&nbsp;16 revFADP).
 				</p>
 			</section>
 

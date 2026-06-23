@@ -19,15 +19,15 @@
 		{#if de}
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">Verantwortlich für den Inhalt</h2>
-				<p class="mt-2">
-					[Vorname Nachname]<br />
-					[Strasse Nr.]<br />
-					[PLZ Ort], Schweiz
-				</p>
+				<p class="mt-2">Michel Utke</p>
 				<p class="mt-3 text-[14px]">
-					teamorg.ch wird derzeit von einer Privatperson betrieben und ist nicht im
-					Handelsregister eingetragen (keine Eintragungspflicht, solange der Jahresumsatz unter
-					CHF&nbsp;100'000 liegt).
+					Die Inhalte dieser Website werden von Michel Utke verwaltet (<a
+						href="https://michelutke.com"
+						rel="noopener"
+						class="text-primary hover:underline">michelutke.com</a
+					>). teamorg.ch wird als Privatperson betrieben und ist nicht im Handelsregister eingetragen
+					(keine Eintragungspflicht unter CHF&nbsp;100'000 Jahresumsatz). Die Postadresse wird auf
+					Anfrage per E-Mail bekanntgegeben.
 				</p>
 			</section>
 			<section>
@@ -59,15 +59,15 @@
 		{:else}
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">Responsible for content</h2>
-				<p class="mt-2">
-					[First name Last name]<br />
-					[Street No.]<br />
-					[Postal code City], Switzerland
-				</p>
+				<p class="mt-2">Michel Utke</p>
 				<p class="mt-3 text-[14px]">
-					teamorg.ch is currently operated by a private individual and is not entered in the
-					commercial register (no registration obligation as long as annual turnover stays below
-					CHF&nbsp;100,000).
+					The content of this website is managed by Michel Utke (<a
+						href="https://michelutke.com"
+						rel="noopener"
+						class="text-primary hover:underline">michelutke.com</a
+					>). teamorg.ch is operated by a private individual and is not entered in the commercial
+					register (no registration obligation below CHF&nbsp;100,000 annual turnover). The postal
+					address is available on request by email.
 				</p>
 			</section>
 			<section>

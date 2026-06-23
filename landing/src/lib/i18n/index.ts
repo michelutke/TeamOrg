@@ -97,7 +97,7 @@ export interface Dict {
 
 const de: Dict = {
 	meta: {
-		title: 'teamorg – Trainings, Spiele & Anwesenheit für Vereine',
+		title: 'teamorg: Trainings, Spiele und Anwesenheit für Vereine',
 		description:
 			'Die mobile App für Sportvereine: Trainings und Spiele planen, Anwesenheit in Echtzeit erfassen und das ganze Team auf dem Laufenden halten. 1 CHF pro Mitglied und Jahr.'
 	},
@@ -106,7 +106,7 @@ const de: Dict = {
 		eyebrow: 'Für Schweizer Sportvereine · J+S-tauglich',
 		headlineA: 'Trainings, Spiele und Anwesenheit.',
 		headlineB: 'Alles im Griff.',
-		sub: 'teamorg ist die mobile App für Vereine: plane Trainings und Spiele, erfasse Zu- und Absagen in Echtzeit und halte dein ganzes Team auf dem Laufenden – online wie offline.',
+		sub: 'teamorg ist die mobile App für Vereine: plane Trainings und Spiele, erfasse Zu- und Absagen in Echtzeit und halte dein ganzes Team auf dem Laufenden, online wie offline.',
 		ctaPrimary: 'Demo anfragen',
 		ctaSecondary: 'Funktionen ansehen',
 		trust: ['1 CHF / Mitglied / Jahr', 'Offline-fähig', 'Keine Einrichtungskosten']
@@ -114,12 +114,12 @@ const de: Dict = {
 	features: {
 		eyebrow: 'FUNKTIONEN',
 		title: 'Alles, was dein Verein braucht.',
-		sub: 'Von der Trainingsplanung bis zur Anwesenheitsstatistik – teamorg bündelt alles in einer App, die Coaches und Spieler gerne nutzen.',
+		sub: 'Von der Trainingsplanung bis zur Anwesenheitsstatistik: teamorg bündelt alles in einer App, die Coaches und Spieler gerne nutzen.',
 		items: [
 			{
 				icon: 'calendar',
 				title: 'Termine & Wiederholungen',
-				body: 'Plane Trainings, Spiele und Events – einmalig, wöchentlich oder nach eigenem Muster.'
+				body: 'Plane Trainings, Spiele und Events: einmalig, wöchentlich oder nach eigenem Muster.'
 			},
 			{
 				icon: 'check',
@@ -129,7 +129,7 @@ const de: Dict = {
 			{
 				icon: 'calendar-x',
 				title: 'Abwesenheiten im Voraus',
-				body: 'Wiederkehrende Abwesenheiten, Ferien und Verletzungen – einmal erfassen, fertig.'
+				body: 'Wiederkehrende Abwesenheiten, Ferien und Verletzungen: einmal erfassen, fertig.'
 			},
 			{
 				icon: 'bell',
@@ -144,7 +144,7 @@ const de: Dict = {
 			{
 				icon: 'bar-chart',
 				title: 'Anwesenheitsstatistik',
-				body: 'Quote pro Spieler, Training gegen Spiel – Zahlen, die bei der Saison helfen.'
+				body: 'Quote pro Spieler, Training gegen Spiel: Zahlen, die bei der Saison helfen.'
 			}
 		]
 	},
@@ -161,7 +161,7 @@ const de: Dict = {
 			{
 				num: '02',
 				title: 'Mitglieder einladen',
-				body: 'Hol Coaches und Spieler per Einladungslink oder E-Mail an Bord – in Sekunden.'
+				body: 'Hol Coaches und Spieler in Sekunden per Einladungslink oder E-Mail an Bord.'
 			},
 			{
 				num: '03',
@@ -173,7 +173,7 @@ const de: Dict = {
 	pricing: {
 		eyebrow: 'PREISE',
 		title: 'Ein Preis. Keine Überraschungen.',
-		sub: 'Fair und planbar – du zahlst nur für aktive Mitglieder.',
+		sub: 'Fair und planbar: du zahlst nur für aktive Mitglieder.',
 		planLabel: 'PRO VEREIN',
 		price: '1 CHF',
 		per: '/ Mitglied / Jahr',
@@ -188,14 +188,14 @@ const de: Dict = {
 			'Persönlicher E-Mail-Support'
 		],
 		cta: 'Kontakt aufnehmen',
-		footnote: 'Nur für Vereine und Organisationen – keine Einzelpersonen.'
+		footnote: 'Nur für Vereine und Organisationen, keine Einzelpersonen.'
 	},
 	contact: {
 		eyebrow: 'KONTAKT',
 		title: 'Bring deinen Verein auf teamorg.',
 		sub: 'Erzähl uns kurz von deinem Verein. Wir melden uns mit allen Infos und richten den Start gemeinsam ein.',
 		infoEmail: 'info@teamorg.ch',
-		infoReply: 'Antwort innert 1–2 Werktagen',
+		infoReply: 'Antwort innert 1 bis 2 Werktagen',
 		infoFor: 'Für Vereine, Clubs & Verbände',
 		formTitle: 'Anfrage senden',
 		fields: {
@@ -216,7 +216,7 @@ const de: Dict = {
 		sending: 'Wird gesendet …',
 		direct: 'Oder direkt: info@teamorg.ch',
 		successTitle: 'Danke für deine Anfrage!',
-		successBody: 'Wir haben deine Nachricht erhalten und melden uns innert 1–2 Werktagen.',
+		successBody: 'Wir haben deine Nachricht erhalten und melden uns innert 1 bis 2 Werktagen.',
 		errorValidation: 'Bitte fülle die Pflichtfelder korrekt aus.',
 		errorCaptcha: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.',
 		errorServer: 'Senden fehlgeschlagen. Bitte versuche es später erneut oder schreib an info@teamorg.ch.'
@@ -240,7 +240,7 @@ const de: Dict = {
 
 const en: Dict = {
 	meta: {
-		title: 'teamorg – Training, matches & attendance for clubs',
+		title: 'teamorg: training, matches and attendance for clubs',
 		description:
 			'The mobile app for sports clubs: plan trainings and matches, track attendance in real time and keep your whole team in the loop. 1 CHF per member per year.'
 	},
@@ -249,7 +249,7 @@ const en: Dict = {
 		eyebrow: 'For Swiss sports clubs · J+S-ready',
 		headlineA: 'Training, matches and attendance.',
 		headlineB: 'All under control.',
-		sub: 'teamorg is the mobile app for clubs: plan trainings and matches, track confirmations and absences in real time, and keep your whole team in the loop – online and offline.',
+		sub: 'teamorg is the mobile app for clubs: plan trainings and matches, track confirmations and absences in real time, and keep your whole team in the loop, online and offline.',
 		ctaPrimary: 'Request a demo',
 		ctaSecondary: 'See features',
 		trust: ['1 CHF / member / year', 'Works offline', 'No setup fees']
@@ -257,12 +257,12 @@ const en: Dict = {
 	features: {
 		eyebrow: 'FEATURES',
 		title: 'Everything your club needs.',
-		sub: 'From scheduling to attendance stats – teamorg brings it all into one app that coaches and players actually enjoy using.',
+		sub: 'From scheduling to attendance stats, teamorg brings it all into one app that coaches and players actually enjoy using.',
 		items: [
 			{
 				icon: 'calendar',
 				title: 'Events & recurrence',
-				body: 'Schedule trainings, matches and events – one-off, weekly or on your own pattern.'
+				body: 'Schedule trainings, matches and events: one-off, weekly or on your own pattern.'
 			},
 			{
 				icon: 'check',
@@ -272,7 +272,7 @@ const en: Dict = {
 			{
 				icon: 'calendar-x',
 				title: 'Absences in advance',
-				body: 'Recurring absences, holidays and injuries – record once, done.'
+				body: 'Recurring absences, holidays and injuries: record once, done.'
 			},
 			{
 				icon: 'bell',
@@ -287,7 +287,7 @@ const en: Dict = {
 			{
 				icon: 'bar-chart',
 				title: 'Attendance stats',
-				body: 'Rate per player, training vs. match – numbers that help across the season.'
+				body: 'Rate per player, training vs. match: numbers that help across the season.'
 			}
 		]
 	},
@@ -304,7 +304,7 @@ const en: Dict = {
 			{
 				num: '02',
 				title: 'Invite members',
-				body: 'Bring coaches and players on board via invite link or email – in seconds.'
+				body: 'Bring coaches and players on board in seconds via invite link or email.'
 			},
 			{
 				num: '03',
@@ -316,7 +316,7 @@ const en: Dict = {
 	pricing: {
 		eyebrow: 'PRICING',
 		title: 'One price. No surprises.',
-		sub: 'Fair and predictable – you only pay for active members.',
+		sub: 'Fair and predictable: you only pay for active members.',
 		planLabel: 'PER CLUB',
 		price: '1 CHF',
 		per: '/ member / year',
@@ -331,14 +331,14 @@ const en: Dict = {
 			'Personal email support'
 		],
 		cta: 'Get in touch',
-		footnote: 'For clubs and organisations only – not for individuals.'
+		footnote: 'For clubs and organisations only, not for individuals.'
 	},
 	contact: {
 		eyebrow: 'CONTACT',
 		title: 'Bring your club to teamorg.',
 		sub: 'Tell us briefly about your club. We’ll get back to you with all the details and set up the start together.',
 		infoEmail: 'info@teamorg.ch',
-		infoReply: 'Reply within 1–2 business days',
+		infoReply: 'Reply within 1 to 2 business days',
 		infoFor: 'For clubs, teams & associations',
 		formTitle: 'Send a request',
 		fields: {
@@ -358,7 +358,7 @@ const en: Dict = {
 		sending: 'Sending …',
 		direct: 'Or directly: info@teamorg.ch',
 		successTitle: 'Thanks for your request!',
-		successBody: 'We’ve received your message and will get back to you within 1–2 business days.',
+		successBody: 'We’ve received your message and will get back to you within 1 to 2 business days.',
 		errorValidation: 'Please fill in the required fields correctly.',
 		errorCaptcha: 'The security check failed. Please try again.',
 		errorServer: 'Sending failed. Please try again later or email info@teamorg.ch.'
