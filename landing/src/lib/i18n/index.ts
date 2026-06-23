@@ -32,7 +32,6 @@ export interface Dict {
 		ctaPrimary: string;
 		ctaSecondary: string;
 		trust: string[];
-		badge: string;
 	};
 	features: { eyebrow: string; title: string; sub: string; items: Feature[] };
 	how: { eyebrow: string; title: string; sub: string; steps: Step[] };
@@ -110,8 +109,7 @@ const de: Dict = {
 		sub: 'teamorg ist die mobile App für Vereine: plane Trainings und Spiele, erfasse Zu- und Absagen in Echtzeit und halte dein ganzes Team auf dem Laufenden – online wie offline.',
 		ctaPrimary: 'Demo anfragen',
 		ctaSecondary: 'Funktionen ansehen',
-		trust: ['1 CHF / Mitglied / Jahr', 'Offline-fähig', 'Keine Einrichtungskosten'],
-		badge: '9 Zusagen · live'
+		trust: ['1 CHF / Mitglied / Jahr', 'Offline-fähig', 'Keine Einrichtungskosten']
 	},
 	features: {
 		eyebrow: 'FUNKTIONEN',
@@ -254,8 +252,7 @@ const en: Dict = {
 		sub: 'teamorg is the mobile app for clubs: plan trainings and matches, track confirmations and absences in real time, and keep your whole team in the loop – online and offline.',
 		ctaPrimary: 'Request a demo',
 		ctaSecondary: 'See features',
-		trust: ['1 CHF / member / year', 'Works offline', 'No setup fees'],
-		badge: '9 confirmed · live'
+		trust: ['1 CHF / member / year', 'Works offline', 'No setup fees']
 	},
 	features: {
 		eyebrow: 'FEATURES',
