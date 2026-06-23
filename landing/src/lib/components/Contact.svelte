@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Mail, Clock, Building2, CheckCircle2 } from 'lucide-svelte';
+	import { Mail, Clock, Building2, Check } from 'lucide-svelte';
+	import MorphShape from './MorphShape.svelte';
 	import type { Dict } from '$lib/i18n';
 
 	type ContactForm = {
@@ -86,8 +87,9 @@
 		>
 			{#if form?.success}
 				<div class="flex flex-col items-center py-8 text-center">
-					<span class="flex h-16 w-16 items-center justify-center rounded-full bg-accent-green">
-						<CheckCircle2 class="h-9 w-9 text-accent-green-on" strokeWidth={2} />
+					<span class="relative flex h-20 w-20 items-center justify-center">
+						<MorphShape class="absolute inset-0 h-full w-full text-accent-green" />
+						<Check class="relative h-8 w-8 text-accent-green-on" strokeWidth={2.75} />
 					</span>
 					<h3 class="font-display mt-5 text-[22px] font-extrabold text-on-surface">
 						{m.successTitle}
