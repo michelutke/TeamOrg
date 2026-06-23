@@ -20,6 +20,14 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       ONESIGNAL_APP_ID: ${ONESIGNAL_APP_ID}
       ONESIGNAL_API_KEY: ${ONESIGNAL_API_KEY}
+      # Contact form (teamorg.ch) — Proton SMTP + recipient + shared secret
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      CONTACT_FROM: ${CONTACT_FROM}
+      CONTACT_TO: ${CONTACT_TO}
+      CONTACT_SHARED_SECRET: ${CONTACT_SHARED_SECRET}
     ports:
       - "8080"
     volumes:
@@ -52,6 +60,33 @@ services:
       - coolify
     # Coolify attaches this service to the coolify network too, so (like server)
     # it ends up multi-homed. Pin Traefik to the coolify network or routing hangs -> 504.
+    labels:
+      - traefik.docker.network=coolify
+    restart: unless-stopped
+
+  # Public marketing site (teamorg.ch). SvelteKit adapter-node, container port 3000.
+  # Posts demo requests to the server's internal /contact endpoint.
+  landing:
+    build:
+      context: ./landing
+      dockerfile: Dockerfile
+    environment:
+      # ORIGIN: public site URL (https://teamorg.ch) — required by SvelteKit form actions.
+      ORIGIN: ${LANDING_ORIGIN}
+      # API_URL: backend base URL on the compose network (the form proxies to /contact).
+      API_URL: http://server:8080
+      # Must match the server's CONTACT_SHARED_SECRET.
+      CONTACT_SHARED_SECRET: ${CONTACT_SHARED_SECRET}
+      # Cloudflare Turnstile (anti-spam): site key (sent to browser) + server secret.
+      TURNSTILE_SITEKEY: ${TURNSTILE_SITEKEY}
+      TURNSTILE_SECRET: ${TURNSTILE_SECRET}
+    ports:
+      - "3000"
+    depends_on:
+      - server
+    networks:
+      - default
+      - coolify
     labels:
       - traefik.docker.network=coolify
     restart: unless-stopped
