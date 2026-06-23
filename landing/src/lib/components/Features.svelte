@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Calendar, CircleCheck, CalendarX, Bell, Users, BarChart3 } from 'lucide-svelte';
+	import Shape, { type ShapeName } from './Shape.svelte';
 	import type { Dict, Feature } from '$lib/i18n';
 
 	let { m }: { m: Dict['features'] } = $props();
@@ -13,12 +14,14 @@
 		'bar-chart': BarChart3
 	};
 
-	// Rotating pastel accents: green → yellow → red (the app's status colors).
+	// Rotating pastel accents: green / yellow / red (the app's status colors).
 	const accents = [
-		{ chip: 'bg-accent-green', on: 'text-accent-green-on' },
-		{ chip: 'bg-accent-yellow', on: 'text-accent-yellow-on' },
-		{ chip: 'bg-accent-red', on: 'text-accent-red-on' }
+		{ fill: 'text-accent-green', on: 'text-accent-green-on' },
+		{ fill: 'text-accent-yellow', on: 'text-accent-yellow-on' },
+		{ fill: 'text-accent-red', on: 'text-accent-red-on' }
 	];
+	// Varied Material 3 Expressive shapes per card.
+	const shapes: ShapeName[] = ['clover', 'flower', 'sunny', 'squircle', 'flower', 'clover'];
 </script>
 
 <section id="funktionen" class="scroll-mt-20 bg-surface-low">
@@ -55,9 +58,10 @@
 					class="group rounded-3xl border border-outline-variant bg-surface p-7 transition-all duration-200 hover:-translate-y-1 hover:border-primary hover:shadow-[0_16px_40px_-16px_rgba(40,25,90,0.18)]"
 				>
 					<span
-						class="flex h-[52px] w-[52px] items-center justify-center rounded-2xl {accent.chip} transition-transform duration-200 group-hover:scale-105"
+						class="relative flex h-[54px] w-[54px] items-center justify-center transition-transform duration-200 group-hover:scale-105"
 					>
-						<Icon class="h-[26px] w-[26px] {accent.on}" strokeWidth={2} />
+						<Shape name={shapes[i]} class="absolute inset-0 h-full w-full {accent.fill}" />
+						<Icon class="relative h-[26px] w-[26px] {accent.on}" strokeWidth={2} />
 					</span>
 					<h3 class="font-display mt-4 text-[19px] font-extrabold tracking-tight text-on-surface">
 						{item.title}

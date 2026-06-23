@@ -1,13 +1,15 @@
 <script lang="ts">
+	import Shape, { type ShapeName } from './Shape.svelte';
 	import type { Dict } from '$lib/i18n';
 
 	let { m }: { m: Dict['how'] } = $props();
 
 	const accents = [
-		{ chip: 'bg-accent-green', on: 'text-accent-green-on' },
-		{ chip: 'bg-accent-yellow', on: 'text-accent-yellow-on' },
-		{ chip: 'bg-accent-red', on: 'text-accent-red-on' }
+		{ fill: 'text-accent-green', on: 'text-accent-green-on' },
+		{ fill: 'text-accent-yellow', on: 'text-accent-yellow-on' },
+		{ fill: 'text-accent-red', on: 'text-accent-red-on' }
 	];
+	const shapes: ShapeName[] = ['clover', 'flower', 'sunny'];
 </script>
 
 <section class="bg-surface">
@@ -38,10 +40,12 @@
 			{#each m.steps as step, i (step.num)}
 				{@const accent = accents[i % 3]}
 				<div data-reveal style="--reveal-delay:{i * 90}ms" class="flex flex-col items-start">
-					<span
-						class="font-display flex h-[60px] w-[60px] items-center justify-center rounded-full {accent.chip} text-[22px] font-extrabold {accent.on}"
-						>{step.num}</span
-					>
+					<span class="relative flex h-[60px] w-[60px] items-center justify-center">
+						<Shape name={shapes[i % 3]} class="absolute inset-0 h-full w-full {accent.fill}" />
+						<span class="font-display relative text-[22px] font-extrabold {accent.on}"
+							>{step.num}</span
+						>
+					</span>
 					<h3 class="font-display mt-5 text-[22px] font-extrabold tracking-tight text-on-surface">
 						{step.title}
 					</h3>
