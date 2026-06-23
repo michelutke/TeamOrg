@@ -63,27 +63,26 @@
 		</div>
 
 		<!-- Device stage -->
-		<div class="relative flex w-full flex-1 justify-center md:justify-end">
+		<div class="relative flex w-full flex-1 items-center justify-center md:justify-end">
 			<div
-				class="pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/40 blur-[90px]"
+				class="pointer-events-none absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/40 blur-[90px]"
 			></div>
 
-			<!-- Back phone (event detail) — desktop only -->
-			<div class="relative hidden md:block">
+			<!-- Desktop: two phones side by side, horizontally overlapping -->
+			<div class="relative hidden items-center md:flex">
+				<PhoneMockup
+					src={eventsImg}
+					alt="teamorg Events"
+					width={290}
+					float
+					class="relative z-10 -mr-12"
+				/>
 				<PhoneMockup
 					src={detailImg}
 					alt="teamorg Event Detail"
-					width={232}
-					class="absolute -right-2 top-6 rotate-[6deg]"
+					width={262}
+					class="relative z-0 mt-14 rotate-[4deg]"
 				/>
-				<PhoneMockup src={eventsImg} alt="teamorg Events" width={300} float class="relative z-10" />
-				<!-- Floating live badge -->
-				<div
-					class="absolute -left-4 top-24 z-20 flex items-center gap-2 rounded-full bg-surface px-3.5 py-2.5 shadow-[0_10px_24px_-4px_rgba(40,25,90,0.22)]"
-				>
-					<span class="h-2.5 w-2.5 rounded-full bg-[#2e7d32]"></span>
-					<span class="text-[13px] font-bold text-on-surface">{m.badge}</span>
-				</div>
 			</div>
 
 			<!-- Mobile: single phone -->

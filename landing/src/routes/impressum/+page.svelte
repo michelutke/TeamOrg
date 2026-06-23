@@ -19,10 +19,15 @@
 		{#if de}
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">Verantwortlich für den Inhalt</h2>
-				<p class="mt-2">
-					[Name / Firma]<br />
-					[Strasse Nr.]<br />
-					[PLZ Ort], Schweiz
+				<p class="mt-2">Michel Utke</p>
+				<p class="mt-3 text-[14px]">
+					Die Inhalte dieser Website werden von Michel Utke verwaltet (<a
+						href="https://michelutke.com"
+						rel="noopener"
+						class="text-primary hover:underline">michelutke.com</a
+					>). teamorg.ch wird als Privatperson betrieben und ist nicht im Handelsregister eingetragen
+					(keine Eintragungspflicht unter CHF&nbsp;100'000 Jahresumsatz). Die Postadresse wird auf
+					Anfrage per E-Mail bekanntgegeben.
 				</p>
 			</section>
 			<section>
@@ -33,10 +38,6 @@
 					><br />
 					Web: teamorg.ch
 				</p>
-			</section>
-			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">Handelsregister / UID</h2>
-				<p class="mt-2">[UID-Nummer, falls im Handelsregister eingetragen, z. B. CHE-123.456.789]</p>
 			</section>
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">Haftungsausschluss</h2>
@@ -58,10 +59,15 @@
 		{:else}
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">Responsible for content</h2>
-				<p class="mt-2">
-					[Name / Company]<br />
-					[Street No.]<br />
-					[Postal code City], Switzerland
+				<p class="mt-2">Michel Utke</p>
+				<p class="mt-3 text-[14px]">
+					The content of this website is managed by Michel Utke (<a
+						href="https://michelutke.com"
+						rel="noopener"
+						class="text-primary hover:underline">michelutke.com</a
+					>). teamorg.ch is operated by a private individual and is not entered in the commercial
+					register (no registration obligation below CHF&nbsp;100,000 annual turnover). The postal
+					address is available on request by email.
 				</p>
 			</section>
 			<section>
@@ -72,10 +78,6 @@
 					><br />
 					Web: teamorg.ch
 				</p>
-			</section>
-			<section>
-				<h2 class="text-[17px] font-bold text-on-surface">Commercial register / UID</h2>
-				<p class="mt-2">[UID number, if registered, e.g. CHE-123.456.789]</p>
 			</section>
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">Disclaimer</h2>
