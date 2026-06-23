@@ -117,11 +117,14 @@
 					use:enhance={() => {
 						submitting = true;
 						return async ({ update }) => {
-							await update();
-							submitting = false;
-							if (typeof window !== 'undefined' && window.turnstile) {
+							try {
+								// On success this resets the form fields (SvelteKit default),
+								// so no entered data lingers; on error it keeps the values.
+								await update();
+							} finally {
+								submitting = false;
 								try {
-									window.turnstile.reset();
+									window.turnstile?.reset();
 								} catch {
 									/* widget not rendered */
 								}
