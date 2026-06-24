@@ -1,0 +1,292 @@
+# Web multi-role design — coaches & players on the web
+
+Status: DRAFT (design only, no code). Builds on the in-flight work that lets
+`club_manager` users log in directly to the admin web app (today the manager UI
+is reached only via super-admin *impersonation*). This doc extends that to
+`coach` and `player`, giving each their app-equivalent feature set on the web.
+
+Read alongside `docs/invite-flow-contract.md` (role model + invite scope).
+
+## 0. Current state (what exists today)
+
+- Single SvelteKit app under `admin/`. One login (`/admin/login`) that today
+  **rejects non-super-admins** (`auth.ts login()` calls `/auth/me` and fails if
+  `!isSuperAdmin`). The current task is relaxing this so `club_manager` can log
+  in directly; this doc layers `coach`/`player` on top.
+- Session = JWT in httpOnly cookie `admin_session`; `hooks.server.ts` resolves
+  it to `locals.user` via `/auth/me` and `locals.token` for downstream API calls.
+- Manager-scoped pages live under `/admin/clubs/[clubId]/teams[/[teamId]]` and
+  are currently gated by an **impersonation** flag (`parent().impersonating`),
+  not by a real club role. The generalization replaces that gate with a true
+  role check.
+- Roles come from two backend tables and one flag:
+  - `UsersTable.isSuperAdmin` (seeded)
+  - `ClubRolesTable(userId, clubId, "club_manager")`
+  - `TeamRolesTable(userId, teamId, "coach"|"player")`
+- The web can read a user's full role set from `GET /auth/me/roles`
+  (`{ clubRoles: [{clubId, role}], teamRoles: [{teamId, role}, ...] }`) — this is
+  the same endpoint the mobile app uses to compute `isCoach` / `isClubManager`.
+
+## 1. Role → capability matrix (web)
+
+Coaches/players get **only their app-equivalent features**. The web is not a new
+surface for new powers — it mirrors the Compose app per role, plus the existing
+super-admin/manager web tooling.
+
+| Capability | super_admin | club_manager | coach | player |
+|---|---|---|---|---|
+| Platform admin: clubs CRUD, users, audit log, impersonate | ✅ | ❌ | ❌ | ❌ |
+| Create club (`POST /clubs`) | ✅ | ❌ | ❌ | ❌ |
+| Manage own club(s): teams CRUD, club settings | via impersonation | ✅ (own clubs) | ❌ | ❌ |
+| View team roster | ✅ | ✅ | ✅ | ✅ (own teams) |
+| Manage roster: change role, remove member, promote to coach | ✅ | ✅ | ❌¹ | ❌ |
+| Edit member jersey / position | ✅ | ✅ | ✅ | own only² |
+| Manage sub-groups | ✅ | ✅ | ✅ | ❌ |
+| Create / edit / cancel / duplicate events | ✅ | ✅ | ✅ | ❌ |
+| View event list & detail | ✅ | ✅ | ✅ | ✅ |
+| RSVP own attendance (`PUT /events/{id}/attendance/me`) | n/a | own | own | ✅ |
+| View all members' RSVP responses | ✅ | ✅ | ✅ | ✅ (read) |
+| Override a member's attendance / check-in | ✅ | ✅ | ✅ | ❌ |
+| Check-in roster on event day (`GET/PUT /events/{id}/check-in`) | ✅ | ✅ | ✅ | ❌ |
+| View team attendance stats | ✅ | ✅ | ✅ | limited³ |
+| Manage own absences/abwesenheit rules | n/a | own | own | ✅ |
+| Manage another member's absences | ✅ | ✅ | ✅ | ❌ |
+| Inbox / notification center (in-app list, mark read) | ✅ | ✅ | ✅ | ✅ |
+| Per-team notification settings | ✅ | ✅ | ✅ | ✅ |
+| Edit own profile / avatar | ✅ | ✅ | ✅ | ✅ |
+| Redeem an invite (`/i/{token}` flow) | ✅ | ✅ | ✅ | ✅ |
+| Push notifications (FCM/APNs) | ❌ web⁴ | ❌ web | ❌ web | ❌ web |
+| QR / on-site check-in scanning | ❌ web | ❌ web | ❌ web | ❌ web |
+
+¹ Promote-to-coach / role changes are `requireTeamRole("club_manager")` on the
+  backend today — coaches cannot. Web must match.
+² A player can edit their own jersey/position only if the app allows it; mirror
+  `state.isOwnProfile` from `PlayerProfileScreen`.
+³ Players see the same response list coaches see (read-only) — Compose passes
+  `isCoach=false` to `MemberResponseList`, which hides override affordances.
+⁴ See §5 — push is app-only by design.
+
+## 2. Route / IA structure
+
+### 2.1 One app, one login, role-branched landing
+
+Keep the single unified login. After successful auth, branch the redirect by the
+user's highest-privilege role (fetched once from `/auth/me` + `/auth/me/roles`):
+
+1. `isSuperAdmin` → `/admin/dashboard` (unchanged).
+2. else has any `club_manager` club role → `/app` home scoped to their club(s).
+3. else has any `coach` team role → `/app` home (coach view).
+4. else has any `player` team role → `/app` home (player view).
+5. else (no roles) → a friendly "you have no teams yet / redeem an invite" page.
+
+A user can hold several roles (player on team A, coach on team B, manager of a
+club). The home is **role-aware per team/club**, not a single global mode — same
+philosophy as the Compose app, which computes `isCoach` per-screen from
+`/auth/me/roles` rather than a single account-level role.
+
+### 2.2 Two route trees
+
+- `/admin/*` — **super-admin only** (and the manager-via-impersonation views that
+  already exist). Untouched in spirit; keep its layout guard.
+- `/app/*` — **new** member surface for club_manager / coach / player when they
+  log in *as themselves* (not impersonated). This is where mobile parity lives.
+
+Recommended `/app` IA (mirrors Compose bottom bar: Events, Teams, Inbox, Profile):
+
+```
+/app                                  → role-aware home / team picker
+/app/events                           → event list (across user's teams)
+/app/events/[eventId]                 → event detail (RSVP, responses, check-in*)
+/app/events/[eventId]/edit            → coach/manager only
+/app/events/new                       → coach/manager only
+/app/teams                            → teams the user belongs to
+/app/teams/[teamId]                   → roster
+/app/teams/[teamId]/members/[userId]  → player profile (jersey/position/absences)
+/app/teams/[teamId]/checkin/[eventId] → coach/manager check-in screen
+/app/inbox                            → notification center
+/app/inbox/settings                   → per-team notification settings
+/app/profile                          → own profile + avatar
+/i/[token]                            → invite redeem (already specced; shared)
+```
+
+### 2.3 Reuse the manager club-scoping pattern
+
+The existing `/admin/clubs/[clubId]/teams/...` tree already demonstrates the
+right pattern: a `[clubId]` layout that loads club context once
+(`+layout.server.ts`) and child pages that fetch team/member/event data with
+`locals.token`. **Reuse it** rather than inventing a parallel structure:
+
+- For club managers logging in directly, the same `/admin/clubs/[clubId]/...`
+  pages can serve them — just replace the `impersonating` gate in those
+  `+page.server.ts` loads with a real `requireClubManager(clubId)` check
+  (see §3). This is the cheapest path and is the current task's deliverable.
+- For coaches/players, mirror the **shape** (a `[teamId]` layout that loads team
+  context once, children fetch scoped resources) under `/app/teams/[teamId]`.
+- Keep one `+layout.svelte` shell per tree (admin shell vs app shell) instead of
+  toggling nav inside a single mega-layout — the current admin layout already
+  branches nav by `isImpersonating`; that conditional grows unmanageable with 4
+  roles. A dedicated `/app/+layout.svelte` with the mobile-style bottom/side nav
+  is cleaner.
+
+### 2.4 Shared vs role-specific routes
+
+- **Shared routes, role-conditional content:** event list/detail, roster,
+  inbox, profile — same route for all roles, with coach/manager affordances
+  (edit, override, check-in) rendered conditionally AND guarded server-side.
+- **Role-specific routes:** `/app/events/new`, `/app/events/[id]/edit`,
+  `/app/teams/[id]/checkin/*` — coach/manager only; player hitting them gets a
+  403 from the load guard, not just a hidden button.
+
+## 3. RBAC enforcement model
+
+**Principle: the web must never rely on UI hiding alone.** Every privileged
+action is enforced in two places — the SvelteKit `load`/action guard (so a
+player can't deep-link into an edit page) and the backend route (the real
+authority). UI hiding is purely cosmetic.
+
+### 3.1 Server-side guards (SvelteKit)
+
+Add small reusable guards in `admin/src/lib/server/` (e.g. `guards.ts`):
+
+- `requireUser(locals)` — already implicit via `/admin/+layout.server.ts`;
+  generalize to `/app/+layout.server.ts`.
+- `loadRoles(locals)` — fetch `/auth/me/roles` once in the `/app` layout load,
+  return it as layout data so child loads can derive `isCoach(teamId)` /
+  `isClubManager(clubId)` without re-fetching.
+- `requireTeamRole(roles, teamId, ...allowed)` — throw `redirect`/`error(403)`
+  in a page `load` if the user lacks the role for that team.
+- `requireClubManager(roles, clubId)` — for the manager pages, replacing the
+  `impersonating` flag check.
+
+These mirror, on the web tier, the backend `requireTeamRole`/`requireClubRole`
+in `RoleMiddleware.kt`. They are a UX nicety (clean 403 page, no broken
+half-loaded screen) — **not** the security boundary.
+
+### 3.2 Backend endpoints by role — and the gaps
+
+The backend is the security boundary. Audit of current guards:
+
+| Endpoint | Current guard | Needed for web | Action |
+|---|---|---|---|
+| `GET /teams/{id}/members`, `/teams/{id}` | none beyond auth | coach/player read | verify membership check; likely OK |
+| `PATCH /teams/{id}/members/{u}/role` | `requireTeamRole(club_manager)` | manager | OK |
+| `DELETE /teams/{id}/members/{u}`, `/leave` | `requireTeamRole(club_manager)` / self | manager / self | OK |
+| `PATCH /teams/{id}/members/{u}/profile` | `requireTeamRole(coach, club_manager)` | coach/manager | OK |
+| sub-groups (all writes) | `requireTeamRole(coach, club_manager)` | coach/manager | OK |
+| `POST /events`, `PATCH /events/{id}`, cancel/uncancel/duplicate | **none** (only `authenticate("jwt")`) | coach/manager only | **GAP — add team-role check on the event's team(s)** |
+| `GET /events/{id}`, `/teams/{id}/events`, `/users/me/events` | auth only | all members | verify membership scoping; add if missing |
+| `PUT /events/{id}/attendance/me`, `GET .../attendance` | auth only | self / member read | verify membership; add if missing |
+| `GET/PUT /events/{id}/check-in[/{u}]` | coach/manager but **global, not team-scoped** | coach/manager of *that event's team* | **GAP — scope the role check to the event's team** |
+| `*/abwesenheit` (own) | self (`/users/me/...`) | self | OK |
+| manage another member's absences | (verify) | coach/manager of team | confirm guard exists |
+| `GET /notifications*`, settings | self / membership | all | OK |
+| `POST /clubs` | `isSuperAdmin` (per invite-flow contract) | super-admin | OK |
+| invite create/redeem | per invite-flow-contract | per role | OK (frozen) |
+
+**Two concrete backend work items before player/coach web ships:**
+
+1. **Event mutations are unauthorized at the role level.** `POST /events` and
+   `PATCH /events/{id}` (and cancel/uncancel/duplicate) only require a valid JWT
+   — any authenticated user, including a player, can create or edit events for
+   any team. Add `requireTeamRole(teamId, "coach", "club_manager")` for each
+   target team. This is exploitable from the app today too; the web just makes
+   it more visible.
+2. **Check-in role check is not team-scoped.** `CheckInRoutes` checks "is this
+   user a coach/manager of *any* team," not of the event's team. A coach of team
+   A can check-in roster for team B's event. Tighten to the event's team(s).
+
+(These two are pre-existing backend gaps surfaced by widening the client base —
+worth fixing regardless of the web work.)
+
+## 4. Component reuse strategy
+
+The web is SvelteKit; the app is Compose — no literal component sharing. Reuse is
+within the web tier:
+
+- **One presentational component, role-prop-driven**, mirroring how Compose
+  passes `isCoach`/`isCoachOrManager` into `MemberResponseList`,
+  `EventDetailScreen`, `PlayerProfileScreen`, `SubGroupSheet`. Build Svelte
+  equivalents that take a `canManage: boolean` prop and hide override/edit
+  affordances when false. Same component renders for coach and player.
+- **Reuse the existing manager UI components** built for the impersonated
+  `/admin/clubs/[clubId]/teams/...` pages (roster table, member row, invite
+  dialog, team edit form). Lift the reusable pieces into
+  `admin/src/lib/components/` so both the `/admin` manager pages and the new
+  `/app` coach pages consume them. The roster + invite UI is the highest-value
+  shared surface (coach and manager both manage rosters/invites per the contract:
+  `POST /teams/{id}/invites` is `requireTeamRole("coach","club_manager")`).
+- **Shared server helpers**: the `api.ts` (`apiGet/Post/Patch/Delete`) and the
+  new `guards.ts` are used by every role's loads. Keep all role logic on the
+  server (loads/actions), keep components dumb.
+- **Layout shells**: `/admin/+layout.svelte` (admin chrome) and a new
+  `/app/+layout.svelte` (mobile-parity nav: Events / Teams / Inbox / Profile).
+  Do not overload one layout with 4-role conditionals.
+
+## 5. Mobile features: port to web vs keep app-only
+
+| Feature | Web? | Rationale |
+|---|---|---|
+| Event list/detail, create/edit, cancel/duplicate | Port | Pure data + forms; high value for coaches on a laptop |
+| RSVP / attendance responses | Port | Simple state toggle; players check from anywhere |
+| Roster view + manage (role, jersey, position, sub-groups) | Port | Already exists for managers; extend to coaches |
+| Abwesenheit / absence rules | Port | Form-driven; useful on a bigger screen |
+| Inbox / notification *center* (list, mark read) | Port | Just a list backed by `/notifications`; works fine in a tab |
+| Per-team notification settings | Port | Config form |
+| Profile + avatar | Port | Standard |
+| Invite create / redeem | Port | Already specced in invite-flow-contract |
+| **Push notifications (FCM/APNs delivery)** | App-only | Web push is a separate channel (service worker + VAPID), not the FCM/APNs path the backend already drives. The inbox center already shows the same notifications server-side; live push on web is a net-new subsystem with low payoff for a coach/admin sitting at a desk. Defer. |
+| **QR / on-site check-in scanning** | App-only | Needs a camera; the day-of-event use case is inherently mobile. Web keeps the *manual* check-in screen (`PUT /events/{id}/check-in/{userId}`) — coaches mark roster from a list — but not QR scan. |
+| Deep links / app-link routing | App-only | Native concern; web's equivalent is normal URLs. |
+
+Guiding rule: port everything that is **data + forms**; leave **device-bound**
+features (push delivery, camera/QR) to the app. The web's job is parity for
+desk/laptop workflows, not to replace the phone for on-field moments.
+
+## 6. Migration / rollout phasing
+
+Sequence by (a) backend readiness and (b) value-per-effort.
+
+**Phase 0 — current task (prereq):** club_manager direct login. Relax
+`auth.ts login()` to admit non-super-admins; replace the `impersonating` gate in
+`/admin/clubs/[clubId]/...` loads with `requireClubManager(clubId)`. No new
+backend work. Validates the multi-role login + guard pattern.
+
+**Phase 1 — backend RBAC hardening (blocks everything below):** add team-role
+guards to event mutations (§3.2 item 1) and team-scope the check-in guard (§3.2
+item 2). Ship with tests (`EventRoutesTest`, `CheckInRoutes` test). This is the
+security gate for letting players/coaches authenticate broadly.
+
+**Phase 2 — coach web first.** Coaches get the most laptop value (planning
+events, managing rosters, check-in lists). Build `/app` shell + `/app/events*`
+(incl. new/edit), `/app/teams/[teamId]` roster, `/app/teams/[teamId]/checkin`.
+Reuse manager roster/invite components from Phase 0. Coaches also get the shared
+read surfaces (inbox, profile).
+
+**Phase 3 — player web.** Mostly read + self-service: event list/detail, RSVP,
+own absences, own profile, inbox. Almost entirely the *same* components from
+Phase 2 with `canManage=false`. Low incremental effort once Phase 2 lands.
+
+**Phase 4 — shared polish.** Inbox center, notification settings, profile/avatar
+for all roles; "no teams yet → redeem invite" empty state; cross-role home/team
+picker for multi-role users.
+
+Rationale for coach-before-player: coaches are the desk-workflow audience and
+exercise the harder write paths first (forcing the RBAC + reusable-component work
+to be solid), after which player is a thin read-only delta.
+
+## 7. Open questions / decisions
+
+- Same SvelteKit app (`/app` tree) or a separate deploy? (recommend same app)
+- Keep cookie name `admin_session` for member sessions or rename (e.g.
+  `to_session`)? Branding: is "admin" in URLs acceptable for players?
+- Multi-role users: explicit team/club switcher, or auto-merge everything into
+  one home? (Compose merges via `/auth/me/roles`.)
+- OK to fix the two backend RBAC gaps (event mutations, check-in scoping) as part
+  of this, or land them as a separate security PR first?
+- Players editing own jersey/position on web — allowed? (app gates on
+  `isOwnProfile`; confirm parity.)
+- Web push: confirm deferred (app-only) — or is there a stakeholder need?
+- i18n: app + landing are DE-first; should `/app` be DE-only, or DE/EN like the
+  landing/invite pages?
+- Does `GET /teams/{id}/events` / `/events/{id}` already scope to membership, or
+  do we need a membership guard there too before exposing to players?
