@@ -20,6 +20,16 @@ import org.koin.ktor.ext.inject
 import java.time.Instant
 import java.util.*
 
+// Single RFC822-ish address only: no whitespace/CR/LF, no commas, no angle brackets or
+// other separators — blocks header injection and multi-recipient fan-out via the invite endpoint.
+private val EMAIL_REGEX = Regex("^[^\\s@,;:<>\"]+@[^\\s@,;:<>\"]+\\.[^\\s@,;:<>\"]+$")
+
+/** Trims + lowercases and returns the address only if it is a single valid address, else null. */
+private fun normalizeEmail(raw: String): String? {
+    val e = raw.trim().lowercase()
+    return if (e.length <= 254 && EMAIL_REGEX.matches(e)) e else null
+}
+
 @Serializable
 data class CreateInviteRequest(
     val role: String,
@@ -77,7 +87,13 @@ fun Route.inviteRoutes() {
                     return@post call.respond(HttpStatusCode.BadRequest, "Invalid role. Must be 'player' or 'coach'")
                 }
 
-                val hasEmail = !request.email.isNullOrBlank()
+                val rawEmail = request.email?.takeIf { it.isNotBlank() }
+                val normalizedEmail = if (rawEmail != null) {
+                    normalizeEmail(rawEmail)
+                        ?: return@post call.respond(HttpStatusCode.BadRequest, "Invalid email address")
+                } else null
+
+                val hasEmail = normalizedEmail != null
                 if (request.reusable) {
                     if (request.role != "player" || hasEmail) {
                         return@post call.respond(
@@ -92,30 +108,34 @@ fun Route.inviteRoutes() {
                         teamId = teamId,
                         createdByUserId = UUID.fromString(user.id),
                         role = request.role,
-                        email = request.email?.takeIf { it.isNotBlank() },
+                        email = normalizedEmail,
                         reusable = request.reusable,
                         expiresInDays = request.expiresInDays
                     )
 
-                    if (hasEmail) {
+                    if (normalizedEmail != null) {
                         runCatching {
                             val details = inviteRepository.getInviteDetails(invite.token)
-                            val email = buildInviteEmail(
-                                inviterName = user.displayName,
-                                teamName = details?.teamName,
-                                clubName = details?.clubName ?: "",
-                                role = invite.role,
-                                inviteUrl = inviteUrlFor(invite.token),
-                                expiresAt = invite.expiresAt
-                            )
-                            mailService.send(
-                                to = request.email!!,
-                                subject = email.subject,
-                                plainText = email.plainText,
-                                html = email.html,
-                                replyToName = user.displayName,
-                                replyToEmail = user.email
-                            )
+                            if (details != null) {
+                                val email = buildInviteEmail(
+                                    inviterName = user.displayName,
+                                    teamName = details.teamName,
+                                    clubName = details.clubName,
+                                    role = invite.role,
+                                    inviteUrl = inviteUrlFor(invite.token),
+                                    expiresAt = invite.expiresAt
+                                )
+                                mailService.send(
+                                    to = normalizedEmail,
+                                    subject = email.subject,
+                                    plainText = email.plainText,
+                                    html = email.html,
+                                    replyToName = user.displayName,
+                                    replyToEmail = user.email
+                                )
+                            } else {
+                                application.log.warn("Invite email skipped: details not found for ${invite.token}")
+                            }
                         }.onFailure { application.log.error("Invite email send failed", it) }
                     }
 
@@ -142,36 +162,39 @@ fun Route.inviteRoutes() {
                 if (request.role != "club_manager") {
                     return@post call.respond(HttpStatusCode.BadRequest, "Invalid role. Must be 'club_manager'")
                 }
-                if (request.email.isBlank()) {
-                    return@post call.respond(HttpStatusCode.BadRequest, "Email is required")
-                }
+                val normalizedEmail = normalizeEmail(request.email)
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, "Invalid email address")
 
                 call.authenticateUser(userRepository) { user ->
                     val invite = inviteRepository.createClubInvite(
                         clubId = clubId,
                         createdByUserId = UUID.fromString(user.id),
                         role = request.role,
-                        email = request.email
+                        email = normalizedEmail
                     )
 
                     runCatching {
                         val details = inviteRepository.getInviteDetails(invite.token)
-                        val email = buildInviteEmail(
-                            inviterName = user.displayName,
-                            teamName = null,
-                            clubName = details?.clubName ?: "",
-                            role = invite.role,
-                            inviteUrl = inviteUrlFor(invite.token),
-                            expiresAt = invite.expiresAt
-                        )
-                        mailService.send(
-                            to = request.email,
-                            subject = email.subject,
-                            plainText = email.plainText,
-                            html = email.html,
-                            replyToName = user.displayName,
-                            replyToEmail = user.email
-                        )
+                        if (details != null) {
+                            val email = buildInviteEmail(
+                                inviterName = user.displayName,
+                                teamName = null,
+                                clubName = details.clubName,
+                                role = invite.role,
+                                inviteUrl = inviteUrlFor(invite.token),
+                                expiresAt = invite.expiresAt
+                            )
+                            mailService.send(
+                                to = normalizedEmail,
+                                subject = email.subject,
+                                plainText = email.plainText,
+                                html = email.html,
+                                replyToName = user.displayName,
+                                replyToEmail = user.email
+                            )
+                        } else {
+                            application.log.warn("Club invite email skipped: details not found for ${invite.token}")
+                        }
                     }.onFailure { application.log.error("Club invite email send failed", it) }
 
                     call.respond(

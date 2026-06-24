@@ -33,7 +33,10 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		if (!res.ok) {
 			return { lang, m, token: params.token, invite: null as InviteDetails | null };
 		}
-		const invite = (await res.json()) as InviteDetails;
+		const raw = (await res.json()) as InviteDetails;
+		// Never ship the invited email to the browser — it is not rendered on the web page
+		// and would otherwise leak into the public HTML/hydration payload.
+		const invite: InviteDetails = { ...raw, invitedEmail: null };
 		return { lang, m, token: params.token, invite };
 	} catch {
 		return { lang, m, token: params.token, invite: null as InviteDetails | null };

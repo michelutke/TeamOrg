@@ -4,6 +4,12 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+private fun escapeHtml(s: String): String = s
+    .replace("&", "&amp;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
+    .replace("\"", "&quot;")
+
 private fun roleLabelDe(role: String): String = when (role) {
     "player" -> "Spieler"
     "coach" -> "Trainer"
@@ -49,6 +55,13 @@ fun buildInviteEmail(
         "$inviterName hat dich als $label beim Verein \"$clubName\" bei teamorg eingeladen."
     }
 
+    // HTML body interpolates DB-sourced names; escape to prevent markup injection.
+    val htmlIntro = if (teamName != null) {
+        "${escapeHtml(inviterName)} hat dich als $label ins Team \"${escapeHtml(teamName)}\" (${escapeHtml(clubName)}) bei teamorg eingeladen."
+    } else {
+        "${escapeHtml(inviterName)} hat dich als $label beim Verein \"${escapeHtml(clubName)}\" bei teamorg eingeladen."
+    }
+
     val plainText = buildString {
         appendLine("Hallo,")
         appendLine()
@@ -65,7 +78,7 @@ fun buildInviteEmail(
 
     val html = """
         <p>Hallo,</p>
-        <p>$intro</p>
+        <p>$htmlIntro</p>
         <p><a href="$inviteUrl">Einladung annehmen</a></p>
         <p>Gültig bis: $expiry</p>
         <p>Viele Grüße<br>Dein teamorg-Team</p>
