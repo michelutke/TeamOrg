@@ -10,4 +10,5 @@ interface ClubRepository {
     suspend fun update(id: UUID, name: String?, location: String?, logoUrl: String?): Club
     suspend fun listTeams(clubId: UUID): List<Team>
     suspend fun hasRole(userId: UUID, clubId: UUID, role: String): Boolean
+    suspend fun isMember(userId: UUID, clubId: UUID): Boolean
 }

@@ -184,23 +184,31 @@ class AttendanceRoutesTest : IntegrationTestBase() {
     @Test
     fun `get event attendance returns all responses`() = withTeamorgTestApplication {
         val client = createJsonClient()
-        val auth1 = registerAndLogin("att_list1@example.com", displayName = "Player 1")
-        val auth2 = registerAndLogin("att_list2@example.com", displayName = "Player 2")
-        val event = createEvent(auth1.token, "Training List")
+        // Attendance is now membership-scoped: set up a real team and add two players,
+        // both members of the event's team.
+        val coachAuth = registerAndLogin("att_list_coach@example.com", displayName = "Coach")
+        val player1 = registerAndLogin("att_list1@example.com", displayName = "Player 1")
+        val player2 = registerAndLogin("att_list2@example.com", displayName = "Player 2")
+        promoteToSuperAdmin(coachAuth.userId)
+        val (_, teamId) = setupClubAndTeam(coachAuth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, player1.token)
+        invitePlayerToTeam(coachAuth.token, teamId, player2.token)
+        val event = createEvent(coachAuth.token, "Training List", teamIds = listOf(teamId))
 
         client.put("/events/${event.id}/attendance/me") {
-            header(HttpHeaders.Authorization, "Bearer ${auth1.token}")
+            header(HttpHeaders.Authorization, "Bearer ${player1.token}")
             contentType(ContentType.Application.Json)
             setBody(AttendanceSubmitPayload(status = "confirmed"))
         }
         client.put("/events/${event.id}/attendance/me") {
-            header(HttpHeaders.Authorization, "Bearer ${auth2.token}")
+            header(HttpHeaders.Authorization, "Bearer ${player2.token}")
             contentType(ContentType.Application.Json)
             setBody(AttendanceSubmitPayload(status = "declined"))
         }
 
+        // A team member may read the event's attendance.
         val response = client.get("/events/${event.id}/attendance") {
-            header(HttpHeaders.Authorization, "Bearer ${auth1.token}")
+            header(HttpHeaders.Authorization, "Bearer ${player1.token}")
         }
 
         assertEquals(HttpStatusCode.OK, response.status)

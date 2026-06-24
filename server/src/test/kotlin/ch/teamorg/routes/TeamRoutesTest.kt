@@ -244,7 +244,7 @@ class TeamRoutesTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `get nonexistent team returns 404`() = withTeamorgTestApplication {
+    fun `get team as non-member returns 403`() = withTeamorgTestApplication {
         val client = createJsonClient()
 
         val auth = client.post("/auth/register") {
@@ -252,11 +252,13 @@ class TeamRoutesTest : IntegrationTestBase() {
             setBody(RegisterRequest("team404@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
 
+        // Non-member hitting an arbitrary team id is rejected before existence is checked
+        // (IDOR hardening — do not leak whether the team exists).
         val response = client.get("/teams/00000000-0000-0000-0000-000000000000") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
         }
 
-        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals(HttpStatusCode.Forbidden, response.status)
     }
 
     @Test
