@@ -44,10 +44,13 @@ data class TeamMember(
 @Serializable
 data class InviteDetails(
     val token: String,
-    val teamName: String,
+    val scope: String = "team",
+    val teamName: String? = null,
     val clubName: String,
     val role: String,
     val invitedBy: String,
+    val invitedEmail: String? = null,
+    val reusable: Boolean = false,
     val expiresAt: String,
     val alreadyRedeemed: Boolean
 )

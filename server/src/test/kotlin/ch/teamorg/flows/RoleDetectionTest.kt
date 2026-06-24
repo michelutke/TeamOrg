@@ -85,6 +85,7 @@ class RoleDetectionTest : IntegrationTestBase() {
     fun `clubmanager role detected as coach`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.roledetect@roles.test", displayName = "CM RoleDetect")
+        promoteToSuperAdmin(cm.userId)
 
         val club = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${cm.token}")
@@ -112,6 +113,7 @@ class RoleDetectionTest : IntegrationTestBase() {
     fun `plain player has no coach role`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.plainplayer@roles.test", displayName = "CM PlainPlayer")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token, "PlainPlayer Club", "PlainPlayer Team")
         val player = inviteAndJoin(cm.token, teamId, "player.plain@roles.test", "player")
 
@@ -130,6 +132,7 @@ class RoleDetectionTest : IntegrationTestBase() {
     fun `promoted player gains coach role`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.promoted@roles.test", displayName = "CM Promoted")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token, "Promoted Club", "Promoted Team")
         val player = inviteAndJoin(cm.token, teamId, "player.promoted@roles.test", "player")
 
@@ -153,6 +156,7 @@ class RoleDetectionTest : IntegrationTestBase() {
     fun `removed member has no roles`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.removed@roles.test", displayName = "CM Removed")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token, "Removed Club", "Removed Team")
         val coach = inviteAndJoin(cm.token, teamId, "coach.removed@roles.test", "coach")
 

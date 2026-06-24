@@ -44,7 +44,8 @@ import org.koin.mp.KoinPlatform
 fun AppNavigation(
     backStack: MutableList<Screen>,
     isLoggedIn: Boolean,
-    onAuthSuccess: () -> Unit
+    onAuthSuccess: () -> Unit,
+    onLogout: () -> Unit
 ) {
     var detailRefreshTrigger by remember { mutableIntStateOf(0) }
     var previousStackSize by remember { mutableIntStateOf(backStack.size) }
@@ -124,8 +125,11 @@ fun AppNavigation(
                         DeepLinkHandler.pendingToken.value = token
                         backStack.add(Screen.Login)
                     },
-                    onNavigateToRegister = { token ->
-                        DeepLinkHandler.pendingToken.value = token
+                    onNavigateToRegister = { invite ->
+                        DeepLinkHandler.pendingToken.value = invite.token
+                        // Personal invite (not reusable) → prefill + lock the email
+                        DeepLinkHandler.pendingInviteEmail.value =
+                            if (!invite.reusable) invite.invitedEmail else null
                         backStack.add(Screen.Register)
                     },
                     onJoinSuccess = {
@@ -134,7 +138,8 @@ fun AppNavigation(
                         // allows navigation to proceed.
                         backStack.removeAll { it is Screen.Invite }
                         onAuthSuccess()
-                    }
+                    },
+                    onLogout = onLogout
                 )
             }
             Screen.Events -> {

@@ -182,6 +182,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow1.cm@contract.test", displayName = "CM Flow1")
+            promoteToSuperAdmin(cm.userId)
             assertNotNull(cm.token)
             assertNotNull(cm.userId)
 
@@ -244,6 +245,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow2.cm@contract.test", displayName = "CM Flow2")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow2 Club")
             val team = setupTeam(cm.token, club.id, "Flow2 Team")
 
@@ -299,6 +301,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow3.cm@contract.test", displayName = "CM Flow3")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow3 Club")
             val team = setupTeam(cm.token, club.id, "Flow3 Team")
 
@@ -324,6 +327,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow4.cm@contract.test", displayName = "CM Flow4")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow4 Club")
             val team = setupTeam(cm.token, club.id, "Flow4 Team")
             val player = inviteAndJoin(cm.token, team.id, "flow4.player@contract.test", "player")
@@ -353,6 +357,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow5.cm@contract.test", displayName = "CM Flow5")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow5 Club")
             val team = setupTeam(cm.token, club.id, "Flow5 Team")
             val player = inviteAndJoin(cm.token, team.id, "flow5.player@contract.test", "player")
@@ -396,6 +401,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow6.cm@contract.test", displayName = "CM Flow6")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow6 Club")
             val team = setupTeam(cm.token, club.id, "Flow6 Team")
             val player = inviteAndJoin(cm.token, team.id, "flow6.player@contract.test", "player")
@@ -431,6 +437,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow7.cm@contract.test", displayName = "CM Flow7")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow7 Club")
             val team = setupTeam(cm.token, club.id, "Flow7 Team")
             val coach = inviteAndJoin(cm.token, team.id, "flow7.coach@contract.test", "coach")
@@ -492,6 +499,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow8.cm@contract.test", displayName = "CM Flow8")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow8 Original", "volleyball", "Basel")
 
             val patchResp = client.patch("/clubs/${club.id}") {
@@ -521,6 +529,7 @@ class UserFlowContractTest : IntegrationTestBase() {
         withTeamorgTestApplication {
             val client = createSharedModelClient()
             val cm = registerUser("flow9.cm@contract.test", displayName = "CM Flow9")
+            promoteToSuperAdmin(cm.userId)
             val club = setupClub(cm.token, "Flow9 Club")
             val team = setupTeam(cm.token, club.id, "Flow9 Original Team")
             val coach = inviteAndJoin(cm.token, team.id, "flow9.coach@contract.test", "coach")

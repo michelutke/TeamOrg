@@ -1,7 +1,6 @@
 package ch.teamorg.flows
 
 import ch.teamorg.domain.models.Club
-import ch.teamorg.domain.models.InviteLink
 import ch.teamorg.domain.models.Team
 import ch.teamorg.domain.models.TeamMember
 import ch.teamorg.routes.AuthResponse
@@ -39,6 +38,7 @@ class CrossTeamInviteTest : IntegrationTestBase() {
                 contentType(ContentType.Application.Json)
                 setBody(RegisterRequest("manager1@cross.test", "password123", "Manager One"))
             }.body<AuthResponse>()
+            promoteToSuperAdmin(user1Auth.userId)
 
             val club1 = client.post("/clubs") {
                 header(HttpHeaders.Authorization, "Bearer ${user1Auth.token}")
@@ -57,6 +57,7 @@ class CrossTeamInviteTest : IntegrationTestBase() {
                 contentType(ContentType.Application.Json)
                 setBody(RegisterRequest("manager2@cross.test", "password123", "Manager Two"))
             }.body<AuthResponse>()
+            promoteToSuperAdmin(user2Auth.userId)
 
             val club2 = client.post("/clubs") {
                 header(HttpHeaders.Authorization, "Bearer ${user2Auth.token}")
@@ -88,10 +89,6 @@ class CrossTeamInviteTest : IntegrationTestBase() {
                 header(HttpHeaders.Authorization, "Bearer ${user2Auth.token}")
             }
             assertEquals(HttpStatusCode.OK, redeemResp.status, "Redeem should succeed for user with existing teams")
-
-            val redeemedInvite = redeemResp.body<InviteLink>()
-            assertEquals(user2Auth.userId, redeemedInvite.redeemedByUserId)
-            assertNotNull(redeemedInvite.redeemedAt)
 
             // ── Verify user2 now has roles after redeem ───────────────
             val rolesAfter = client.get("/auth/me/roles") {

@@ -1,39 +1,31 @@
 package ch.teamorg.fake
 
 import ch.teamorg.domain.InviteDetails
+import ch.teamorg.domain.RedeemResult
 import ch.teamorg.repository.InviteRepository
 
 class FakeInviteRepository : InviteRepository {
 
-    var getInviteDetailsResult: Result<InviteDetails> = Result.success(
-        InviteDetails(
-            token = "abc123",
-            teamName = "Team A",
-            clubName = "Club A",
-            role = "player",
-            invitedBy = "Coach",
-            expiresAt = "2099-01-01T00:00:00Z",
-            alreadyRedeemed = false
-        )
+    private fun defaultDetails() = InviteDetails(
+        token = "abc123",
+        scope = "team",
+        teamName = "Team A",
+        clubName = "Club A",
+        role = "player",
+        invitedBy = "Coach",
+        expiresAt = "2099-01-01T00:00:00Z",
+        alreadyRedeemed = false
     )
-    var redeemInviteResult: Result<Unit> = Result.success(Unit)
+
+    var getInviteDetailsResult: Result<InviteDetails> = Result.success(defaultDetails())
+    var redeemInviteResult: RedeemResult = RedeemResult.Success
 
     var lastDetailsToken: String? = null
     var lastRedeemToken: String? = null
 
     fun reset() {
-        getInviteDetailsResult = Result.success(
-            InviteDetails(
-                token = "abc123",
-                teamName = "Team A",
-                clubName = "Club A",
-                role = "player",
-                invitedBy = "Coach",
-                expiresAt = "2099-01-01T00:00:00Z",
-                alreadyRedeemed = false
-            )
-        )
-        redeemInviteResult = Result.success(Unit)
+        getInviteDetailsResult = Result.success(defaultDetails())
+        redeemInviteResult = RedeemResult.Success
         lastDetailsToken = null
         lastRedeemToken = null
     }
@@ -43,7 +35,7 @@ class FakeInviteRepository : InviteRepository {
         return getInviteDetailsResult
     }
 
-    override suspend fun redeemInvite(token: String): Result<Unit> {
+    override suspend fun redeemInvite(token: String): RedeemResult {
         lastRedeemToken = token
         return redeemInviteResult
     }

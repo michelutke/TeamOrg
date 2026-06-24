@@ -196,6 +196,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("inbox_coach@example.com", displayName = "Coach")
         val playerAuth = registerAndLogin("inbox_player@example.com", displayName = "Player")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
         createEvent(coachAuth.token, "Inbox Training", teamIds = listOf(teamId))
@@ -211,6 +212,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("mark_read_coach@example.com", displayName = "Coach MR")
         val playerAuth = registerAndLogin("mark_read_player@example.com", displayName = "Player MR")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
         createEvent(coachAuth.token, "Mark Read Training", teamIds = listOf(teamId))
@@ -237,6 +239,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("mark_all_coach@example.com", displayName = "Coach MA")
         val playerAuth = registerAndLogin("mark_all_player@example.com", displayName = "Player MA")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
         createEvent(coachAuth.token, "Mark All Training", teamIds = listOf(teamId))
@@ -259,6 +262,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("unread_coach@example.com", displayName = "Coach UC")
         val playerAuth = registerAndLogin("unread_player@example.com", displayName = "Player UC")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
         createEvent(coachAuth.token, "Unread Count Training", teamIds = listOf(teamId))
@@ -280,6 +284,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
     @Test
     fun settings_defaultValues() = withTeamorgTestApplication {
         val coachAuth = registerAndLogin("settings_default@example.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
 
         val client = createJsonClient()
@@ -300,6 +305,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
     @Test
     fun settings_update() = withTeamorgTestApplication {
         val coachAuth = registerAndLogin("settings_update@example.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
 
         val client = createJsonClient()
@@ -320,6 +326,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
     @Test
     fun settings_perTeam() = withTeamorgTestApplication {
         val coachAuth = registerAndLogin("settings_perteam@example.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val client = createJsonClient()
 
         val clubA = client.post("/clubs") {
@@ -429,6 +436,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("trig_create_coach@example.com", displayName = "Coach Create")
         val playerAuth = registerAndLogin("trig_create_player@example.com", displayName = "Player Create")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
         createEvent(coachAuth.token, "Create Trigger", teamIds = listOf(teamId))
@@ -443,6 +451,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("trig_edit_coach@example.com", displayName = "Coach Edit")
         val playerAuth = registerAndLogin("trig_edit_player@example.com", displayName = "Player Edit")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
 
@@ -466,6 +475,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("trig_cancel_coach@example.com", displayName = "Coach Cancel")
         val playerAuth = registerAndLogin("trig_cancel_player@example.com", displayName = "Player Cancel")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
 
@@ -493,6 +503,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("coach_per_resp@example.com", displayName = "Coach PerResp")
         val playerAuth = registerAndLogin("player_per_resp@example.com", displayName = "Player PerResp")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         // Coach must be in team_roles with "coach" role for getCoachIdsForTeam() to find them
         addCoachToTeam(coachAuth.token, teamId)
@@ -521,6 +532,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("coach_summary_mode@example.com", displayName = "Coach Summary")
         val playerAuth = registerAndLogin("player_summary_mode@example.com", displayName = "Player Summary")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         // Coach must be in team_roles with "coach" role for getCoachIdsForTeam() to find them
         addCoachToTeam(coachAuth.token, teamId)
@@ -582,6 +594,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("absence_notif_coach@example.com", displayName = "Coach Absence")
         val playerAuth = registerAndLogin("absence_notif_player@example.com", displayName = "Player Absence")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         // Coach must be in team_roles to receive team notifications via getTeamMemberIds()
         addCoachToTeam(coachAuth.token, teamId)
@@ -617,6 +630,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("dedup_coach@example.com", displayName = "Coach Dedup")
         val playerAuth = registerAndLogin("dedup_player@example.com", displayName = "Player Dedup")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
 
@@ -652,6 +666,7 @@ class NotificationRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("removed_coach@example.com", displayName = "Coach Removed")
         val playerAuth = registerAndLogin("removed_player@example.com", displayName = "Player Removed")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayer(coachAuth.token, teamId, playerAuth.token)
 

@@ -93,6 +93,23 @@ export interface Dict {
 		imprintTitle: string;
 		privacyTitle: string;
 	};
+	invite: {
+		eyebrow: string;
+		teamTitle: string;
+		clubTitle: string;
+		teamLabel: string;
+		roleLabel: string;
+		invitedByLabel: string;
+		expiresLabel: string;
+		roles: { player: string; coach: string; club_manager: string };
+		openApp: string;
+		download: string;
+		iosSoon: string;
+		hint: string;
+		invalidTitle: string;
+		invalidBody: string;
+		backHome: string;
+	};
 }
 
 const de: Dict = {
@@ -235,6 +252,24 @@ const de: Dict = {
 		back: '← Zurück zur Startseite',
 		imprintTitle: 'Impressum',
 		privacyTitle: 'Datenschutzerklärung'
+	},
+	invite: {
+		eyebrow: 'EINLADUNG',
+		teamTitle: 'Du wurdest in ein Team eingeladen',
+		clubTitle: 'Du wurdest in einen Verein eingeladen',
+		teamLabel: 'Team',
+		roleLabel: 'Rolle',
+		invitedByLabel: 'Eingeladen von',
+		expiresLabel: 'Gültig bis',
+		roles: { player: 'Spieler', coach: 'Trainer', club_manager: 'Club-Manager' },
+		openApp: 'App öffnen',
+		download: 'Android-App herunterladen',
+		iosSoon: 'iOS-App folgt bald',
+		hint: 'Öffne die Einladung in der teamorg-App, um beizutreten.',
+		invalidTitle: 'Einladung ungültig oder abgelaufen',
+		invalidBody:
+			'Diese Einladung ist nicht mehr gültig. Bitte den Verein um eine neue Einladung.',
+		backHome: '← Zurück zur Startseite'
 	}
 };
 
@@ -377,6 +412,23 @@ const en: Dict = {
 		back: '← Back to home',
 		imprintTitle: 'Imprint',
 		privacyTitle: 'Privacy Policy'
+	},
+	invite: {
+		eyebrow: 'INVITATION',
+		teamTitle: 'You have been invited to a team',
+		clubTitle: 'You have been invited to a club',
+		teamLabel: 'Team',
+		roleLabel: 'Role',
+		invitedByLabel: 'Invited by',
+		expiresLabel: 'Valid until',
+		roles: { player: 'Spieler', coach: 'Trainer', club_manager: 'Club-Manager' },
+		openApp: 'Open app',
+		download: 'Download Android app',
+		iosSoon: 'iOS app coming soon',
+		hint: 'Open the invitation in the teamorg app to join.',
+		invalidTitle: 'Invitation invalid or expired',
+		invalidBody: 'This invitation is no longer valid. Please ask the club for a new one.',
+		backHome: '← Back to home'
 	}
 };
 

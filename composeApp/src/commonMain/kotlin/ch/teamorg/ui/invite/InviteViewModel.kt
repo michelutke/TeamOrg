@@ -3,6 +3,8 @@ package ch.teamorg.ui.invite
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ch.teamorg.domain.InviteDetails
+import ch.teamorg.domain.RedeemResult
+import ch.teamorg.repository.AuthRepository
 import ch.teamorg.repository.InviteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,11 +15,13 @@ data class InviteState(
     val isLoading: Boolean = false,
     val isRedeeming: Boolean = false,
     val error: String? = null,
-    val isRedeemed: Boolean = false
+    val isRedeemed: Boolean = false,
+    val showLogout: Boolean = false
 )
 
 class InviteViewModel(
-    private val inviteRepository: InviteRepository
+    private val inviteRepository: InviteRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(InviteState())
@@ -45,30 +49,54 @@ class InviteViewModel(
 
     fun redeemInvite(token: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isRedeeming = true, error = null)
-            inviteRepository.redeemInvite(token).fold(
-                onSuccess = {
+            _state.value = _state.value.copy(isRedeeming = true, error = null, showLogout = false)
+            when (val result = inviteRepository.redeemInvite(token)) {
+                is RedeemResult.Success -> {
+                    _state.value = _state.value.copy(isRedeeming = false, isRedeemed = true)
+                }
+                is RedeemResult.EmailMismatch -> {
+                    val currentEmail = authRepository.getMe().getOrNull()?.email
+                    val message = buildString {
+                        append("Diese Einladung ist für ")
+                        append(result.invitedEmail ?: "eine andere E-Mail-Adresse")
+                        append(".")
+                        if (currentEmail != null) {
+                            append(" Du bist als ")
+                            append(currentEmail)
+                            append(" angemeldet.")
+                        }
+                    }
                     _state.value = _state.value.copy(
                         isRedeeming = false,
-                        isRedeemed = true
+                        error = message,
+                        showLogout = true
                     )
-                },
-                onFailure = { e ->
-                    // Handle idempotent join (already a member)
-                    if (e.message?.contains("Already a member", ignoreCase = true) == true ||
-                        e.message?.contains("409") == true) {
-                        _state.value = _state.value.copy(
-                            isRedeeming = false,
-                            isRedeemed = true
-                        )
-                    } else {
-                        _state.value = _state.value.copy(
-                            isRedeeming = false,
-                            error = e.message ?: "Failed to redeem invite"
-                        )
-                    }
                 }
-            )
+                is RedeemResult.Expired -> {
+                    _state.value = _state.value.copy(
+                        isRedeeming = false,
+                        error = "Diese Einladung ist abgelaufen."
+                    )
+                }
+                is RedeemResult.Inactive -> {
+                    _state.value = _state.value.copy(
+                        isRedeeming = false,
+                        error = "Diese Einladung ist nicht mehr gültig."
+                    )
+                }
+                is RedeemResult.NotFound -> {
+                    _state.value = _state.value.copy(
+                        isRedeeming = false,
+                        error = "Diese Einladung wurde nicht gefunden."
+                    )
+                }
+                is RedeemResult.Error -> {
+                    _state.value = _state.value.copy(
+                        isRedeeming = false,
+                        error = result.message
+                    )
+                }
+            }
         }
     }
 }

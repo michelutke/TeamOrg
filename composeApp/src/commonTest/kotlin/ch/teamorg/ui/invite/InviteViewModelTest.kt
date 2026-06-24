@@ -1,10 +1,14 @@
 package ch.teamorg.ui.invite
 
 import app.cash.turbine.test
+import ch.teamorg.domain.AuthUser
 import ch.teamorg.domain.InviteDetails
+import ch.teamorg.domain.RedeemResult
+import ch.teamorg.fake.FakeAuthRepository
 import ch.teamorg.fake.FakeInviteRepository
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -20,10 +24,12 @@ class InviteViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private val fakeInviteRepo = FakeInviteRepository()
+    private val fakeAuthRepo = FakeAuthRepository()
     private lateinit var viewModel: InviteViewModel
 
     private val sampleDetails = InviteDetails(
         token = "abc123",
+        scope = "team",
         teamName = "Team A",
         clubName = "Club A",
         role = "player",
@@ -36,7 +42,8 @@ class InviteViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeInviteRepo.reset()
-        viewModel = InviteViewModel(fakeInviteRepo)
+        fakeAuthRepo.reset()
+        viewModel = InviteViewModel(fakeInviteRepo, fakeAuthRepo)
     }
 
     @AfterTest
@@ -54,6 +61,7 @@ class InviteViewModelTest {
         state.isRedeeming shouldBe false
         state.error shouldBe null
         state.isRedeemed shouldBe false
+        state.showLogout shouldBe false
     }
 
     // region — loadInvite happy path
@@ -130,21 +138,12 @@ class InviteViewModelTest {
         fakeInviteRepo.lastRedeemToken shouldBe "inviteToken"
     }
 
-    // region — redeemInvite: 409 / already-member treated as success
+    // region — redeemInvite: already-member (Success) path
 
     @Test
-    fun redeemInvite_with409Message_treatsAsSuccess() = runTest {
-        fakeInviteRepo.redeemInviteResult = Result.failure(Exception("HTTP 409"))
-        viewModel.redeemInvite("abc123")
-
-        val state = viewModel.state.value
-        state.isRedeemed shouldBe true
-        state.error shouldBe null
-    }
-
-    @Test
-    fun redeemInvite_withAlreadyMemberMessage_treatsAsSuccess() = runTest {
-        fakeInviteRepo.redeemInviteResult = Result.failure(Exception("Already a member of this team"))
+    fun redeemInvite_withSuccessResult_treatsAsSuccess() = runTest {
+        // Repository maps 409 / already-member to RedeemResult.Success
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Success
         viewModel.redeemInvite("abc123")
 
         val state = viewModel.state.value
@@ -153,19 +152,60 @@ class InviteViewModelTest {
         state.isRedeeming shouldBe false
     }
 
+    // region — redeemInvite: email mismatch
+
     @Test
-    fun redeemInvite_withAlreadyMemberCaseInsensitive_treatsAsSuccess() = runTest {
-        fakeInviteRepo.redeemInviteResult = Result.failure(Exception("ALREADY A MEMBER"))
+    fun redeemInvite_emailMismatch_setsGermanMessageWithBothEmails() = runTest {
+        fakeInviteRepo.redeemInviteResult = RedeemResult.EmailMismatch("invited@example.com")
+        fakeAuthRepo.getMeResult = Result.success(
+            AuthUser(userId = "u1", email = "current@example.com", displayName = "Cur", avatarUrl = null)
+        )
+
         viewModel.redeemInvite("abc123")
 
-        viewModel.state.value.isRedeemed shouldBe true
+        val state = viewModel.state.value
+        state.isRedeemed shouldBe false
+        state.showLogout shouldBe true
+        state.error shouldNotBe null
+        val error = state.error ?: ""
+        error shouldContain "invited@example.com"
+        error shouldContain "current@example.com"
+    }
+
+    // region — redeemInvite: expired / inactive / not found
+
+    @Test
+    fun redeemInvite_expired_setsGermanExpiredMessage() = runTest {
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Expired
+        viewModel.redeemInvite("abc123")
+
+        val state = viewModel.state.value
+        state.error shouldBe "Diese Einladung ist abgelaufen."
+        state.isRedeemed shouldBe false
+        state.isRedeeming shouldBe false
+    }
+
+    @Test
+    fun redeemInvite_inactive_setsGermanInactiveMessage() = runTest {
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Inactive
+        viewModel.redeemInvite("abc123")
+
+        viewModel.state.value.error shouldBe "Diese Einladung ist nicht mehr gültig."
+    }
+
+    @Test
+    fun redeemInvite_notFound_setsGermanNotFoundMessage() = runTest {
+        fakeInviteRepo.redeemInviteResult = RedeemResult.NotFound
+        viewModel.redeemInvite("abc123")
+
+        viewModel.state.value.error shouldBe "Diese Einladung wurde nicht gefunden."
     }
 
     // region — redeemInvite error path
 
     @Test
-    fun redeemInvite_onOtherFailure_setsErrorMessage() = runTest {
-        fakeInviteRepo.redeemInviteResult = Result.failure(Exception("Invite expired"))
+    fun redeemInvite_onError_setsErrorMessage() = runTest {
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Error("Invite expired")
         viewModel.redeemInvite("abc123")
 
         val state = viewModel.state.value
@@ -175,16 +215,8 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun redeemInvite_onOtherFailureWithNullMessage_setsDefaultError() = runTest {
-        fakeInviteRepo.redeemInviteResult = Result.failure(Exception())
-        viewModel.redeemInvite("abc123")
-
-        viewModel.state.value.error shouldBe "Failed to redeem invite"
-    }
-
-    @Test
-    fun redeemInvite_onFailure_clearsRedeemingState() = runTest {
-        fakeInviteRepo.redeemInviteResult = Result.failure(Exception("Server error"))
+    fun redeemInvite_onError_clearsRedeemingState() = runTest {
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Error("Server error")
         viewModel.redeemInvite("abc123")
 
         viewModel.state.value.isRedeeming shouldBe false
@@ -196,11 +228,6 @@ class InviteViewModelTest {
      * Simulates the real user flow: load invite details, then redeem.
      * Verifies that isRedeemed transitions to true, which is the signal
      * InviteScreen's LaunchedEffect uses to trigger onJoinSuccess.
-     *
-     * This test would catch:
-     * - redeemInvite silently failing
-     * - isRedeemed not being set after successful redeem
-     * - state being reset between load and redeem
      */
     @Test
     fun fullFlow_loadThenRedeem_setsIsRedeemedTrue() = runTest {
@@ -251,8 +278,8 @@ class InviteViewModelTest {
     // region — error does not set isRedeemed (prevents false navigation)
 
     @Test
-    fun redeemInvite_onNon409Failure_doesNotSetIsRedeemed() = runTest {
-        fakeInviteRepo.redeemInviteResult = Result.failure(Exception("Network timeout"))
+    fun redeemInvite_onError_doesNotSetIsRedeemed() = runTest {
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Error("Network timeout")
         viewModel.redeemInvite("abc123")
 
         viewModel.state.value.isRedeemed shouldBe false
@@ -275,7 +302,7 @@ class InviteViewModelTest {
         viewModel.state.value.inviteDetails shouldNotBe null
 
         // User clicks Join — redeem succeeds
-        fakeInviteRepo.redeemInviteResult = Result.success(Unit)
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Success
         viewModel.redeemInvite("abc123")
 
         val state = viewModel.state.value
@@ -292,7 +319,7 @@ class InviteViewModelTest {
     @Test
     fun authenticatedUserWithExistingTeam_fullFlow_turbineVerifiesIsRedeemed() = runTest {
         fakeInviteRepo.getInviteDetailsResult = Result.success(sampleDetails)
-        fakeInviteRepo.redeemInviteResult = Result.success(Unit)
+        fakeInviteRepo.redeemInviteResult = RedeemResult.Success
 
         viewModel.state.test {
             awaitItem() // initial

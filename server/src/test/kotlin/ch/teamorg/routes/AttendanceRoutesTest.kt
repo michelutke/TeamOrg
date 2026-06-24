@@ -213,6 +213,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val client = createJsonClient()
         val coachAuth = registerAndLogin("coach_override@example.com", displayName = "Coach")
         val playerAuth = registerAndLogin("player_target@example.com", displayName = "Player")
+        promoteToSuperAdmin(coachAuth.userId)
         setupClubAndTeam(coachAuth.token)
         val event = createEvent(coachAuth.token, "Training Override")
 
@@ -250,6 +251,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val client = createJsonClient()
         val coachAuth = registerAndLogin("coach_audit@example.com", displayName = "Coach Audit")
         val playerAuth = registerAndLogin("player_audit@example.com", displayName = "Player Audit")
+        promoteToSuperAdmin(coachAuth.userId)
         setupClubAndTeam(coachAuth.token)
         val event = createEvent(coachAuth.token, "Training Audit")
 
@@ -329,6 +331,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val player1Auth = registerAndLogin("ci_player1@example.com", displayName = "Player One")
         val player2Auth = registerAndLogin("ci_player2@example.com", displayName = "Player Two")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (clubId, teamId) = setupClubAndTeam(coachAuth.token)
 
         // Create player invite and redeem for both players
@@ -455,6 +458,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("ci_rsvp_coach@example.com", displayName = "Coach RSVP")
         val playerAuth = registerAndLogin("ci_rsvp_player@example.com", displayName = "Player RSVP")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
@@ -483,6 +487,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("ci_noresponse_coach@example.com", displayName = "Coach NoResp")
         val playerAuth = registerAndLogin("ci_noresponse_player@example.com", displayName = "Player NoResp")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
@@ -506,6 +511,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
     fun `check-in entries return empty for event with no team`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val auth = registerAndLogin("ci_noteam@example.com", displayName = "No Team User")
+        promoteToSuperAdmin(auth.userId)
         setupClubAndTeam(auth.token) // grants club_manager role
 
         // Event created without teamIds
@@ -526,6 +532,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("ci_guard_coach@example.com", displayName = "Coach Guard")
         val playerAuth = registerAndLogin("ci_guard_player@example.com", displayName = "Player Guard")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
@@ -547,6 +554,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("abw_period_coach@example.com", displayName = "Coach Period")
         val playerAuth = registerAndLogin("abw_period_player@example.com", displayName = "Player Period")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
@@ -590,6 +598,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("abw_recur_coach@example.com", displayName = "Coach Recur")
         val playerAuth = registerAndLogin("abw_recur_player@example.com", displayName = "Player Recur")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
@@ -631,6 +640,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("abw_override_coach@example.com", displayName = "Coach Override")
         val playerAuth = registerAndLogin("abw_override_player@example.com", displayName = "Player Override")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
@@ -682,6 +692,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val coachAuth = registerAndLogin("ci_update_coach@example.com", displayName = "Coach Update")
         val playerAuth = registerAndLogin("ci_update_player@example.com", displayName = "Player Update")
 
+        promoteToSuperAdmin(coachAuth.userId)
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 

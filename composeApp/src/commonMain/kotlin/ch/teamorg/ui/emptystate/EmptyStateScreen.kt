@@ -83,13 +83,15 @@ fun EmptyStateScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Create a club — primary CTA
-            Button(
-                onClick = { viewModel.onCreateClubClick() },
-                modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_setup_club"),
-                shape = PillShape
-            ) {
-                Text("Set up your club", style = MaterialTheme.typography.titleMedium)
+            // Create a club — primary CTA (super-admins only)
+            if (state.isSuperAdmin) {
+                Button(
+                    onClick = { viewModel.onCreateClubClick() },
+                    modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_setup_club"),
+                    shape = PillShape
+                ) {
+                    Text("Set up your club", style = MaterialTheme.typography.titleMedium)
+                }
             }
 
             // Join a team — invite redemption card

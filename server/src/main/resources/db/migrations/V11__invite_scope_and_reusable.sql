@@ -1,0 +1,5 @@
+ALTER TABLE invite_links ALTER COLUMN team_id DROP NOT NULL;
+ALTER TABLE invite_links ADD COLUMN club_id UUID REFERENCES clubs(id) ON DELETE CASCADE;
+ALTER TABLE invite_links ADD COLUMN reusable BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE invite_links ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;
+CREATE INDEX idx_invites_club ON invite_links(club_id);

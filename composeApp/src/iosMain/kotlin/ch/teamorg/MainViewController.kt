@@ -28,7 +28,8 @@ fun MainViewController() = ComposeUIViewController {
 }
 
 fun handleDeepLink(url: String) {
-    // teamorg://invite/team/{token} → extract last path segment
+    // Supported: teamorg://invite/team/{token} and https://teamorg.ch/i/{token}
+    // Both end in /{token} → take the last path segment.
     val token = url.trimEnd('/').substringAfterLast('/')
     if (token.isNotBlank()) {
         DeepLinkHandler.pendingToken.value = token
