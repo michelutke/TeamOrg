@@ -23,6 +23,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("club@example.com", "password123", "Club Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val response = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -44,6 +45,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("getclub@example.com", "password123", "Club Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -68,6 +70,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("updclub@example.com", "password123", "Club Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -95,6 +98,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("logoclub@example.com", "password123", "Club Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -139,6 +143,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("noauthget@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -159,6 +164,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("manager403@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
@@ -188,6 +194,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("blankclub@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val response = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -222,6 +229,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("teammgr@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
@@ -251,6 +259,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("listteams@example.com", "password123", "Club Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")

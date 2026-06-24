@@ -2,6 +2,7 @@ package ch.teamorg.ui.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ch.teamorg.DeepLinkHandler
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.repository.AuthRepository
 import kotlinx.coroutines.channels.Channel
@@ -16,14 +17,22 @@ data class RegisterUiState(
     val password: String = "",
     val confirmPassword: String = "",
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val emailLocked: Boolean = false
 )
 
 class RegisterViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(RegisterUiState())
+    private val _state = MutableStateFlow(
+        DeepLinkHandler.pendingInviteEmail.value.let { lockedEmail ->
+            RegisterUiState(
+                email = lockedEmail ?: "",
+                emailLocked = lockedEmail != null
+            )
+        }
+    )
     val state = _state.asStateFlow()
 
     private val _registerSuccess = Channel<Unit>(Channel.CONFLATED)
@@ -34,6 +43,7 @@ class RegisterViewModel(
     }
 
     fun onEmailChange(email: String) {
+        if (_state.value.emailLocked) return
         _state.value = _state.value.copy(email = email, error = null)
     }
 
@@ -76,6 +86,7 @@ class RegisterViewModel(
             ).fold(
                 onSuccess = {
                     _state.value = _state.value.copy(isLoading = false)
+                    DeepLinkHandler.pendingInviteEmail.value = null
                     _registerSuccess.send(Unit)
                 },
                 onFailure = { error ->

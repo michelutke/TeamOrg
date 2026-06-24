@@ -103,7 +103,12 @@ fun TeamorgApp(
             AppNavigation(
                 backStack = backStack,
                 isLoggedIn = authState is AuthState.Authenticated,
-                onAuthSuccess = { viewModel.checkAuthState() }
+                onAuthSuccess = { viewModel.checkAuthState() },
+                onLogout = {
+                    DeepLinkHandler.pendingToken.value = null
+                    DeepLinkHandler.pendingInviteEmail.value = null
+                    viewModel.logout()
+                }
             )
 
             // Bottom bar overlaid on top — animates without affecting content layout

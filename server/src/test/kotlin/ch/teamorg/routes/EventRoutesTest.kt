@@ -322,6 +322,7 @@ class EventRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("event_team@example.com", "password123", "EventUser"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -353,6 +354,7 @@ class EventRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("mgr_event@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")

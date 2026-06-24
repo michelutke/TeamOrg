@@ -25,10 +25,12 @@ class WireContractTest : IntegrationTestBase() {
 
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.registerAndGetToken(email: String): String {
         val client = createJsonClient()
-        return client.post("/auth/register") {
+        val auth = client.post("/auth/register") {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest(email, "password123", "Contract Test User"))
-        }.body<AuthResponse>().token
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
+        return auth.token
     }
 
     @Test

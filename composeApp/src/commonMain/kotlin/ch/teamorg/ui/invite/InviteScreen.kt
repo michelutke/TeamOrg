@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ch.teamorg.domain.InviteDetails
 import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 
@@ -19,8 +20,9 @@ fun InviteScreen(
     viewModel: InviteViewModel,
     isLoggedIn: Boolean,
     onNavigateToLogin: (String) -> Unit,
-    onNavigateToRegister: (String) -> Unit,
-    onJoinSuccess: () -> Unit
+    onNavigateToRegister: (InviteDetails) -> Unit,
+    onJoinSuccess: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -53,16 +55,34 @@ fun InviteScreen(
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                FilledTonalButton(
-                    onClick = { viewModel.loadInvite(token) },
-                    modifier = Modifier.height(57.dp).testTag("btn_retry"),
-                    shape = PillShape
-                ) {
-                    Text("Retry", style = MaterialTheme.typography.titleMedium)
+                if (state.showLogout) {
+                    FilledTonalButton(
+                        onClick = onLogout,
+                        modifier = Modifier.height(57.dp).testTag("btn_logout"),
+                        shape = PillShape
+                    ) {
+                        Text("Abmelden", style = MaterialTheme.typography.titleMedium)
+                    }
+                } else {
+                    FilledTonalButton(
+                        onClick = { viewModel.loadInvite(token) },
+                        modifier = Modifier.height(57.dp).testTag("btn_retry"),
+                        shape = PillShape
+                    ) {
+                        Text("Retry", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
         } else if (state.inviteDetails != null) {
             val invite = state.inviteDetails!!
+            val isClubInvite = invite.teamName == null
+            val title = invite.teamName ?: invite.clubName
+            val roleLabel = when (invite.role) {
+                "player" -> "Spieler"
+                "coach" -> "Trainer"
+                "club_manager" -> "Club-Manager"
+                else -> invite.role.replaceFirstChar { it.uppercase() }
+            }
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -88,7 +108,7 @@ fun InviteScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = invite.clubName
+                                    text = title
                                         .split(" ")
                                         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
                                         .take(2)
@@ -107,18 +127,20 @@ fun InviteScreen(
                         )
 
                         Text(
-                            invite.teamName,
+                            title,
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         )
 
-                        Text(
-                            "at ${invite.clubName}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
+                        if (!isClubInvite) {
+                            Text(
+                                "at ${invite.clubName}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
 
                         // Invited-by chip
                         Surface(
@@ -126,10 +148,19 @@ fun InviteScreen(
                             shape = PillShape
                         ) {
                             Text(
-                                "Invited by ${invite.invitedBy} as ${invite.role.replaceFirstChar { it.uppercase() }}",
+                                "Invited by ${invite.invitedBy} as $roleLabel",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                            )
+                        }
+
+                        if (!invite.reusable && invite.invitedEmail != null) {
+                            Text(
+                                "für ${invite.invitedEmail}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -151,7 +182,7 @@ fun InviteScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Join ${invite.teamName}", style = MaterialTheme.typography.titleMedium)
+                            Text("Join $title", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 } else {
@@ -160,7 +191,7 @@ fun InviteScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
-                            onClick = { onNavigateToRegister(token) },
+                            onClick = { onNavigateToRegister(invite) },
                             modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_create_account_to_join"),
                             shape = PillShape
                         ) {

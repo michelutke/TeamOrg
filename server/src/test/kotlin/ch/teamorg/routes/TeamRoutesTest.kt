@@ -24,6 +24,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("teamcr@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -51,6 +52,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("teamget@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -80,6 +82,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("teamupd@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -111,6 +114,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("teamarc@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -146,6 +150,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("teammem@example.com", "password123", "Creator"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
@@ -176,6 +181,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("delmgr@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
@@ -209,6 +215,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("updmgr@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
@@ -260,6 +267,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("memmgr@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
@@ -307,6 +315,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("mctmgr@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
@@ -361,6 +370,7 @@ class TeamRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("rolemgr@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
 
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")

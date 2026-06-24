@@ -102,6 +102,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `clubmanager full setup flow`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.setup@flow.test", displayName = "CM Setup")
+        promoteToSuperAdmin(cm.userId)
 
         val clubResp = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${cm.token}")
@@ -136,6 +137,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `player registers via invite link`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.playerinvite@flow.test", displayName = "CM Player")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
 
         val inviteResp = client.post("/teams/$teamId/invites") {
@@ -168,6 +170,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `coach registers via invite link`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.coachinvite@flow.test", displayName = "CM Coach")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
 
         val inviteToken = client.post("/teams/$teamId/invites") {
@@ -192,6 +195,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `clubmanager promotes player to coach`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.promote@flow.test", displayName = "CM Promote")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
         val player = inviteAndJoin(cm.token, teamId, "player.promote@flow.test", "player")
 
@@ -214,6 +218,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `clubmanager removes coach from team`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.remove@flow.test", displayName = "CM Remove")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
         val coach = inviteAndJoin(cm.token, teamId, "coach.remove@flow.test", "coach")
 
@@ -232,6 +237,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `player can leave team`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.leave@flow.test", displayName = "CM Leave")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
         val player = inviteAndJoin(cm.token, teamId, "player.leave@flow.test", "player")
 
@@ -250,6 +256,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `coach can edit team details`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.edit@flow.test", displayName = "CM Edit")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token, teamName = "U18 Women")
         val coach = inviteAndJoin(cm.token, teamId, "coach.edit@flow.test", "coach")
 
@@ -270,6 +277,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `player can update jersey and position`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.profile@flow.test", displayName = "CM Profile")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
         val player = inviteAndJoin(cm.token, teamId, "player.profile@flow.test", "player")
 
@@ -293,6 +301,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `coach creates sub-group and assigns players`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.subgroup@flow.test", displayName = "CM SubGroup")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
         val coach = inviteAndJoin(cm.token, teamId, "coach.subgroup@flow.test", "coach")
         val player1 = inviteAndJoin(cm.token, teamId, "player1.subgroup@flow.test", "player")
@@ -329,6 +338,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `expired invite returns 410`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.expired@flow.test", displayName = "CM Expired")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
 
         val expiredToken = UUID.randomUUID().toString()
@@ -357,6 +367,7 @@ class TeamManagementFlowTest : IntegrationTestBase() {
     fun `double redeem invite is idempotent`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val cm = registerAndLogin("cm.double@flow.test", displayName = "CM Double")
+        promoteToSuperAdmin(cm.userId)
         val (_, teamId) = setupClubAndTeam(cm.token)
 
         val inviteToken = client.post("/teams/$teamId/invites") {

@@ -6,6 +6,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import ch.teamorg.ui.TestActivity
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import ch.teamorg.domain.AuthUser
+import ch.teamorg.repository.AuthRepository
 import ch.teamorg.ui.MainDispatcherRule
 import ch.teamorg.ui.fakes.FakeAuthRepository
 import org.junit.Rule
@@ -25,10 +27,11 @@ class EmptyStateScreenTest {
     val composeTestRule = createAndroidComposeRule<TestActivity>()
 
     private fun launchScreen(
+        authRepository: AuthRepository = FakeAuthRepository(),
         onNavigateToClubSetup: () -> Unit = {},
         onNavigateToInvite: (String) -> Unit = {},
     ): EmptyStateViewModel {
-        val viewModel = EmptyStateViewModel(authRepository = FakeAuthRepository())
+        val viewModel = EmptyStateViewModel(authRepository = authRepository)
         composeTestRule.setContent {
             EmptyStateScreen(
                 viewModel = viewModel,
@@ -61,10 +64,28 @@ class EmptyStateScreenTest {
     }
 
     @Test
-    fun emptyStateScreen_showsSetupClubButton() {
-        launchScreen()
+    fun emptyStateScreen_showsSetupClubButton_forSuperAdmin() {
+        val superAdmin = FakeAuthRepository().apply {
+            getMeResult = Result.success(
+                AuthUser(
+                    userId = "admin-1",
+                    email = "admin@test.com",
+                    displayName = "Admin",
+                    avatarUrl = null,
+                    isSuperAdmin = true
+                )
+            )
+        }
+        launchScreen(authRepository = superAdmin)
 
         composeTestRule.onNodeWithTag("btn_setup_club").assertIsDisplayed()
+    }
+
+    @Test
+    fun emptyStateScreen_hidesSetupClubButton_forNonSuperAdmin() {
+        launchScreen()
+
+        composeTestRule.onNodeWithTag("btn_setup_club").assertDoesNotExist()
     }
 
     @Test

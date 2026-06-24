@@ -2,7 +2,6 @@ package ch.teamorg.flows
 
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.InviteDetails
-import ch.teamorg.domain.models.InviteLink
 import ch.teamorg.domain.models.Team
 import ch.teamorg.domain.models.TeamMember
 import ch.teamorg.routes.AuthResponse
@@ -36,6 +35,7 @@ class UserJourneyTest : IntegrationTestBase() {
             }.body<AuthResponse>()
             assertNotNull(managerAuth.token)
             assertNotNull(managerAuth.userId)
+            promoteToSuperAdmin(managerAuth.userId)
 
             // Login returns same data
             val loginAuth = lenient.post("/auth/login") {
@@ -100,9 +100,6 @@ class UserJourneyTest : IntegrationTestBase() {
                 header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
             }
             assertEquals(HttpStatusCode.OK, redeemResp.status)
-            val redeemedInvite = redeemResp.body<InviteLink>()
-            assertEquals(playerAuth.userId, redeemedInvite.redeemedByUserId)
-            assertNotNull(redeemedInvite.redeemedAt)
 
             // Verify player appears in team members
             val members = lenient.get("/teams/${team.id}/members") {
@@ -131,6 +128,8 @@ class UserJourneyTest : IntegrationTestBase() {
             setBody(RegisterRequest("mgr2.journey@example.com", "password123", "Manager Two"))
         }.body<AuthResponse>()
 
+        promoteToSuperAdmin(manager1.userId)
+
         val clubId = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${manager1.token}")
             contentType(ContentType.Application.Json)
@@ -153,6 +152,7 @@ class UserJourneyTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("mgr.invitetest@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(manager.userId)
 
         val club = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${manager.token}")
@@ -199,6 +199,7 @@ class UserJourneyTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(RegisterRequest("mgr.newuser@example.com", "password123", "New User Manager"))
         }.body<AuthResponse>()
+        promoteToSuperAdmin(manager.userId)
 
         val club = client.post("/clubs") {
             header(HttpHeaders.Authorization, "Bearer ${manager.token}")

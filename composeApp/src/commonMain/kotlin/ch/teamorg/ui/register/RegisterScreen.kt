@@ -77,7 +77,7 @@ fun RegisterScreen(
                 onValueChange = { viewModel.onEmailChange(it) },
                 label = "Email",
                 modifier = Modifier.fillMaxWidth().testTag("tf_email"),
-                enabled = !state.isLoading,
+                enabled = !state.isLoading && !state.emailLocked,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 

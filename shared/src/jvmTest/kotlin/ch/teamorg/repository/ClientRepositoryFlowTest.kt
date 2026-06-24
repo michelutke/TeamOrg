@@ -5,6 +5,7 @@ import ch.teamorg.data.repository.ClubRepositoryImpl
 import ch.teamorg.data.repository.InviteRepositoryImpl
 import ch.teamorg.data.repository.TeamRepositoryImpl
 import ch.teamorg.domain.AuthResponse
+import ch.teamorg.domain.RedeemResult
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.module as serverModule
 import ch.teamorg.preferences.UserPreferences
@@ -28,6 +29,7 @@ import org.junit.BeforeClass
 import org.testcontainers.containers.PostgreSQLContainer
 import java.net.ServerSocket
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -150,6 +152,24 @@ class ClientRepositoryFlowTest {
             .getOrThrow()
     }
 
+    /**
+     * Club creation is now restricted to super-admins. Flip the flag directly in the
+     * test database (the guard re-reads isSuperAdmin from the DB per request, so the
+     * already-issued JWT stays valid).
+     */
+    private fun promoteToSuperAdmin(userId: String) {
+        postgres.createConnection("").use { conn ->
+            conn.prepareStatement("UPDATE users SET is_super_admin = true WHERE id = ?::uuid").use { st ->
+                st.setString(1, userId)
+                st.executeUpdate()
+            }
+        }
+    }
+
+    /** Registers a user and immediately promotes them to super-admin (for club creation). */
+    private suspend fun registerSuperAdmin(email: String, displayName: String): AuthResponse =
+        registerUser(email, displayName).also { promoteToSuperAdmin(it.userId) }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Flow 2: register → create club → create team → createInvite → redeem → roster
     // Tests that createInvite sends a correct Content-Type header (the original bug).
@@ -158,7 +178,7 @@ class ClientRepositoryFlowTest {
     @Test
     fun `flow2 createInvite sends correct Content-Type and roster is updated after redeem`() = runBlocking {
         // Register CM and build an authenticated client with its token
-        val cmAuth = registerUser("client.flow2.cm@test.local", "CM ClientFlow2")
+        val cmAuth = registerSuperAdmin("client.flow2.cm@test.local", "CM ClientFlow2")
         val cmClient = buildClient { cmAuth.token }
 
         // Wire up the shared repositories to the CM client
@@ -187,11 +207,11 @@ class ClientRepositoryFlowTest {
         // Get invite details via InviteRepositoryImpl
         val inviteDetails = playerInviteRepo.getInviteDetails(inviteToken).getOrThrow()
         assertFalse(inviteDetails.alreadyRedeemed)
-        assertTrue(inviteDetails.teamName.isNotBlank())
+        assertTrue(!inviteDetails.teamName.isNullOrBlank())
         assertTrue(inviteDetails.clubName.isNotBlank())
 
         // Redeem invite via InviteRepositoryImpl
-        playerInviteRepo.redeemInvite(inviteToken).getOrThrow()
+        assertEquals(RedeemResult.Success, playerInviteRepo.redeemInvite(inviteToken))
 
         // Verify roster via TeamRepositoryImpl (CM perspective)
         val roster = cmTeamRepo.getTeamRoster(team.id).getOrThrow()
@@ -232,7 +252,7 @@ class ClientRepositoryFlowTest {
 
     @Test
     fun `getMyRoles returns club_manager role after creating a club`() = runBlocking {
-        val cmAuth = registerUser("client.flow4.cm@test.local", "CM ClientFlow4")
+        val cmAuth = registerSuperAdmin("client.flow4.cm@test.local", "CM ClientFlow4")
         val cmClient = buildClient { cmAuth.token }
         val clubRepo = ClubRepositoryImpl(cmClient)
         val teamRepo = TeamRepositoryImpl(cmClient)
@@ -252,7 +272,7 @@ class ClientRepositoryFlowTest {
 
     @Test
     fun `removeMember removes player from team roster`() = runBlocking {
-        val cmAuth = registerUser("client.flow5.cm@test.local", "CM ClientFlow5")
+        val cmAuth = registerSuperAdmin("client.flow5.cm@test.local", "CM ClientFlow5")
         val cmClient = buildClient { cmAuth.token }
         val cmClubRepo = ClubRepositoryImpl(cmClient)
         val cmTeamRepo = TeamRepositoryImpl(cmClient)
@@ -264,7 +284,7 @@ class ClientRepositoryFlowTest {
 
         val playerAuth = registerUser("client.flow5.player@test.local", "Player ClientFlow5")
         val playerClient = buildClient { playerAuth.token }
-        InviteRepositoryImpl(playerClient).redeemInvite(inviteToken).getOrThrow()
+        assertEquals(RedeemResult.Success, InviteRepositoryImpl(playerClient).redeemInvite(inviteToken))
 
         // Assert player is in roster before removal
         assertNotNull(
@@ -357,7 +377,7 @@ class ClientRepositoryFlowTest {
     @Test
     fun `full invite journey - new user redeems invite and gains team role visible in roles endpoint`() = runBlocking {
         // 1. CM registers and creates club + team
-        val cmAuth = registerUser("full-journey.cm@test.local", "CM FullJourney")
+        val cmAuth = registerSuperAdmin("full-journey.cm@test.local", "CM FullJourney")
         val cmClient = buildClient { cmAuth.token }
         val cmClubRepo = ClubRepositoryImpl(cmClient)
         val cmTeamRepo = TeamRepositoryImpl(cmClient)
@@ -386,7 +406,7 @@ class ClientRepositoryFlowTest {
         assertFalse(details.alreadyRedeemed, "invite must not be redeemed yet")
 
         // 5. Player redeems invite
-        playerInviteRepo.redeemInvite(inviteToken).getOrThrow()
+        assertEquals(RedeemResult.Success, playerInviteRepo.redeemInvite(inviteToken))
 
         // 6. Verify: player's roles include team membership
         val playerRoles = playerTeamRepo.getMyRoles().getOrThrow()
@@ -409,7 +429,7 @@ class ClientRepositoryFlowTest {
 
     @Test
     fun `redeeming same invite twice returns idempotent success or 409`() = runBlocking {
-        val cmAuth = registerUser("idempotent.cm@test.local", "CM Idempotent")
+        val cmAuth = registerSuperAdmin("idempotent.cm@test.local", "CM Idempotent")
         val cmClient = buildClient { cmAuth.token }
         val cmClubRepo = ClubRepositoryImpl(cmClient)
         val cmTeamRepo = TeamRepositoryImpl(cmClient)
@@ -424,17 +444,15 @@ class ClientRepositoryFlowTest {
         val playerInviteRepo = InviteRepositoryImpl(playerClient)
 
         // First redeem
-        playerInviteRepo.redeemInvite(inviteToken).getOrThrow()
+        assertEquals(RedeemResult.Success, playerInviteRepo.redeemInvite(inviteToken))
 
-        // Second redeem — should either succeed or fail with 409/already-member
+        // Second redeem — idempotent: 409/already-member maps to Success
         val secondResult = playerInviteRepo.redeemInvite(inviteToken)
-        if (secondResult.isFailure) {
-            val msg = secondResult.exceptionOrNull()?.message ?: ""
-            assertTrue(
-                msg.contains("409") || msg.contains("Already a member", ignoreCase = true),
-                "Second redeem failure must be 409 or 'Already a member', got: $msg"
-            )
-        }
+        assertEquals(
+            RedeemResult.Success,
+            secondResult,
+            "Second redeem must be idempotent (Success), got: $secondResult"
+        )
         // Either way, player is still on the team
         val roster = cmTeamRepo.getTeamRoster(team.id).getOrThrow()
         assertNotNull(roster.find { it.userId == playerAuth.userId }, "Player must still be on team")

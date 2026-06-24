@@ -53,6 +53,7 @@ class InviteRoutesTest : IntegrationTestBase() {
         val client = createJsonClient()
 
         val coachAuth = setupAuthUser("coach@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         val inviteResp = client.post("/teams/$teamId/invites") {
@@ -77,9 +78,6 @@ class InviteRoutesTest : IntegrationTestBase() {
             header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
         }
         assertEquals(HttpStatusCode.OK, redeemResp.status)
-        val redeemedInvite = redeemResp.body<InviteLink>()
-        assertEquals(playerAuth.userId, redeemedInvite.redeemedByUserId)
-        assertNotNull(redeemedInvite.redeemedAt)
 
         val detailsAfter = client.get("/invites/${invite.token}").body<InviteDetails>()
         assertEquals(true, detailsAfter.alreadyRedeemed)
@@ -89,6 +87,7 @@ class InviteRoutesTest : IntegrationTestBase() {
     fun `redeem - expired token returns 410`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = setupAuthUser("coachexp@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         // Insert invite directly with a past expiresAt
@@ -114,9 +113,10 @@ class InviteRoutesTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `redeem - already redeemed by another user returns 409`() = withTeamorgTestApplication {
+    fun `redeem - second different user also becomes member returns 200`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = setupAuthUser("coach2@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         val inviteToken = client.post("/teams/$teamId/invites") {
@@ -134,13 +134,14 @@ class InviteRoutesTest : IntegrationTestBase() {
         val response = client.post("/invites/$inviteToken/redeem") {
             header(HttpHeaders.Authorization, "Bearer ${player2.token}")
         }
-        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertEquals(HttpStatusCode.OK, response.status)
     }
 
     @Test
     fun `redeem - already member returns 200 idempotent`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = setupAuthUser("coach3@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         val inviteToken = client.post("/teams/$teamId/invites") {
@@ -172,6 +173,7 @@ class InviteRoutesTest : IntegrationTestBase() {
     fun `create invite - unauthorized returns 403`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = setupAuthUser("coach4@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         val otherUser = setupAuthUser("other@test.com")
@@ -187,6 +189,7 @@ class InviteRoutesTest : IntegrationTestBase() {
     fun `create invite - invalid role returns 400`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = setupAuthUser("coach5@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         val response = client.post("/teams/$teamId/invites") {
@@ -210,6 +213,7 @@ class InviteRoutesTest : IntegrationTestBase() {
     fun `create invite unauthenticated returns 401`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = setupAuthUser("coach6@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         val response = client.post("/teams/$teamId/invites") {
@@ -223,6 +227,7 @@ class InviteRoutesTest : IntegrationTestBase() {
     fun `redeem invite - user added to team members`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = setupAuthUser("coach7@test.com")
+        promoteToSuperAdmin(coachAuth.userId)
         val teamId = setupClubAndTeam(coachAuth.token)
 
         val inviteToken = client.post("/teams/$teamId/invites") {

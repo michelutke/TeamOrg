@@ -1,5 +1,6 @@
 package ch.teamorg.test
 
+import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.module
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -7,7 +8,10 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.testcontainers.containers.PostgreSQLContainer
+import java.util.UUID
 
 abstract class IntegrationTestBase {
 
@@ -43,6 +47,15 @@ abstract class IntegrationTestBase {
                 ignoreUnknownKeys = true
                 isLenient = true
             })
+        }
+    }
+
+    /** Promote an already-registered user (by userId string) to super-admin so they can create clubs. */
+    fun promoteToSuperAdmin(userId: String) {
+        transaction {
+            UsersTable.update({ UsersTable.id eq UUID.fromString(userId) }) {
+                it[isSuperAdmin] = true
+            }
         }
     }
 

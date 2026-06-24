@@ -34,6 +34,9 @@ fun Route.clubRoutes() {
         route("/clubs") {
             post {
                 call.authenticateUser(userRepository) { user ->
+                    if (!user.isSuperAdmin) {
+                        return@authenticateUser call.respond(HttpStatusCode.Forbidden, "Only super-admins can create clubs")
+                    }
                     val request = call.receive<CreateClubRequest>()
                     if (request.name.isBlank()) {
                         return@authenticateUser call.respond(HttpStatusCode.BadRequest, "Club name is required")

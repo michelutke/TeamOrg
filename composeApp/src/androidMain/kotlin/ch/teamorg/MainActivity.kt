@@ -21,5 +21,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun Intent?.inviteToken(): String? =
-    this?.data?.takeIf { it.scheme == "teamorg" }?.pathSegments?.lastOrNull()
+private fun Intent?.inviteToken(): String? {
+    val uri = this?.data ?: return null
+    return when {
+        // teamorg://invite/team/{token}
+        uri.scheme == "teamorg" -> uri.pathSegments?.lastOrNull()
+        // https://teamorg.ch/i/{token}
+        uri.scheme == "https" && uri.host == "teamorg.ch" && uri.pathSegments.firstOrNull() == "i" ->
+            uri.pathSegments?.lastOrNull()
+        else -> null
+    }?.takeIf { it.isNotBlank() }
+}

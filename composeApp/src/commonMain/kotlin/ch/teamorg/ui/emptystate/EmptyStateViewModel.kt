@@ -14,7 +14,8 @@ data class EmptyStateUiState(
     val profileLink: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
-    val infoMessage: String? = null
+    val infoMessage: String? = null,
+    val isSuperAdmin: Boolean = false
 )
 
 sealed class EmptyStateEvent {
@@ -40,7 +41,8 @@ class EmptyStateViewModel(
         viewModelScope.launch {
             authRepository.getMe().onSuccess { user ->
                 _state.value = _state.value.copy(
-                    profileLink = "teamorg://invite/player/${user.userId}"
+                    profileLink = "teamorg://invite/player/${user.userId}",
+                    isSuperAdmin = user.isSuperAdmin
                 )
             }
         }
@@ -57,11 +59,12 @@ class EmptyStateViewModel(
             return
         }
 
-        // Extract token from teamorg://invite/team/{token} or just take the whole thing if it's just the token
-        val token = if (link.startsWith("teamorg://invite/team/")) {
-            link.substringAfterLast("/")
-        } else {
-            link
+        // Extract token from supported link formats, else treat the whole input as the token.
+        val trimmed = link.trim()
+        val token = when {
+            trimmed.contains("/i/") -> trimmed.substringAfterLast("/i/")
+            trimmed.startsWith("teamorg://invite/team/") -> trimmed.substringAfterLast("/")
+            else -> trimmed
         }
 
         if (token.isBlank()) {

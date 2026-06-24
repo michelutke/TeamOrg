@@ -2,6 +2,8 @@ package ch.teamorg.plugins
 
 import ch.teamorg.di.StorageModule
 import ch.teamorg.domain.repositories.*
+import ch.teamorg.mail.MailService
+import ch.teamorg.mail.MailServiceImpl
 import ch.teamorg.infra.AbwesenheitBackfillJob
 import ch.teamorg.infra.NotificationDispatcher
 import ch.teamorg.infra.PushService
@@ -38,6 +40,7 @@ fun appModule(environment: ApplicationEnvironment) = module {
     single { NotificationDispatcher(get(), get()) }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
     single<AdminRepository> { AdminRepositoryImpl() }
+    single<MailService> { MailServiceImpl(environment.config) }
 }
 
 fun Application.configureKoin() {

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import ch.teamorg.domain.InviteDetails
 import ch.teamorg.ui.MainDispatcherRule
+import ch.teamorg.ui.fakes.FakeAuthRepository
 import ch.teamorg.ui.fakes.FakeInviteRepository
 import org.junit.Rule
 import org.junit.Test
@@ -30,6 +31,7 @@ class InviteScreenTest {
 
     private val fakeInviteDetails = InviteDetails(
         token = testToken,
+        scope = "team",
         teamName = "FC Zurich U21",
         clubName = "FC Zurich",
         role = "player",
@@ -42,10 +44,14 @@ class InviteScreenTest {
         fakeRepo: FakeInviteRepository = FakeInviteRepository(),
         isLoggedIn: Boolean = false,
         onNavigateToLogin: (String) -> Unit = {},
-        onNavigateToRegister: (String) -> Unit = {},
+        onNavigateToRegister: (InviteDetails) -> Unit = {},
         onJoinSuccess: () -> Unit = {},
+        onLogout: () -> Unit = {},
     ): InviteViewModel {
-        val viewModel = InviteViewModel(inviteRepository = fakeRepo)
+        val viewModel = InviteViewModel(
+            inviteRepository = fakeRepo,
+            authRepository = FakeAuthRepository(),
+        )
         composeTestRule.setContent {
             InviteScreen(
                 token = testToken,
@@ -54,6 +60,7 @@ class InviteScreenTest {
                 onNavigateToLogin = onNavigateToLogin,
                 onNavigateToRegister = onNavigateToRegister,
                 onJoinSuccess = onJoinSuccess,
+                onLogout = onLogout,
             )
         }
         return viewModel
@@ -96,7 +103,7 @@ class InviteScreenTest {
         var joinSuccessCalled = false
         val fakeRepo = FakeInviteRepository().apply {
             getInviteDetailsResult = Result.success(fakeInviteDetails)
-            redeemInviteResult = Result.success(Unit)
+            redeemInviteResult = ch.teamorg.domain.RedeemResult.Success
         }
         launchScreen(
             fakeRepo = fakeRepo,
