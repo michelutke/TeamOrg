@@ -4,6 +4,7 @@ import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.authenticateUser
+import ch.teamorg.middleware.requireClubMember
 import ch.teamorg.middleware.requireClubRole
 import ch.teamorg.storage.FileStorageService
 import ch.teamorg.storage.FileType
@@ -54,6 +55,7 @@ fun Route.clubRoutes() {
             route("/{clubId}") {
                 get {
                     val clubId = UUID.fromString(call.parameters["clubId"])
+                    if (!call.requireClubMember(clubId, clubRepository)) return@get
                     val club = clubRepository.findById(clubId)
                     if (club == null) {
                         call.respond(HttpStatusCode.NotFound, "Club not found")
@@ -114,6 +116,7 @@ fun Route.clubRoutes() {
 
                 get("/teams") {
                     val clubId = UUID.fromString(call.parameters["clubId"])
+                    if (!call.requireClubMember(clubId, clubRepository)) return@get
                     val teams = clubRepository.listTeams(clubId)
                     call.respond(teams)
                 }

@@ -39,6 +39,7 @@ fun Route.subGroupRoutes() {
         route("/teams/{teamId}/subgroups") {
             get {
                 val teamId = UUID.fromString(call.parameters["teamId"])
+                if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
                 val subGroups = newSuspendedTransaction {
                     SubGroupsTable
                         .leftJoin(SubGroupMembersTable)

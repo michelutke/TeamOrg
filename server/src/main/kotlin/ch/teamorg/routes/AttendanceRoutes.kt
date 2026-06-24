@@ -6,6 +6,9 @@ import ch.teamorg.domain.repositories.AttendanceResponseRow
 import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.RawAttendanceRow
+import ch.teamorg.domain.repositories.TeamRepository
+import ch.teamorg.middleware.requireEventAccess
+import ch.teamorg.middleware.requireTeamRole
 import ch.teamorg.infra.NotificationDispatcher
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -60,16 +63,22 @@ fun Route.attendanceRoutes() {
     val dispatcher by inject<NotificationDispatcher>()
     val notificationRepo by inject<NotificationRepository>()
     val eventRepository by inject<EventRepository>()
+    val teamRepository by inject<TeamRepository>()
 
     authenticate("jwt") {
         get("/events/{id}/attendance") {
             val eventId = UUID.fromString(call.parameters["id"])
+            // Any member of the event's team(s) may read the roster (the app shows RSVP counts
+            // to players); non-members are rejected.
+            if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@get
             val responses = attendanceRepo.getEventAttendance(eventId)
             call.respond(responses.map { it.toDto() })
         }
 
         get("/events/{id}/attendance/me") {
             val eventId = UUID.fromString(call.parameters["id"])
+            // You may only view/set your own attendance for events of teams you belong to.
+            if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@get
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val response = attendanceRepo.getMyResponse(eventId, userId)
             if (response != null) call.respond(response.toDto())
@@ -78,6 +87,7 @@ fun Route.attendanceRoutes() {
 
         put("/events/{id}/attendance/me") {
             val eventId = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@put
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<SubmitResponseRequest>()
 
@@ -127,6 +137,29 @@ fun Route.attendanceRoutes() {
 
         get("/users/{userId}/attendance") {
             val userId = UUID.fromString(call.parameters["userId"])
+            val callerId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+
+            if (userId != callerId) {
+                // A coach/club_manager may read the attendance of players who share one of
+                // their managed teams; everyone else is rejected.
+                val callerManagedTeams = teamRepository.getUserTeamRoles(callerId)
+                    .filter { it.third == "coach" }
+                    .map { it.first }
+                    .toSet()
+                val callerManagedClubs = teamRepository.getUserClubRoles(callerId)
+                    .filter { it.second == "club_manager" }
+                    .map { it.first }
+                    .toSet()
+                val targetRoles = teamRepository.getUserTeamRoles(userId)
+                val sharesManagedTeam = targetRoles.any {
+                    it.first in callerManagedTeams || it.second in callerManagedClubs
+                }
+                if (!sharesManagedTeam) {
+                    call.respond(HttpStatusCode.Forbidden, "You may not view this user's attendance")
+                    return@get
+                }
+            }
+
             val from = call.parameters["from"]?.let { Instant.parse(it) }
             val to = call.parameters["to"]?.let { Instant.parse(it) }
             val rows = attendanceRepo.getRawAttendance(userId, from, to)
@@ -135,6 +168,9 @@ fun Route.attendanceRoutes() {
 
         get("/teams/{teamId}/attendance") {
             val teamId = UUID.fromString(call.parameters["teamId"])
+            // Restricted to members of the team (a player sees their own team's attendance);
+            // club_manager passes via role inheritance.
+            if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
             val from = call.parameters["from"]?.let { Instant.parse(it) }
             val to = call.parameters["to"]?.let { Instant.parse(it) }
             val rows = attendanceRepo.getTeamAttendance(teamId, from, to)

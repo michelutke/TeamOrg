@@ -66,6 +66,19 @@ class ClubRepositoryImpl : ClubRepository {
         }.empty()
     }
 
+    override suspend fun isMember(userId: UUID, clubId: UUID): Boolean = transaction {
+        // 1. Direct club role (e.g. club_manager)
+        val hasClubRole = !ClubRolesTable.selectAll().where {
+            (ClubRolesTable.userId eq userId) and (ClubRolesTable.clubId eq clubId)
+        }.empty()
+        if (hasClubRole) return@transaction true
+
+        // 2. Any team role within a team belonging to this club
+        !(TeamRolesTable innerJoin TeamsTable).selectAll().where {
+            (TeamRolesTable.userId eq userId) and (TeamsTable.clubId eq clubId)
+        }.empty()
+    }
+
     private fun rowToClub(row: ResultRow) = Club(
         id = row[ClubsTable.id].toString(),
         name = row[ClubsTable.name],

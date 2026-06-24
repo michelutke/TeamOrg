@@ -35,6 +35,7 @@ fun Route.teamRoutes() {
             route("/{teamId}") {
                 get {
                     val teamId = UUID.fromString(call.parameters["teamId"])
+                    if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
                     val team = teamRepository.findById(teamId)
                     if (team == null) {
                         call.respond(HttpStatusCode.NotFound, "Team not found")
@@ -63,6 +64,7 @@ fun Route.teamRoutes() {
 
                 get("/members") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
+                    if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
                     val members = teamRepository.listMembers(teamId)
                     call.respond(members)
                 }

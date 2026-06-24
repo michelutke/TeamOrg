@@ -136,6 +136,11 @@ fun Route.abwesenheitRoutes() {
         put("/users/me/abwesenheit/{ruleId}") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val ruleId = UUID.fromString(call.parameters["ruleId"])
+            val existing = abwesenheitRepo.getRule(ruleId)
+            if (existing == null || existing.userId != userId) {
+                call.respond(HttpStatusCode.Forbidden, "You do not own this absence rule")
+                return@put
+            }
             val body = call.receive<UpdateAbwesenheitRequest>()
             val rule = abwesenheitRepo.updateRule(
                 ruleId,
@@ -176,7 +181,13 @@ fun Route.abwesenheitRoutes() {
         }
 
         delete("/users/me/abwesenheit/{ruleId}") {
+            val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val ruleId = UUID.fromString(call.parameters["ruleId"])
+            val existing = abwesenheitRepo.getRule(ruleId)
+            if (existing == null || existing.userId != userId) {
+                call.respond(HttpStatusCode.Forbidden, "You do not own this absence rule")
+                return@delete
+            }
             abwesenheitRepo.deleteRule(ruleId)
             call.respond(HttpStatusCode.NoContent)
         }
