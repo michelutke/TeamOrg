@@ -173,9 +173,14 @@ class AttendanceRepositoryImpl : AttendanceRepository {
             .single()
     }
 
-    override suspend fun getRawAttendance(userId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow> =
+    override suspend fun getRawAttendance(
+        userId: UUID,
+        from: Instant?,
+        to: Instant?,
+        restrictToTeamIds: Set<UUID>?
+    ): List<RawAttendanceRow> =
         transaction {
-            buildRawQuery(userId = userId, teamId = null, from = from, to = to)
+            buildRawQuery(userId = userId, teamId = null, from = from, to = to, restrictToTeamIds = restrictToTeamIds)
         }
 
     override suspend fun getTeamAttendance(teamId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow> =
@@ -219,7 +224,8 @@ class AttendanceRepositoryImpl : AttendanceRepository {
         userId: UUID?,
         teamId: UUID?,
         from: Instant?,
-        to: Instant?
+        to: Instant?,
+        restrictToTeamIds: Set<UUID>? = null
     ): List<RawAttendanceRow> {
         val query = if (teamId != null) {
             (EventsTable innerJoin EventTeamsTable)
@@ -233,6 +239,25 @@ class AttendanceRepositoryImpl : AttendanceRepository {
                     EventsTable.startAt
                 )
                 .where { EventTeamsTable.teamId eq teamId }
+        } else if (restrictToTeamIds != null) {
+            // Scope the target's rows to events targeting only the authorized teams (the caller's
+            // managed teams that the target also belongs to). Distinct guards against an event
+            // matching multiple authorized teams.
+            (EventsTable innerJoin EventTeamsTable)
+                .leftJoin(AttendanceResponsesTable, { EventsTable.id }, { AttendanceResponsesTable.eventId })
+                .leftJoin(AttendanceRecordsTable, { EventsTable.id }, { AttendanceRecordsTable.eventId })
+                .select(
+                    EventsTable.id,
+                    AttendanceResponsesTable.userId,
+                    AttendanceResponsesTable.status,
+                    AttendanceRecordsTable.status,
+                    EventsTable.startAt
+                )
+                .where {
+                    (AttendanceResponsesTable.userId eq userId!!) and
+                        (EventTeamsTable.teamId inList restrictToTeamIds)
+                }
+                .withDistinct()
         } else {
             EventsTable
                 .leftJoin(AttendanceResponsesTable, { EventsTable.id }, { AttendanceResponsesTable.eventId })

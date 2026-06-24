@@ -5,6 +5,9 @@ import ch.teamorg.domain.models.EditEventRequest
 import ch.teamorg.domain.models.RecurringScope
 import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.NotificationRepository
+import ch.teamorg.domain.repositories.TeamRepository
+import ch.teamorg.middleware.requireEventAccess
+import ch.teamorg.middleware.requireTeamRole
 import ch.teamorg.infra.AbwesenheitBackfillJob
 import ch.teamorg.infra.NotificationDispatcher
 import org.slf4j.LoggerFactory
@@ -48,6 +51,7 @@ private fun formatDate(instant: Instant): String {
 
 fun Route.eventRoutes() {
     val eventRepository by inject<EventRepository>()
+    val teamRepository by inject<TeamRepository>()
     val backfillJob by inject<AbwesenheitBackfillJob>()
     val dispatcher by inject<NotificationDispatcher>()
     val notificationRepo by inject<NotificationRepository>()
@@ -65,6 +69,7 @@ fun Route.eventRoutes() {
 
         get("/teams/{teamId}/events") {
             val teamId = UUID.fromString(call.parameters["teamId"])
+            if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
             val from = call.parameters["from"]?.let { Instant.parse(it) }
             val to = call.parameters["to"]?.let { Instant.parse(it) }
             val events = eventRepository.findEventsForTeam(teamId, from, to)
@@ -73,6 +78,7 @@ fun Route.eventRoutes() {
 
         get("/events/{id}") {
             val id = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(id, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@get
             val event = eventRepository.findByIdWithTeams(id)
             if (event != null) call.respond(event)
             else call.respond(HttpStatusCode.NotFound)
@@ -81,6 +87,10 @@ fun Route.eventRoutes() {
         post("/events") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val request = call.receive<CreateEventRequest>()
+            // An event may only be created for teams the caller coaches/manages.
+            for (teamId in request.teamIds) {
+                if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
+            }
             val event = eventRepository.create(request, userId)
             backfillJob.applyRulesToNewEvent(event.id, event.startAt, event.teamIds)
 
@@ -117,6 +127,7 @@ fun Route.eventRoutes() {
 
         patch("/events/{id}") {
             val id = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(id, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@patch
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<EditEventWithScope>()
             val scope = RecurringScope.valueOf(body.scope ?: "this_only")
@@ -207,6 +218,7 @@ fun Route.eventRoutes() {
 
         post("/events/{id}/cancel") {
             val id = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(id, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<CancelScopeRequest>()
             val scope = RecurringScope.valueOf(body.scope ?: "this_only")
@@ -260,6 +272,7 @@ fun Route.eventRoutes() {
 
         post("/events/{id}/uncancel") {
             val id = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(id, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
             val body = call.receive<CancelScopeRequest>()
             val scope = RecurringScope.valueOf(body.scope ?: "this_only")
 
@@ -293,6 +306,7 @@ fun Route.eventRoutes() {
         post("/events/{id}/duplicate") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val id = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(id, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
             val event = eventRepository.duplicate(id, userId)
             if (event != null) {
                 backfillJob.applyRulesToNewEvent(event.id, event.startAt, event.teamIds)

@@ -4,9 +4,13 @@ import ch.teamorg.domain.models.NotificationResponse
 import ch.teamorg.domain.models.NotificationSettingsResponse
 import ch.teamorg.domain.models.ReminderOverrideRequest
 import ch.teamorg.domain.models.UpdateNotificationSettingsRequest
+import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.NotificationRow
 import ch.teamorg.domain.repositories.NotificationSettingsRow
+import ch.teamorg.domain.repositories.TeamRepository
+import ch.teamorg.middleware.requireEventAccess
+import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -51,6 +55,8 @@ private fun NotificationSettingsRow.toResponse() = NotificationSettingsResponse(
 
 fun Route.notificationRoutes() {
     val notificationRepo by inject<NotificationRepository>()
+    val teamRepository by inject<TeamRepository>()
+    val eventRepository by inject<EventRepository>()
 
     authenticate("jwt") {
         get("/notifications") {
@@ -90,6 +96,7 @@ fun Route.notificationRoutes() {
         get("/notifications/settings/{teamId}") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val teamId = UUID.fromString(call.parameters["teamId"])
+            if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
             val settings = notificationRepo.getSettings(userId, teamId)
             if (settings != null) {
                 call.respond(settings.toResponse())
@@ -113,6 +120,7 @@ fun Route.notificationRoutes() {
         put("/notifications/settings/{teamId}") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val teamId = UUID.fromString(call.parameters["teamId"])
+            if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@put
             val body = call.receive<UpdateNotificationSettingsRequest>()
             notificationRepo.upsertSettings(userId, teamId, body)
             call.respond(HttpStatusCode.OK)
@@ -121,6 +129,7 @@ fun Route.notificationRoutes() {
         get("/events/{eventId}/reminder") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val eventId = UUID.fromString(call.parameters["eventId"])
+            if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@get
             val leadMinutes = notificationRepo.getReminderOverride(userId, eventId)
             call.respond(ReminderOverrideResponse(leadMinutes))
         }
@@ -128,6 +137,7 @@ fun Route.notificationRoutes() {
         put("/events/{eventId}/reminder") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val eventId = UUID.fromString(call.parameters["eventId"])
+            if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@put
             val body = call.receive<ReminderOverrideRequest>()
             notificationRepo.upsertReminderOverride(userId, eventId, body.reminderLeadMinutes)
             call.respond(HttpStatusCode.OK)

@@ -299,7 +299,7 @@ class EventRoutesTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `GET events nonexistent returns 404`() = withTeamorgTestApplication {
+    fun `GET events nonexistent returns 403`() = withTeamorgTestApplication {
         val client = createJsonClient()
 
         val auth = client.post("/auth/register") {
@@ -307,11 +307,13 @@ class EventRoutesTest : IntegrationTestBase() {
             setBody(RegisterRequest("event_404@example.com", "password123", "EventUser"))
         }.body<AuthResponse>()
 
+        // A caller with no access to the event id is rejected before existence is checked
+        // (IDOR hardening — do not leak whether the event exists).
         val response = client.get("/events/00000000-0000-0000-0000-000000000000") {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
         }
 
-        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals(HttpStatusCode.Forbidden, response.status)
     }
 
     @Test
