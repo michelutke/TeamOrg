@@ -1,4 +1,5 @@
 import { apiPatch, apiPost } from '$lib/server/api';
+import { ApiError, assertClubAccess } from '$lib/server/guards';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -15,14 +16,22 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
 	edit: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const name = (data.get('name') as string) || undefined;
 		const location = (data.get('location') as string) || undefined;
-		await apiPatch(`/clubs/${params.clubId}`, locals.token!, { name, location });
-		return { success: true };
+		try {
+			await apiPatch(`/clubs/${params.clubId}`, locals.token!, { name, location });
+			return { success: true };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to edit this club' });
+			return fail(500, { error: 'Failed to save changes' });
+		}
 	},
 
 	inviteCoManager: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const email = data.get('email') as string;
 		if (!email) return fail(400, { error: 'Email required' });
@@ -34,7 +43,9 @@ export const actions: Actions = {
 				{ role: 'club_manager', email }
 			);
 			return { success: true, action: 'invite_sent', inviteUrl: invite.inviteUrl, expiresAt: invite.expiresAt };
-		} catch {
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to invite co-managers' });
 			return fail(400, { error: 'Failed to send invite' });
 		}
 	}

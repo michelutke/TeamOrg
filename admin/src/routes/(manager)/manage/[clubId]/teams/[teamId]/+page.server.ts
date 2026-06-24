@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from '$lib/server/api';
+import { ApiError, assertClubAccess } from '$lib/server/guards';
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -42,42 +43,77 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 export const actions: Actions = {
 	updateTeam: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const name = (data.get('name') as string) || undefined;
 		const description = (data.get('description') as string) || undefined;
-		await apiPatch(`/teams/${params.teamId}`, locals.token!, { name, description });
-		return { success: true };
+		try {
+			await apiPatch(`/teams/${params.teamId}`, locals.token!, { name, description });
+			return { success: true };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to update this team' });
+			return fail(500, { error: 'Failed to update team' });
+		}
 	},
 
 	archive: async ({ params, locals }) => {
-		await apiDelete(`/teams/${params.teamId}`, locals.token!);
+		assertClubAccess(locals, params.clubId);
+		try {
+			await apiDelete(`/teams/${params.teamId}`, locals.token!);
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to archive this team' });
+			return fail(500, { error: 'Failed to archive team' });
+		}
 		throw redirect(302, `/manage/${params.clubId}/teams`);
 	},
 
 	changeRole: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const userId = data.get('userId') as string;
 		const role = data.get('role') as string;
-		await apiPatch(`/teams/${params.teamId}/members/${userId}/role`, locals.token!, { role });
-		return { success: true, action: 'role_changed' };
+		try {
+			await apiPatch(`/teams/${params.teamId}/members/${userId}/role`, locals.token!, { role });
+			return { success: true, action: 'role_changed' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to change roles' });
+			return fail(500, { error: 'Failed to change role' });
+		}
 	},
 
 	removeMember: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const userId = data.get('userId') as string;
 		if (!userId) return fail(400, { error: 'User ID required' });
-		await apiDelete(`/teams/${params.teamId}/members/${userId}`, locals.token!);
-		return { success: true, action: 'member_removed' };
+		try {
+			await apiDelete(`/teams/${params.teamId}/members/${userId}`, locals.token!);
+			return { success: true, action: 'member_removed' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to remove members' });
+			return fail(500, { error: 'Failed to remove member' });
+		}
 	},
 
 	createInvite: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const role = (data.get('role') as string) || 'player';
-		const invite = await apiPost<InviteResponse>(
-			`/teams/${params.teamId}/invites`,
-			locals.token!,
-			{ role }
-		);
-		return { success: true, action: 'invite_created', inviteUrl: invite.inviteUrl, expiresAt: invite.expiresAt };
+		try {
+			const invite = await apiPost<InviteResponse>(
+				`/teams/${params.teamId}/invites`,
+				locals.token!,
+				{ role }
+			);
+			return { success: true, action: 'invite_created', inviteUrl: invite.inviteUrl, expiresAt: invite.expiresAt };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to create invites' });
+			return fail(500, { error: 'Failed to create invite' });
+		}
 	}
 };

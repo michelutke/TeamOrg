@@ -25,10 +25,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(302, `/manage/${managedClubIds[0]}`);
 	}
 
-	// Multiple clubs: fetch names for picker
-	const clubs = await Promise.all(
+	// Multiple clubs: fetch names; skip any that fail rather than 500ing the picker
+	const results = await Promise.allSettled(
 		managedClubIds.map((id) => apiGet<Club>(`/clubs/${id}`, locals.token!))
 	);
+
+	const clubs = results
+		.filter((r): r is PromiseFulfilledResult<Club> => r.status === 'fulfilled')
+		.map((r) => r.value);
+
+	if (clubs.length === 0) throw error(503, 'Could not load any club data');
 
 	return { clubs };
 };
