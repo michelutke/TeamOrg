@@ -3,7 +3,7 @@
 declare global {
 	namespace App {
 		interface Locals {
-			user?: { id: string; email: string; displayName: string; isSuperAdmin: boolean };
+			user?: { id: string; email: string; displayName: string; isSuperAdmin: boolean; managedClubIds: string[] };
 			token?: string;
 			adminToken?: string;
 			impersonation?: {

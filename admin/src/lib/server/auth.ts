@@ -15,6 +15,17 @@ interface UserInfo {
 	email: string;
 	displayName: string;
 	isSuperAdmin: boolean;
+	managedClubIds: string[];
+}
+
+interface ClubRoleEntry {
+	clubId: string;
+	role: string;
+}
+
+interface UserRolesResponse {
+	clubRoles: ClubRoleEntry[];
+	teamRoles: unknown[];
 }
 
 export async function login(
@@ -34,18 +45,33 @@ export async function login(
 
 	const data: AuthResponse = await res.json();
 
-	// Verify user is SuperAdmin
-	const meRes = await fetch(`${API_BASE}/auth/me`, {
-		headers: { Authorization: `Bearer ${data.token}` }
-	});
+	// Verify user identity and fetch roles in parallel
+	const [meRes, rolesRes] = await Promise.all([
+		fetch(`${API_BASE}/auth/me`, {
+			headers: { Authorization: `Bearer ${data.token}` }
+		}),
+		fetch(`${API_BASE}/auth/me/roles`, {
+			headers: { Authorization: `Bearer ${data.token}` }
+		})
+	]);
 
 	if (!meRes.ok) {
 		return { success: false, error: 'Failed to verify user' };
 	}
 
-	const user: UserInfo = await meRes.json();
-	if (!user.isSuperAdmin) {
-		return { success: false, error: 'SuperAdmin access required' };
+	const user: Omit<UserInfo, 'managedClubIds'> = await meRes.json();
+
+	let managedClubIds: string[] = [];
+	if (rolesRes.ok) {
+		const roles: UserRolesResponse = await rolesRes.json();
+		managedClubIds = roles.clubRoles
+			.filter((r) => r.role === 'club_manager')
+			.map((r) => r.clubId);
+	}
+
+	const isAllowed = user.isSuperAdmin || managedClubIds.length > 0;
+	if (!isAllowed) {
+		return { success: false, error: 'Only managers and admins can sign in here.' };
 	}
 
 	// Store JWT in httpOnly cookie — never exposed to browser JS
@@ -65,11 +91,28 @@ export async function getSession(cookies: Cookies): Promise<UserInfo | null> {
 	if (!token) return null;
 
 	try {
-		const res = await fetch(`${API_BASE}/auth/me`, {
-			headers: { Authorization: `Bearer ${token}` }
-		});
-		if (!res.ok) return null;
-		return await res.json();
+		const [meRes, rolesRes] = await Promise.all([
+			fetch(`${API_BASE}/auth/me`, {
+				headers: { Authorization: `Bearer ${token}` }
+			}),
+			fetch(`${API_BASE}/auth/me/roles`, {
+				headers: { Authorization: `Bearer ${token}` }
+			})
+		]);
+
+		if (!meRes.ok) return null;
+
+		const user: Omit<UserInfo, 'managedClubIds'> = await meRes.json();
+
+		let managedClubIds: string[] = [];
+		if (rolesRes.ok) {
+			const roles: UserRolesResponse = await rolesRes.json();
+			managedClubIds = roles.clubRoles
+				.filter((r) => r.role === 'club_manager')
+				.map((r) => r.clubId);
+		}
+
+		return { ...user, managedClubIds };
 	} catch {
 		return null;
 	}
