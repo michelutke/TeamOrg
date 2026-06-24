@@ -76,7 +76,17 @@ interface AttendanceRepository {
     suspend fun getCheckIn(eventId: UUID): List<CheckInRow>
     suspend fun getCheckInEntries(eventId: UUID): List<CheckInEntryResponse>
     suspend fun upsertCheckIn(eventId: UUID, userId: UUID, status: String, note: String?, setBy: UUID): CheckInRow
-    suspend fun getRawAttendance(userId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow>
+    /**
+     * Raw attendance rows for [userId]. When [restrictToTeamIds] is non-null, only rows for events
+     * targeting one of those teams are returned (used to scope a coach to the teams they share with
+     * the target). A null value returns rows across all of the user's events (self-request).
+     */
+    suspend fun getRawAttendance(
+        userId: UUID,
+        from: Instant?,
+        to: Instant?,
+        restrictToTeamIds: Set<UUID>? = null
+    ): List<RawAttendanceRow>
     suspend fun getTeamAttendance(teamId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow>
     suspend fun bulkInsertAutoDeclines(ruleId: UUID, userId: UUID, eventUserPairs: List<Pair<UUID, UUID>>)
 }

@@ -14,6 +14,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
@@ -31,6 +32,30 @@ data class AddSubGroupMemberRequest(val userId: String)
 
 @Serializable
 data class SubGroupResponse(val id: String, val teamId: String, val name: String, val memberCount: Long)
+
+/** Returns the team a subgroup belongs to, or null if the subgroup does not exist. */
+private suspend fun subGroupTeamId(subGroupId: UUID): UUID? = newSuspendedTransaction {
+    SubGroupsTable.select(SubGroupsTable.teamId)
+        .where { SubGroupsTable.id eq subGroupId }
+        .map { it[SubGroupsTable.teamId] }
+        .singleOrNull()
+}
+
+/**
+ * Confirm the subgroup belongs to the team in the path. Guards against a coach of team A
+ * mutating a subgroup owned by team B via a forged path. Responds 403 and returns false on
+ * mismatch (or when the subgroup is missing — do not leak existence).
+ */
+private suspend fun io.ktor.server.application.ApplicationCall.requireSubGroupInTeam(
+    subGroupId: UUID,
+    teamId: UUID
+): Boolean {
+    if (subGroupTeamId(subGroupId) != teamId) {
+        respond(HttpStatusCode.Forbidden, "Subgroup does not belong to this team")
+        return false
+    }
+    return true
+}
 
 fun Route.subGroupRoutes() {
     val teamRepository by inject<TeamRepository>()
@@ -78,6 +103,7 @@ fun Route.subGroupRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@put
+                    if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@put
                     val request = call.receive<UpdateSubGroupRequest>()
                     newSuspendedTransaction {
                         SubGroupsTable.update({ SubGroupsTable.id eq subGroupId }) {
@@ -91,6 +117,7 @@ fun Route.subGroupRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@delete
+                    if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@delete
                     newSuspendedTransaction {
                         SubGroupMembersTable.deleteWhere { SubGroupMembersTable.subGroupId eq subGroupId }
                         SubGroupsTable.deleteWhere { SubGroupsTable.id eq subGroupId }
@@ -102,6 +129,7 @@ fun Route.subGroupRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
+                    if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@post
                     val request = call.receive<AddSubGroupMemberRequest>()
                     newSuspendedTransaction {
                         SubGroupMembersTable.insert {
@@ -117,6 +145,7 @@ fun Route.subGroupRoutes() {
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     val userId = UUID.fromString(call.parameters["userId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@delete
+                    if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@delete
                     newSuspendedTransaction {
                         SubGroupMembersTable.deleteWhere {
                             (SubGroupMembersTable.subGroupId eq subGroupId) and (SubGroupMembersTable.userId eq userId)

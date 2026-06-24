@@ -54,8 +54,8 @@ suspend fun ApplicationCall.requireClubMember(clubId: UUID, clubRepository: Club
  * hold one of [roles] in at least one of those teams. Events with no teams (personal/orphaned)
  * are only accessible to their creator.
  *
- * Returns true when access is granted. On failure responds (404 if event missing, 403 otherwise)
- * and returns false.
+ * Returns true when access is granted. On failure always responds 403 (existence is only decided
+ * after access is granted — do not leak whether the event exists) and returns false.
  */
 suspend fun ApplicationCall.requireEventAccess(
     eventId: UUID,
@@ -68,7 +68,7 @@ suspend fun ApplicationCall.requireEventAccess(
 
     val event = eventRepository.findById(eventId)
     if (event == null) {
-        respond(HttpStatusCode.NotFound)
+        respond(HttpStatusCode.Forbidden, "You do not have access to this event")
         return false
     }
 

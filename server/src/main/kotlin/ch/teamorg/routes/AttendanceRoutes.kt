@@ -139,9 +139,14 @@ fun Route.attendanceRoutes() {
             val userId = UUID.fromString(call.parameters["userId"])
             val callerId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
 
+            // Null = unrestricted (self-request); non-null = only the teams the caller is
+            // authorized to see the target's data for.
+            var restrictToTeamIds: Set<UUID>? = null
+
             if (userId != callerId) {
-                // A coach/club_manager may read the attendance of players who share one of
-                // their managed teams; everyone else is rejected.
+                // A coach/club_manager may read the attendance of players who share one of their
+                // managed teams — but only the data for those shared teams, not the target's
+                // unrelated teams.
                 val callerManagedTeams = teamRepository.getUserTeamRoles(callerId)
                     .filter { it.third == "coach" }
                     .map { it.first }
@@ -151,18 +156,20 @@ fun Route.attendanceRoutes() {
                     .map { it.first }
                     .toSet()
                 val targetRoles = teamRepository.getUserTeamRoles(userId)
-                val sharesManagedTeam = targetRoles.any {
-                    it.first in callerManagedTeams || it.second in callerManagedClubs
-                }
-                if (!sharesManagedTeam) {
+                val authorizedTeams = targetRoles
+                    .filter { it.first in callerManagedTeams || it.second in callerManagedClubs }
+                    .map { it.first }
+                    .toSet()
+                if (authorizedTeams.isEmpty()) {
                     call.respond(HttpStatusCode.Forbidden, "You may not view this user's attendance")
                     return@get
                 }
+                restrictToTeamIds = authorizedTeams
             }
 
             val from = call.parameters["from"]?.let { Instant.parse(it) }
             val to = call.parameters["to"]?.let { Instant.parse(it) }
-            val rows = attendanceRepo.getRawAttendance(userId, from, to)
+            val rows = attendanceRepo.getRawAttendance(userId, from, to, restrictToTeamIds)
             call.respond(rows.map { it.toDto() })
         }
 
