@@ -106,6 +106,12 @@ export interface Dict {
 		excused: string;
 		empty: string;
 	};
+	member: {
+		jersey: string;
+		position: string;
+		editOwn: string;
+		saved: string;
+	};
 }
 
 const de: Dict = {
@@ -202,6 +208,12 @@ const de: Dict = {
 		absent: 'Abwesend',
 		excused: 'Entschuldigt',
 		empty: 'Keine Mitglieder zum Einchecken.'
+	},
+	member: {
+		jersey: 'Trikotnummer',
+		position: 'Position',
+		editOwn: 'Mein Profil bearbeiten',
+		saved: 'Gespeichert'
 	}
 };
 
@@ -299,6 +311,12 @@ const en: Dict = {
 		absent: 'Absent',
 		excused: 'Excused',
 		empty: 'No members to check in.'
+	},
+	member: {
+		jersey: 'Jersey number',
+		position: 'Position',
+		editOwn: 'Edit my profile',
+		saved: 'Saved'
 	}
 };
 

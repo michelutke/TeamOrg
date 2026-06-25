@@ -48,7 +48,9 @@
 			</h2>
 			<div class="flex flex-col gap-2">
 				{#each coaches as member (member.userId)}
-					<MemberRow {member} {roleLabel} />
+					<a href="/app/teams/{data.team.id}/members/{member.userId}" class="block">
+						<MemberRow {member} {roleLabel} />
+					</a>
 				{/each}
 			</div>
 		</section>
@@ -61,7 +63,9 @@
 			</h2>
 			<div class="flex flex-col gap-2">
 				{#each players as member (member.userId)}
-					<MemberRow {member} {roleLabel} />
+					<a href="/app/teams/{data.team.id}/members/{member.userId}" class="block">
+						<MemberRow {member} {roleLabel} />
+					</a>
 				{/each}
 			</div>
 		</section>
