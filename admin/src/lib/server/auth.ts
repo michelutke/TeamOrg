@@ -1,7 +1,14 @@
 import type { Cookies } from '@sveltejs/kit';
 
 const API_BASE = process.env.API_URL || 'http://localhost:8080';
-const COOKIE_NAME = 'admin_session';
+
+// Member-neutral session cookie. `admin_session` is the legacy name — read it as a
+// fallback for one release (grace period) so existing sessions are not logged out,
+// but only ever write `to_session`.
+export const SESSION_COOKIE = 'to_session';
+export const LEGACY_SESSION_COOKIE = 'admin_session';
+
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 interface AuthResponse {
 	token: string;
@@ -10,12 +17,19 @@ interface AuthResponse {
 	avatarUrl: string | null;
 }
 
-interface UserInfo {
+export interface TeamRole {
+	teamId: string;
+	clubId: string;
+	role: string; // "coach" | "player"
+}
+
+export interface UserInfo {
 	id: string;
 	email: string;
 	displayName: string;
 	isSuperAdmin: boolean;
 	managedClubIds: string[];
+	teamRoles: TeamRole[];
 }
 
 interface ClubRoleEntry {
@@ -23,16 +37,66 @@ interface ClubRoleEntry {
 	role: string;
 }
 
+interface TeamRoleEntry {
+	teamId: string;
+	clubId: string;
+	role: string;
+}
+
 interface UserRolesResponse {
 	clubRoles: ClubRoleEntry[];
-	teamRoles: unknown[];
+	teamRoles: TeamRoleEntry[];
+}
+
+/** Reads the session token, preferring the new cookie and falling back to the legacy name. */
+function readToken(cookies: Cookies): string | null {
+	return cookies.get(SESSION_COOKIE) ?? cookies.get(LEGACY_SESSION_COOKIE) ?? null;
+}
+
+function writeSessionCookie(cookies: Cookies, token: string): void {
+	// JWT in httpOnly cookie — never exposed to browser JS.
+	cookies.set(SESSION_COOKIE, token, {
+		path: '/',
+		httpOnly: true,
+		secure: false, // true in production
+		sameSite: 'lax',
+		maxAge: SESSION_MAX_AGE
+	});
+}
+
+/** Resolves a token to the full user info (identity + club + team roles). */
+async function resolveUser(token: string): Promise<UserInfo | null> {
+	const [meRes, rolesRes] = await Promise.all([
+		fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } }),
+		fetch(`${API_BASE}/auth/me/roles`, { headers: { Authorization: `Bearer ${token}` } })
+	]);
+
+	if (!meRes.ok) return null;
+
+	const me: Omit<UserInfo, 'managedClubIds' | 'teamRoles'> = await meRes.json();
+
+	let managedClubIds: string[] = [];
+	let teamRoles: TeamRole[] = [];
+	if (rolesRes.ok) {
+		const roles: UserRolesResponse = await rolesRes.json();
+		managedClubIds = roles.clubRoles
+			.filter((r) => r.role === 'club_manager')
+			.map((r) => r.clubId);
+		teamRoles = roles.teamRoles.map((r) => ({
+			teamId: r.teamId,
+			clubId: r.clubId,
+			role: r.role
+		}));
+	}
+
+	return { ...me, managedClubIds, teamRoles };
 }
 
 export async function login(
 	email: string,
 	password: string,
 	cookies: Cookies
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
 	const res = await fetch(`${API_BASE}/auth/login`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -45,83 +109,39 @@ export async function login(
 
 	const data: AuthResponse = await res.json();
 
-	// Verify user identity and fetch roles in parallel
-	const [meRes, rolesRes] = await Promise.all([
-		fetch(`${API_BASE}/auth/me`, {
-			headers: { Authorization: `Bearer ${data.token}` }
-		}),
-		fetch(`${API_BASE}/auth/me/roles`, {
-			headers: { Authorization: `Bearer ${data.token}` }
-		})
-	]);
-
-	if (!meRes.ok) {
+	const user = await resolveUser(data.token);
+	if (!user) {
 		return { success: false, error: 'Failed to verify user' };
 	}
 
-	const user: Omit<UserInfo, 'managedClubIds'> = await meRes.json();
+	// Any authenticated user may sign in — super-admins, managers, coaches, players.
+	// Landing redirect (and zero-role empty state) is decided by landingPathFor().
+	writeSessionCookie(cookies, data.token);
 
-	let managedClubIds: string[] = [];
-	if (rolesRes.ok) {
-		const roles: UserRolesResponse = await rolesRes.json();
-		managedClubIds = roles.clubRoles
-			.filter((r) => r.role === 'club_manager')
-			.map((r) => r.clubId);
-	}
-
-	const isAllowed = user.isSuperAdmin || managedClubIds.length > 0;
-	if (!isAllowed) {
-		return { success: false, error: 'Only managers and admins can sign in here.' };
-	}
-
-	// Store JWT in httpOnly cookie — never exposed to browser JS
-	cookies.set(COOKIE_NAME, data.token, {
-		path: '/',
-		httpOnly: true,
-		secure: false, // true in production
-		sameSite: 'lax',
-		maxAge: 60 * 60 * 24 * 30 // 30 days
-	});
-
-	return { success: true };
+	return { success: true, user };
 }
 
 export async function getSession(cookies: Cookies): Promise<UserInfo | null> {
-	const token = cookies.get(COOKIE_NAME);
+	const token = readToken(cookies);
 	if (!token) return null;
-
 	try {
-		const [meRes, rolesRes] = await Promise.all([
-			fetch(`${API_BASE}/auth/me`, {
-				headers: { Authorization: `Bearer ${token}` }
-			}),
-			fetch(`${API_BASE}/auth/me/roles`, {
-				headers: { Authorization: `Bearer ${token}` }
-			})
-		]);
-
-		if (!meRes.ok) return null;
-
-		const user: Omit<UserInfo, 'managedClubIds'> = await meRes.json();
-
-		let managedClubIds: string[] = [];
-		if (rolesRes.ok) {
-			const roles: UserRolesResponse = await rolesRes.json();
-			managedClubIds = roles.clubRoles
-				.filter((r) => r.role === 'club_manager')
-				.map((r) => r.clubId);
-		}
-
-		return { ...user, managedClubIds };
+		return await resolveUser(token);
 	} catch {
 		return null;
 	}
 }
 
 export function getToken(cookies: Cookies): string | null {
-	return cookies.get(COOKIE_NAME) || null;
+	return readToken(cookies);
 }
 
 export function logout(cookies: Cookies): void {
-	cookies.delete(COOKIE_NAME, { path: '/' });
+	cookies.delete(SESSION_COOKIE, { path: '/' });
+	cookies.delete(LEGACY_SESSION_COOKIE, { path: '/' });
+}
+
+/** Highest-privilege landing path for a freshly authenticated user. */
+export function landingPathFor(user: UserInfo): string {
+	if (user.isSuperAdmin) return '/admin/dashboard';
+	return '/app';
 }

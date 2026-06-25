@@ -11,7 +11,7 @@ interface Club {
 }
 
 export const load: LayoutServerLoad = async ({ params, locals }) => {
-	if (!locals.user) throw redirect(302, '/admin/login');
+	if (!locals.user) throw redirect(302, '/login');
 
 	const { clubId } = params;
 	const { managedClubIds, isSuperAdmin } = locals.user;

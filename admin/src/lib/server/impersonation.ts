@@ -1,8 +1,9 @@
 import type { Cookies } from '@sveltejs/kit';
+import { SESSION_COOKIE, LEGACY_SESSION_COOKIE } from './auth';
 
 const API_BASE = process.env.API_URL || 'http://localhost:8080';
 const IMPERSONATION_COOKIE = 'admin_impersonation';
-const ORIGINAL_TOKEN_COOKIE = 'admin_session_original';
+export const ORIGINAL_TOKEN_COOKIE = 'to_session_original';
 
 interface ImpersonationResponse {
 	token: string;
@@ -72,7 +73,7 @@ export async function startImpersonation(
 	});
 
 	// Replace the session cookie with impersonation token
-	cookies.set('admin_session', data.token, {
+	cookies.set(SESSION_COOKIE, data.token, {
 		path: '/',
 		httpOnly: true,
 		secure: false,
@@ -84,7 +85,7 @@ export async function startImpersonation(
 }
 
 export async function endImpersonation(cookies: Cookies): Promise<void> {
-	const currentToken = cookies.get('admin_session');
+	const currentToken = cookies.get(SESSION_COOKIE) ?? cookies.get(LEGACY_SESSION_COOKIE);
 
 	// Call server to end impersonation
 	if (currentToken) {
@@ -101,7 +102,7 @@ export async function endImpersonation(cookies: Cookies): Promise<void> {
 	// Restore original SA token
 	const originalToken = cookies.get(ORIGINAL_TOKEN_COOKIE);
 	if (originalToken) {
-		cookies.set('admin_session', originalToken, {
+		cookies.set(SESSION_COOKIE, originalToken, {
 			path: '/',
 			httpOnly: true,
 			secure: false,

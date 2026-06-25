@@ -2,19 +2,17 @@ import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-	if (!locals.user && !url.pathname.startsWith('/admin/login')) {
-		throw redirect(302, '/admin/login');
+	if (!locals.user) {
+		throw redirect(302, '/login');
 	}
 
-	// Club managers who are not impersonating belong in the manager UI
+	// Non-super-admins who are not impersonating belong in the member surface
 	if (
-		locals.user &&
 		!locals.user.isSuperAdmin &&
 		!locals.impersonation?.active &&
-		!url.pathname.startsWith('/admin/login') &&
 		!url.pathname.startsWith('/admin/logout')
 	) {
-		throw redirect(302, '/manage');
+		throw redirect(302, '/app');
 	}
 
 	return {

@@ -10,7 +10,7 @@ interface Club {
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) throw redirect(302, '/admin/login');
+	if (!locals.user) throw redirect(302, '/login');
 
 	const managedClubIds = locals.user.managedClubIds;
 
