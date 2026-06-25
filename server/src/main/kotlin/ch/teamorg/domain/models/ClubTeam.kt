@@ -14,12 +14,19 @@ data class Club(
 )
 
 @Serializable
+data class TeamAppearance(
+    val shape: String,
+    val color: String
+)
+
+@Serializable
 data class Team(
     val id: String,
     val clubId: String,
     val name: String,
     val memberCount: Int,
     val description: String?,
+    val appearance: TeamAppearance?,
     val archivedAt: String?,
     val createdAt: String,
     val updatedAt: String

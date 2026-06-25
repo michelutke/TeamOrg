@@ -23,7 +23,7 @@ export interface Step {
 
 export interface Dict {
 	meta: { title: string; description: string };
-	nav: { features: string; pricing: string; contact: string; cta: string };
+	nav: { features: string; pricing: string; contact: string; cta: string; login: string };
 	hero: {
 		eyebrow: string;
 		headlineA: string;
@@ -103,6 +103,7 @@ export interface Dict {
 		expiresLabel: string;
 		roles: { player: string; coach: string; club_manager: string };
 		openApp: string;
+		joinWeb: string;
 		download: string;
 		iosSoon: string;
 		hint: string;
@@ -118,7 +119,13 @@ const de: Dict = {
 		description:
 			'Die mobile App für Sportvereine: Trainings und Spiele planen, Anwesenheit in Echtzeit erfassen und das ganze Team auf dem Laufenden halten. 1 CHF pro Mitglied und Jahr.'
 	},
-	nav: { features: 'Funktionen', pricing: 'Preise', contact: 'Kontakt', cta: 'Demo anfragen' },
+	nav: {
+		features: 'Funktionen',
+		pricing: 'Preise',
+		contact: 'Kontakt',
+		cta: 'Demo anfragen',
+		login: 'Anmelden'
+	},
 	hero: {
 		eyebrow: 'Für Schweizer Sportvereine · J+S-tauglich',
 		headlineA: 'Trainings, Spiele und Anwesenheit.',
@@ -263,6 +270,7 @@ const de: Dict = {
 		expiresLabel: 'Gültig bis',
 		roles: { player: 'Spieler', coach: 'Trainer', club_manager: 'Club-Manager' },
 		openApp: 'App öffnen',
+		joinWeb: 'Im Web beitreten',
 		download: 'Android-App herunterladen',
 		iosSoon: 'iOS-App folgt bald',
 		hint: 'Öffne die Einladung in der teamorg-App, um beizutreten.',
@@ -279,7 +287,13 @@ const en: Dict = {
 		description:
 			'The mobile app for sports clubs: plan trainings and matches, track attendance in real time and keep your whole team in the loop. 1 CHF per member per year.'
 	},
-	nav: { features: 'Features', pricing: 'Pricing', contact: 'Contact', cta: 'Request a demo' },
+	nav: {
+		features: 'Features',
+		pricing: 'Pricing',
+		contact: 'Contact',
+		cta: 'Request a demo',
+		login: 'Log in'
+	},
 	hero: {
 		eyebrow: 'For Swiss sports clubs · J+S-ready',
 		headlineA: 'Training, matches and attendance.',
@@ -423,6 +437,7 @@ const en: Dict = {
 		expiresLabel: 'Valid until',
 		roles: { player: 'Spieler', coach: 'Trainer', club_manager: 'Club-Manager' },
 		openApp: 'Open app',
+		joinWeb: 'Join on the web',
 		download: 'Download Android app',
 		iosSoon: 'iOS app coming soon',
 		hint: 'Open the invitation in the teamorg app to join.',

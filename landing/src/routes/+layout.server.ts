@@ -22,6 +22,8 @@ export const load: LayoutServerLoad = async ({ url, cookies }) => {
 	return {
 		lang,
 		m: getMessages(lang),
-		turnstileSiteKey: env.TURNSTILE_SITEKEY ?? ''
+		turnstileSiteKey: env.TURNSTILE_SITEKEY ?? '',
+		// Member/manager web app — the "Anmelden" + web invite-redeem target. Overridable per deploy.
+		appUrl: env.APP_URL ?? 'https://app.teamorg.ch'
 	};
 };

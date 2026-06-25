@@ -290,3 +290,185 @@ to be solid), after which player is a thin read-only delta.
   landing/invite pages?
 - Does `GET /teams/{id}/events` / `/events/{id}` already scope to membership, or
   do we need a membership guard there too before exposing to players?
+
+## 8. Confirmed decisions (2026-06-24)
+
+- **Phase 0 (manager login) + Phase 1 (backend RBAC hardening): DONE** and merged to
+  `main` (PRs #31, #32). Membership scoping for `/teams/{id}/events`, `/events/{id}`,
+  check-in, attendance, etc. is in place — the security gate is cleared.
+- **Multi-role users:** auto-merge into one role-aware home (per team/club), like the
+  Compose app. No explicit global mode switcher.
+- **Language:** `/app` is **DE/EN** (like landing/invite), not DE-only.
+- **Players may edit their own jersey/position** on web (mirror `isOwnProfile`).
+- **Rename — no "admin" for members:** member surface lives at `/app` (not `/admin`);
+  use a separate session cookie (not `admin_session`).
+- **Web push deferred:** push notifications stay app-only (FCM/APNs); web shows the
+  in-app inbox/notification center only.
+
+## 9. Implementation plan (Phase 2 → 4)
+
+Grounded in the **actual** current `admin/` tree (which has evolved past §0):
+
+- Shared login at `/admin/login` → cookie `admin_session` (httpOnly). `hooks.server.ts`
+  resolves it to `locals.user` + `locals.token`.
+- `getSession()` (`auth.ts`) only parses **club_manager** roles into
+  `managedClubIds`; `teamRoles` from `/auth/me/roles` is dropped (`teamRoles: unknown[]`).
+- Manager work surface already lives at route group `(manager)` → `/manage/[clubId]/...`
+  (super-admins redirected to `/admin/dashboard`). So "admin" only leaks into the
+  **login/logout** URLs for managers; the manage tree is already neutral.
+- `guards.ts` has only `assertClubAccess`. No `src/lib/components/`. **No i18n** (no
+  Paraglide/inlang/svelte-i18n).
+- Backend RBAC (Phase 1) **confirmed done**: `POST /events`,
+  `PATCH/cancel/uncancel/duplicate /events/{id}` are guarded by
+  `requireTeamRole`/`requireEventAccess("coach","club_manager")`; check-in is
+  event-team-scoped; `/auth/me/roles` returns `teamRoles:[{teamId,clubId,role}]`.
+
+### 9.1 Phase 2a — `/app` foundations (shared by all member roles)
+
+These land first; every screen depends on them.
+
+1. **Session: parse team roles.** Extend `auth.ts`: add
+   `teamRoles: {teamId,clubId,role}[]` to `UserInfo`; populate in `getSession()` and
+   `login()`. Update `app.d.ts` `Locals.user`. Now `locals.user` knows every team
+   role, not just managed clubs.
+2. **Relax the login gate.** Remove the `isAllowed = isSuperAdmin || managedClubIds>0`
+   rejection in `auth.ts login()`. Admit any authenticated user; zero-role users still
+   get a session and land on the empty state (§Phase 4). Keep credential failure intact.
+3. **Neutral login + cookie rename.** Add member-neutral `/login` + `/logout`
+   (recommend moving `/admin/login` logic there; `/admin/login` can 302 → `/login`).
+   Rename cookie `admin_session` → `to_session` in `auth.ts`, `impersonation.ts`
+   (`admin_session_original`), `hooks.server.ts`. Read-accept both names for one
+   release to avoid logging everyone out (grace shim), then drop.
+4. **Role-branched landing** (`/+page.server.ts` or `/login` post-action redirect):
+   `isSuperAdmin` → `/admin/dashboard`; else any role → `/app`; computed from
+   `locals.user`.
+5. **`/app` route group + shell.** New `(app)` group:
+   - `(app)/app/+layout.server.ts` — `requireUser`; expose `roles` (club+team) as
+     layout data so children derive access without re-fetching.
+   - `(app)/app/+layout.svelte` — M3 Expressive shell from the Figma design
+     (sidebar/bottom nav: **Start / Termine / Teams / Inbox / Profil**, round TO badge,
+     Abmelden). DE/EN aware.
+6. **Web guards** (`guards.ts`): add
+   `isCoach(roles, teamId)`, `canManageTeam(roles, teamId)` (coach|club_manager),
+   `isClubManager(roles, clubId)`, and throwing
+   `requireTeamRole(locals, teamId, ...allowed)` / `requireClubManager(locals, clubId)`
+   for page `load`/actions. Mirror backend `RoleMiddleware`; UI-only — backend is the
+   boundary.
+7. **i18n.** Add **Paraglide JS** (inlang) — SvelteKit-native, type-safe, build-time.
+   DE default + EN; locale from `to_locale` cookie / `Accept-Language`. Wrap `/app`
+   strings only (admin tree stays as-is). No prior lib in repo (§10).
+8. **Team appearance (backend).** Add `TeamsTable.appearance` (`shape`, `color`),
+   accept on `PATCH /teams/{id}`, expose on `GET /teams/{id}`. Backs the
+   Team-Einstellungen picker and per-team shape/color in the `/app` shell + app.
+9. **Extract shared components** → `src/lib/components/`. Lift the currently-inline
+   manager pieces (roster table, member row, invite dialog, event form, RSVP/status
+   chips) out of `(manager)/manage/[clubId]/...` into prop-driven Svelte components
+   keyed on a single `canManage: boolean` (mirrors Compose `isCoach`). Both `(manager)`
+   and `(app)` consume them. Highest-value shared surface: roster + invite.
+
+### 9.2 Phase 2b — coach screens (`/app`)
+
+Each `+page.server.ts` `load` guards with `requireTeamRole(...,"coach","club_manager")`;
+mutations re-checked server-side (backend already enforces).
+
+| Figma screen | Route | Guard |
+|---|---|---|
+| Home (Coach) | `/app` | any role; coach affordances if `canManageTeam` |
+| Termine (Coach) | `/app/events` (+ `?team=`) | member of ≥1 team |
+| Event Detail (Coach) | `/app/events/[id]` | member of event's team |
+| — create/edit | `/app/events/new`, `/app/events/[id]/edit` | coach/manager of team |
+| Roster (Coach) | `/app/teams`, `/app/teams/[teamId]` | member; manage if coach/mgr |
+| (member profile) | `/app/teams/[teamId]/members/[userId]` | member read; edit if coach/mgr |
+| Check-in (Coach) | `/app/teams/[teamId]/checkin/[eventId]` | coach/manager of team |
+
+### 9.3 Phase 3 — player screens
+
+Same routes/components with `canManage=false`. Net-new player paths: self RSVP
+(`PUT /events/{id}/attendance/me`), own absences, own profile. Response lists render
+read-only (no override). **Backend gap to fix first:**
+`PATCH /teams/{id}/members/{u}/profile` is `requireTeamRole("coach","club_manager")`,
+so a player **cannot** edit own jersey/position — contradicts the §8 decision. Add a
+self-edit branch (`userId == caller` → allow jersey/position only) or a dedicated
+`/users/me/...` route, with a test. Blocks player profile edit.
+
+### 9.4 Phase 4 — shared polish
+
+- **Empty state** (`/app` with zero roles): "no teams yet → redeem invite" (Figma
+  Empty State screen).
+- **Multi-role home / team picker**: auto-merged home; per-team chips switch context
+  (no global mode). Figma Home already shows merged teams.
+- **Inbox + settings** (`/app/inbox`, `/app/inbox/settings`), **Profil + avatar**
+  (`/app/profile`) — shared, all roles.
+- **Team-Einstellungen (shape + color picker)** — Figma screen. UI built here; backing
+  field `TeamsTable.appearance` lands in 2a (§9.1.8), so this phase is just the picker UI
+  wired to `PATCH /teams/{id}`.
+
+### 9.5 Testing
+
+- **Vitest**: `guards.ts` unit tests (role matrix → allow/deny).
+- **Playwright**: per-role deep-link guard tests — player hitting
+  `/app/events/new` / `/app/teams/[id]/checkin/*` gets 403, not a hidden button.
+- Backend Phase-1 guards already covered; add a test for the player self-profile fix.
+
+### 9.6 Sequencing
+
+2a (foundations) → 2b (coach) → 3 (player, incl. self-profile backend fix) → 4 (polish).
+2a is the critical path; 3 is a thin delta on 2b once components are `canManage`-driven.
+
+## 9.7 Implementation status (2026-06-25, branch `feat/web-app-foundations`)
+
+- **2a foundations — DONE**: team roles in session, `to_session` cookie (dual-read),
+  neutral `/login`, role-branched landing, web guards, M3 `/app` shell, DE/EN i18n,
+  backend `teams.appearance`.
+- **2b coach — DONE**: teams list + roster, events list (merged + filter chips) +
+  detail + RSVP, event create/edit forms, check-in screen. All load-guarded.
+- **3 player — DONE (core)**: backend self-profile `PUT /users/me/teams/{id}/profile`
+  + member profile page (self/coach edit). Players already had read + RSVP via the
+  shared guarded routes.
+- **4 polish — PARTIAL**: inbox (list + mark read) + profile (info + language) done.
+- **Still open**: own absences (Abwesenheit) UI; per-team notification settings
+  (`/app/inbox/settings`); avatar upload; Team-Einstellungen shape/color picker UI
+  (backend ready); event cancel/duplicate UI (backend ready); extracting shared
+  components out of the `/manage` tree (2a item 9 — deferred, no blocker).
+
+## 10. Resolved decisions (2026-06-25)
+
+- **Login URL:** neutral `/login` for **all** roles. `/admin/login` 302 → `/login`.
+- **Cookie:** rename `admin_session` → `to_session` with a **dual-read grace period**
+  (read both names for one release, write only `to_session`, then drop the shim) — no
+  forced re-login.
+- **i18n:** **dependency-free typed dictionary** mirroring `landing/src/lib/i18n`
+  (typed `Dict`, `de`/`en` consts, `lang` cookie resolved server-side, `?lang=` toggle).
+  Chosen over Paraglide: the landing site already ships this exact pattern — reusing it
+  keeps both web apps consistent, adds zero deps, and is SSR-correct + type-checked.
+  DE default, EN second. Cookie name `lang` (matches landing), not `to_locale`.
+- **Player self jersey/position:** **new `/users/me/teams/{teamId}/profile`** (PUT) —
+  self-scoped, jersey/position only. Do NOT widen the coach/manager
+  `/teams/{id}/members/{u}/profile` guard. App reads the same field.
+- **Team shape/color:** add `TeamsTable.appearance` (`shape`, `color`) backend field
+  **now** — `PATCH /teams/{id}` accepts it, app + web read it. Pull into Phase 2a
+  foundations so the Figma Team-Einstellungen screen has a real backing.
+- **Coach `/app/events`:** **merged across all the user's teams**; the top filter chips
+  narrow by team. No per-team default.
+
+## 11. Domain + web invite redeem (2026-06-25)
+
+- **Single signed-in app on its own subdomain `app.teamorg.ch`** (the `admin/`
+  codebase: players → super-admins). Role-branch happens **inside** one origin via
+  `landingPathFor()` (super-admin → `/admin/*`, everyone else → `/app`). No
+  cross-domain redirect — the host-only session cookie would not survive a hop to a
+  different host (and `admin.teamorg.michelutke.com` is a different registrable domain
+  entirely). `teamorg.ch` = marketing only; cookie stays host-only on `app.teamorg.ch`.
+  Set `APP_URL=https://app.teamorg.ch` on the landing service; retire the old admin host.
+- **Web invite redeem is additive, canonical URL unchanged.** Emails + the
+  `teamorg://` deep-link + `INVITE_BASE_URL` keep pointing at `teamorg.ch/i/{token}`
+  (no https App Link exists today — the app uses the custom scheme). The landing invite
+  page gains a **"Join on the web"** button → `app.teamorg.ch/i/{token}`, which does the
+  actual redeem against the existing auth-gated `POST /invites/{token}/redeem`.
+- **New invitees:** registration is **invite-only** (no public `/register`) and lives
+  inside the redeem flow. For **personal** invites the invited email is **prefilled +
+  locked** (avoids the email-mismatch 403); reusable invites get an open field. Register
+  → auto-login → redeem → `/app`.
+- **Hardening:** `redirectTo` is validated (`safeRedirect`, no open-redirect); redeem
+  page is `noindex`; redeem is idempotent server-side (`ALREADY_MEMBER`→200);
+  404/410/403/email-taken all handled; SvelteKit same-origin CSRF check kept.

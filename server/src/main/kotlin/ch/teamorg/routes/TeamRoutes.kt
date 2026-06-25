@@ -1,5 +1,6 @@
 package ch.teamorg.routes
 
+import ch.teamorg.domain.models.TeamAppearance
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.authenticateUser
@@ -18,7 +19,15 @@ import java.util.*
 data class CreateTeamRequest(val name: String, val description: String? = null)
 
 @Serializable
-data class UpdateTeamRequest(val name: String? = null, val description: String? = null)
+data class UpdateTeamRequest(
+    val name: String? = null,
+    val description: String? = null,
+    val appearance: TeamAppearance? = null
+)
+
+// M3 Expressive shape set offered by the team-appearance picker.
+private val ALLOWED_SHAPES = setOf("cookie", "clover", "sunny", "flower")
+private val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
 
 @Serializable
 data class UpdateRoleRequest(val role: String)
@@ -49,7 +58,19 @@ fun Route.teamRoutes() {
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@patch
 
                     val request = call.receive<UpdateTeamRequest>()
-                    val team = teamRepository.update(teamId, request.name, request.description)
+                    val appearance = request.appearance
+                    if (appearance != null) {
+                        if (appearance.shape !in ALLOWED_SHAPES || !HEX_COLOR.matches(appearance.color)) {
+                            return@patch call.respond(HttpStatusCode.BadRequest, "Invalid appearance")
+                        }
+                    }
+                    val team = teamRepository.update(
+                        teamId,
+                        request.name,
+                        request.description,
+                        appearance?.shape,
+                        appearance?.color
+                    )
                     call.respond(team)
                 }
 
@@ -102,6 +123,29 @@ fun Route.teamRoutes() {
                         call.respond(HttpStatusCode.NoContent)
                     }
                 }
+            }
+        }
+
+        // Self-service profile edit: a member may update only their OWN jersey/position.
+        // The coach/manager route (/teams/{id}/members/{userId}/profile) stays restricted.
+        put("/users/me/teams/{teamId}/profile") {
+            val teamId = UUID.fromString(call.parameters["teamId"])
+            val request = call.receive<UpdateProfileRequest>()
+            call.authenticateUser(userRepository) { user ->
+                val userId = UUID.fromString(user.id)
+                if (!teamRepository.hasRole(userId, teamId, "coach", "player", "club_manager")) {
+                    return@authenticateUser call.respond(
+                        HttpStatusCode.Forbidden,
+                        "Not a member of this team"
+                    )
+                }
+                val member = teamRepository.updateMemberProfile(
+                    teamId,
+                    userId,
+                    request.jerseyNumber,
+                    request.position
+                )
+                call.respond(member)
             }
         }
     }

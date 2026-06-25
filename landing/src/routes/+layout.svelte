@@ -62,7 +62,7 @@
 	<meta property="og:type" content="website" />
 </svelte:head>
 
-<Nav m={data.m.nav} lang={data.lang} />
+<Nav m={data.m.nav} lang={data.lang} appUrl={data.appUrl} />
 <main>
 	{@render children()}
 </main>

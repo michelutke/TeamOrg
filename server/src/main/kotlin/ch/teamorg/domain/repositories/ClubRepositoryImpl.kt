@@ -6,6 +6,7 @@ import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.Team
+import ch.teamorg.domain.models.TeamAppearance
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
@@ -89,14 +90,19 @@ class ClubRepositoryImpl : ClubRepository {
         updatedAt = row[ClubsTable.updatedAt].toString()
     )
 
-    private fun rowToTeam(row: ResultRow, memberCount: Int = 0) = Team(
-        id = row[TeamsTable.id].toString(),
-        clubId = row[TeamsTable.clubId].toString(),
-        name = row[TeamsTable.name],
-        memberCount = memberCount,
-        description = row[TeamsTable.description],
-        archivedAt = row[TeamsTable.archivedAt]?.toString(),
-        createdAt = row[TeamsTable.createdAt].toString(),
-        updatedAt = row[TeamsTable.updatedAt].toString()
-    )
+    private fun rowToTeam(row: ResultRow, memberCount: Int = 0): Team {
+        val shape = row[TeamsTable.appearanceShape]
+        val color = row[TeamsTable.appearanceColor]
+        return Team(
+            id = row[TeamsTable.id].toString(),
+            clubId = row[TeamsTable.clubId].toString(),
+            name = row[TeamsTable.name],
+            memberCount = memberCount,
+            description = row[TeamsTable.description],
+            appearance = if (shape != null && color != null) TeamAppearance(shape, color) else null,
+            archivedAt = row[TeamsTable.archivedAt]?.toString(),
+            createdAt = row[TeamsTable.createdAt].toString(),
+            updatedAt = row[TeamsTable.updatedAt].toString()
+        )
+    }
 }

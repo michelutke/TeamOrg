@@ -7,7 +7,13 @@ import java.util.UUID
 interface TeamRepository {
     suspend fun create(clubId: UUID, name: String, description: String?): Team
     suspend fun findById(id: UUID): Team?
-    suspend fun update(id: UUID, name: String?, description: String?): Team
+    suspend fun update(
+        id: UUID,
+        name: String?,
+        description: String?,
+        appearanceShape: String? = null,
+        appearanceColor: String? = null
+    ): Team
     suspend fun archive(id: UUID): Team
     suspend fun listMembers(teamId: UUID): List<TeamMember>
     suspend fun hasRole(userId: UUID, teamId: UUID, vararg roles: String): Boolean
