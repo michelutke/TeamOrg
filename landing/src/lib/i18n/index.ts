@@ -23,7 +23,7 @@ export interface Step {
 
 export interface Dict {
 	meta: { title: string; description: string };
-	nav: { features: string; pricing: string; contact: string; cta: string };
+	nav: { features: string; pricing: string; contact: string; cta: string; login: string };
 	hero: {
 		eyebrow: string;
 		headlineA: string;
@@ -118,7 +118,13 @@ const de: Dict = {
 		description:
 			'Die mobile App für Sportvereine: Trainings und Spiele planen, Anwesenheit in Echtzeit erfassen und das ganze Team auf dem Laufenden halten. 1 CHF pro Mitglied und Jahr.'
 	},
-	nav: { features: 'Funktionen', pricing: 'Preise', contact: 'Kontakt', cta: 'Demo anfragen' },
+	nav: {
+		features: 'Funktionen',
+		pricing: 'Preise',
+		contact: 'Kontakt',
+		cta: 'Demo anfragen',
+		login: 'Anmelden'
+	},
 	hero: {
 		eyebrow: 'Für Schweizer Sportvereine · J+S-tauglich',
 		headlineA: 'Trainings, Spiele und Anwesenheit.',
@@ -279,7 +285,13 @@ const en: Dict = {
 		description:
 			'The mobile app for sports clubs: plan trainings and matches, track attendance in real time and keep your whole team in the loop. 1 CHF per member per year.'
 	},
-	nav: { features: 'Features', pricing: 'Pricing', contact: 'Contact', cta: 'Request a demo' },
+	nav: {
+		features: 'Features',
+		pricing: 'Pricing',
+		contact: 'Contact',
+		cta: 'Request a demo',
+		login: 'Log in'
+	},
 	hero: {
 		eyebrow: 'For Swiss sports clubs · J+S-ready',
 		headlineA: 'Training, matches and attendance.',

@@ -2,8 +2,10 @@
 	import { Check, Menu, X } from 'lucide-svelte';
 	import type { Dict, Locale } from '$lib/i18n';
 
-	let { m, lang }: { m: Dict['nav']; lang: Locale } = $props();
+	let { m, lang, appUrl }: { m: Dict['nav']; lang: Locale; appUrl: string } = $props();
 	let open = $state(false);
+
+	const loginUrl = $derived(`${appUrl}/login`);
 
 	const links = $derived([
 		{ href: '/#funktionen', label: m.features },
@@ -63,6 +65,12 @@
 			</div>
 
 			<a
+				href={loginUrl}
+				class="text-[15px] font-medium text-on-surface-variant transition-colors hover:text-on-surface"
+				>{m.login}</a
+			>
+
+			<a
 				href="/#kontakt"
 				class="rounded-full bg-primary px-5 py-3 text-[14px] font-bold text-on-primary shadow-sm transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98]"
 				>{m.cta}</a
@@ -93,6 +101,13 @@
 						>
 					</li>
 				{/each}
+				<li>
+					<a
+						href={loginUrl}
+						class="block py-3 text-[16px] font-medium text-on-surface"
+						onclick={() => (open = false)}>{m.login}</a
+					>
+				</li>
 			</ul>
 			<div class="mt-3 flex items-center justify-between">
 				<div
