@@ -125,5 +125,28 @@ fun Route.teamRoutes() {
                 }
             }
         }
+
+        // Self-service profile edit: a member may update only their OWN jersey/position.
+        // The coach/manager route (/teams/{id}/members/{userId}/profile) stays restricted.
+        put("/users/me/teams/{teamId}/profile") {
+            val teamId = UUID.fromString(call.parameters["teamId"])
+            val request = call.receive<UpdateProfileRequest>()
+            call.authenticateUser(userRepository) { user ->
+                val userId = UUID.fromString(user.id)
+                if (!teamRepository.hasRole(userId, teamId, "coach", "player", "club_manager")) {
+                    return@authenticateUser call.respond(
+                        HttpStatusCode.Forbidden,
+                        "Not a member of this team"
+                    )
+                }
+                val member = teamRepository.updateMemberProfile(
+                    teamId,
+                    userId,
+                    request.jerseyNumber,
+                    request.position
+                )
+                call.respond(member)
+            }
+        }
     }
 }

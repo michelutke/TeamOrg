@@ -326,6 +326,88 @@ class TeamRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `player edits own jersey and position via self endpoint`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val managerAuth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("selfmgr@example.com", "password123", "Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Self Club"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Self Team"))
+        }.body<Team>().id
+
+        val inviteToken = client.post("/teams/$teamId/invites") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(role = "player"))
+        }.body<InviteResponse>().token
+
+        val playerAuth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("selfplayer@example.com", "password123", "Self Player"))
+        }.body<AuthResponse>()
+        client.post("/invites/$inviteToken/redeem") {
+            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
+        }
+
+        val response = client.put("/users/me/teams/$teamId/profile") {
+            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(UpdateProfileRequest(jerseyNumber = 10, position = "Stürmer"))
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val member = response.body<TeamMember>()
+        assertEquals(10, member.jerseyNumber)
+        assertEquals("Stürmer", member.position)
+    }
+
+    @Test
+    fun `self profile edit by non-member returns 403`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val managerAuth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("selfnmgr@example.com", "password123", "Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Self NoMember Club"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Self NoMember Team"))
+        }.body<Team>().id
+
+        val otherAuth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("selfother@example.com", "password123", "Outsider"))
+        }.body<AuthResponse>()
+
+        val response = client.put("/users/me/teams/$teamId/profile") {
+            header(HttpHeaders.Authorization, "Bearer ${otherAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(UpdateProfileRequest(jerseyNumber = 7, position = "Verteidiger"))
+        }
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
     fun `get team as non-member returns 403`() = withTeamorgTestApplication {
         val client = createJsonClient()
 
