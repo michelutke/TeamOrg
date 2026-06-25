@@ -99,6 +99,13 @@ export interface Dict {
 		selectTeams: string;
 		required: string;
 	};
+	checkin: {
+		title: string;
+		present: string;
+		absent: string;
+		excused: string;
+		empty: string;
+	};
 }
 
 const de: Dict = {
@@ -188,6 +195,13 @@ const de: Dict = {
 		fMinAttendees: 'Mindestteilnehmer',
 		selectTeams: 'Mindestens ein Team wählen',
 		required: 'Pflichtfeld'
+	},
+	checkin: {
+		title: 'Check-in',
+		present: 'Anwesend',
+		absent: 'Abwesend',
+		excused: 'Entschuldigt',
+		empty: 'Keine Mitglieder zum Einchecken.'
 	}
 };
 
@@ -278,6 +292,13 @@ const en: Dict = {
 		fMinAttendees: 'Min. attendees',
 		selectTeams: 'Select at least one team',
 		required: 'Required'
+	},
+	checkin: {
+		title: 'Check-in',
+		present: 'Present',
+		absent: 'Absent',
+		excused: 'Excused',
+		empty: 'No members to check in.'
 	}
 };
 
