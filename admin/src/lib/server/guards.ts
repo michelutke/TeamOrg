@@ -44,6 +44,16 @@ export function requireUser(locals: App.Locals): User {
 	return locals.user;
 }
 
+/**
+ * Returns `target` only if it is a safe in-app path (starts with a single "/",
+ * not "//" or a scheme). Prevents open-redirect via ?redirectTo=. Falls back to null.
+ */
+export function safeRedirect(target: string | null | undefined): string | null {
+	if (!target) return null;
+	if (!target.startsWith('/') || target.startsWith('//')) return null;
+	return target;
+}
+
 export function assertClubAccess(locals: App.Locals, clubId: string): void {
 	const user = requireUser(locals);
 	if (!isClubManager(user, clubId)) throw error(403, 'You do not have access to this club');

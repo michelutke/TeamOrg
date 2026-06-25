@@ -121,6 +121,30 @@ export async function login(
 	return { success: true, user };
 }
 
+/** Registers a new account, sets the session cookie, and returns the user. */
+export async function register(
+	email: string,
+	password: string,
+	displayName: string,
+	cookies: Cookies
+): Promise<{ success: boolean; error?: 'email_taken' | 'invalid'; user?: UserInfo; token?: string }> {
+	const res = await fetch(`${API_BASE}/auth/register`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ email, password, displayName })
+	});
+
+	if (res.status === 409) return { success: false, error: 'email_taken' };
+	if (!res.ok) return { success: false, error: 'invalid' };
+
+	const data: AuthResponse = await res.json();
+	const user = await resolveUser(data.token);
+	if (!user) return { success: false, error: 'invalid' };
+
+	writeSessionCookie(cookies, data.token);
+	return { success: true, user, token: data.token };
+}
+
 export async function getSession(cookies: Cookies): Promise<UserInfo | null> {
 	const token = readToken(cookies);
 	if (!token) return null;

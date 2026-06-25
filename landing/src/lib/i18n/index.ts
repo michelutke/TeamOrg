@@ -103,6 +103,7 @@ export interface Dict {
 		expiresLabel: string;
 		roles: { player: string; coach: string; club_manager: string };
 		openApp: string;
+		joinWeb: string;
 		download: string;
 		iosSoon: string;
 		hint: string;
@@ -269,6 +270,7 @@ const de: Dict = {
 		expiresLabel: 'Gültig bis',
 		roles: { player: 'Spieler', coach: 'Trainer', club_manager: 'Club-Manager' },
 		openApp: 'App öffnen',
+		joinWeb: 'Im Web beitreten',
 		download: 'Android-App herunterladen',
 		iosSoon: 'iOS-App folgt bald',
 		hint: 'Öffne die Einladung in der teamorg-App, um beizutreten.',
@@ -435,6 +437,7 @@ const en: Dict = {
 		expiresLabel: 'Valid until',
 		roles: { player: 'Spieler', coach: 'Trainer', club_manager: 'Club-Manager' },
 		openApp: 'Open app',
+		joinWeb: 'Join on the web',
 		download: 'Download Android app',
 		iosSoon: 'iOS app coming soon',
 		hint: 'Open the invitation in the teamorg app to join.',

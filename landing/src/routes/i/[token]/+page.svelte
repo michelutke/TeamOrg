@@ -69,6 +69,11 @@
 					class="rounded-full bg-primary px-5 py-3.5 text-center text-[15px] font-bold text-on-primary shadow-sm transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
 					>{data.m.invite.openApp}</a
 				>
+				<a
+					href="{data.appUrl}/i/{data.token}"
+					class="rounded-full border border-outline-variant px-5 py-3.5 text-center text-[15px] font-bold text-on-surface transition-colors hover:bg-surface-variant/40"
+					>{data.m.invite.joinWeb}</a
+				>
 				{#if androidUrl}
 					<a
 						href={androidUrl}

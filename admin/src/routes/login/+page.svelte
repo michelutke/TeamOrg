@@ -26,6 +26,9 @@
 		<p class="text-[13px] text-on-surface-variant">{m.subtitle}</p>
 
 		<form method="POST" use:enhance class="flex w-full flex-col gap-4">
+			{#if data.redirectTo}
+				<input type="hidden" name="redirectTo" value={data.redirectTo} />
+			{/if}
 			<label class="flex w-full flex-col gap-1 rounded-2xl bg-surface-container-high px-[18px] py-[10px]">
 				<span class="text-[11px] font-medium text-primary">{m.email}</span>
 				<input

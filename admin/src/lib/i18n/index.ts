@@ -124,6 +124,30 @@ export interface Dict {
 		name: string;
 		email: string;
 	};
+	invite: {
+		eyebrow: string;
+		teamTitle: string;
+		clubTitle: string;
+		teamLabel: string;
+		roleLabel: string;
+		invitedByLabel: string;
+		expiresLabel: string;
+		join: string;
+		mismatchTitle: string;
+		mismatchBody: string;
+		signOut: string;
+		haveAccount: string;
+		toLogin: string;
+		newHere: string;
+		name: string;
+		email: string;
+		password: string;
+		createAndJoin: string;
+		invalidTitle: string;
+		invalidBody: string;
+		emailTaken: string;
+		failed: string;
+	};
 }
 
 const de: Dict = {
@@ -238,6 +262,31 @@ const de: Dict = {
 		language: 'Sprache',
 		name: 'Name',
 		email: 'E-Mail'
+	},
+	invite: {
+		eyebrow: 'EINLADUNG',
+		teamTitle: 'Du wurdest in ein Team eingeladen',
+		clubTitle: 'Du wurdest in einen Verein eingeladen',
+		teamLabel: 'Team',
+		roleLabel: 'Rolle',
+		invitedByLabel: 'Eingeladen von',
+		expiresLabel: 'Gültig bis',
+		join: 'Beitreten',
+		mismatchTitle: 'Andere E-Mail-Adresse',
+		mismatchBody:
+			'Diese Einladung wurde an eine andere Adresse gesendet. Melde dich mit dem eingeladenen Konto an.',
+		signOut: 'Abmelden',
+		haveAccount: 'Ich habe bereits ein Konto',
+		toLogin: 'Anmelden',
+		newHere: 'Neu hier? Konto erstellen',
+		name: 'Name',
+		email: 'E-Mail',
+		password: 'Passwort',
+		createAndJoin: 'Konto erstellen & beitreten',
+		invalidTitle: 'Einladung ungültig oder abgelaufen',
+		invalidBody: 'Diese Einladung ist nicht mehr gültig. Bitte fordere beim Verein eine neue an.',
+		emailTaken: 'Für diese E-Mail existiert bereits ein Konto. Bitte melde dich an.',
+		failed: 'Beitritt fehlgeschlagen. Bitte versuche es erneut.'
 	}
 };
 
@@ -353,6 +402,31 @@ const en: Dict = {
 		language: 'Language',
 		name: 'Name',
 		email: 'Email'
+	},
+	invite: {
+		eyebrow: 'INVITATION',
+		teamTitle: 'You have been invited to a team',
+		clubTitle: 'You have been invited to a club',
+		teamLabel: 'Team',
+		roleLabel: 'Role',
+		invitedByLabel: 'Invited by',
+		expiresLabel: 'Valid until',
+		join: 'Join',
+		mismatchTitle: 'Different email address',
+		mismatchBody:
+			'This invitation was sent to a different address. Please sign in with the invited account.',
+		signOut: 'Sign out',
+		haveAccount: 'I already have an account',
+		toLogin: 'Sign in',
+		newHere: 'New here? Create an account',
+		name: 'Name',
+		email: 'Email',
+		password: 'Password',
+		createAndJoin: 'Create account & join',
+		invalidTitle: 'Invitation invalid or expired',
+		invalidBody: 'This invitation is no longer valid. Please ask the club for a new one.',
+		emailTaken: 'An account already exists for this email. Please sign in.',
+		failed: 'Could not join. Please try again.'
 	}
 };
 
