@@ -53,7 +53,8 @@ data class NotificationSettingsRow(
     val remindersEnabled: Boolean,
     val reminderLeadMinutes: Int,
     val coachResponseMode: String,
-    val absencesEnabled: Boolean
+    val absencesEnabled: Boolean,
+    val svGames: Boolean
 )
 
 interface NotificationRepository {
@@ -97,6 +98,7 @@ interface NotificationRepository {
     suspend fun getDueReminders(): List<DueReminderRow>
     suspend fun markReminderSent(reminderId: UUID)
     suspend fun getCoachIdsForTeam(teamId: UUID): List<UUID>
+    suspend fun getManagerIdsForClub(clubId: UUID): List<UUID>
     suspend fun getEventAttendanceSummary(eventId: UUID): AttendanceSummary
     suspend fun getUpcomingEventsForCoachSummary(withinMinutes: Int = 120): List<EventReminderInfo>
 }
@@ -231,6 +233,7 @@ class NotificationRepositoryImpl : NotificationRepository {
             "event_cancel" -> row[NotificationSettingsTable.eventsCancel]
             "reminder" -> row[NotificationSettingsTable.remindersEnabled]
             "absence" -> row[NotificationSettingsTable.absencesEnabled]
+            "sv_game_new", "sv_game_changed" -> row[NotificationSettingsTable.svGames]
             else -> true
         }
     }
@@ -334,6 +337,15 @@ class NotificationRepositoryImpl : NotificationRepository {
             .mapNotNull { it[TeamRolesTable.userId] }
     }
 
+    override suspend fun getManagerIdsForClub(clubId: UUID): List<UUID> = transaction {
+        ClubRolesTable.select(ClubRolesTable.userId)
+            .where {
+                (ClubRolesTable.clubId eq clubId) and
+                (ClubRolesTable.role eq "club_manager")
+            }
+            .map { it[ClubRolesTable.userId] }
+    }
+
     override suspend fun getEventAttendanceSummary(eventId: UUID): AttendanceSummary = transaction {
         val rows = AttendanceResponsesTable.selectAll()
             .where { AttendanceResponsesTable.eventId eq eventId }
@@ -393,6 +405,7 @@ class NotificationRepositoryImpl : NotificationRepository {
         remindersEnabled = row[NotificationSettingsTable.remindersEnabled],
         reminderLeadMinutes = row[NotificationSettingsTable.reminderLeadMinutes],
         coachResponseMode = row[NotificationSettingsTable.coachResponseMode],
-        absencesEnabled = row[NotificationSettingsTable.absencesEnabled]
+        absencesEnabled = row[NotificationSettingsTable.absencesEnabled],
+        svGames = row[NotificationSettingsTable.svGames]
     )
 }

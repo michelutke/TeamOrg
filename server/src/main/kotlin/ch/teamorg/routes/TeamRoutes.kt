@@ -1,8 +1,10 @@
 package ch.teamorg.routes
 
 import ch.teamorg.domain.models.TeamAppearance
+import ch.teamorg.domain.repositories.IntegrationRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
+import ch.teamorg.infra.SwissVolleySyncService
 import ch.teamorg.middleware.authenticateUser
 import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
@@ -35,9 +37,17 @@ data class UpdateRoleRequest(val role: String)
 @Serializable
 data class UpdateProfileRequest(val jerseyNumber: Int? = null, val position: String? = null)
 
+@Serializable
+data class GameSyncRequest(val enabled: Boolean)
+
+@Serializable
+data class GameSyncResponse(val enabled: Boolean)
+
 fun Route.teamRoutes() {
     val teamRepository by inject<TeamRepository>()
     val userRepository by inject<UserRepository>()
+    val integrationRepository by inject<IntegrationRepository>()
+    val syncService by inject<SwissVolleySyncService>()
 
     authenticate("jwt") {
         route("/teams") {
@@ -72,6 +82,28 @@ fun Route.teamRoutes() {
                         appearance?.color
                     )
                     call.respond(team)
+                }
+
+                patch("/game-sync") {
+                    val teamId = UUID.fromString(call.parameters["teamId"])
+                    if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@patch
+
+                    val request = call.receive<GameSyncRequest>()
+
+                    val hasActiveLink = integrationRepository.listLinksForTeam(teamId)
+                        .any { it.deprecatedAt == null }
+                    if (!hasActiveLink) {
+                        return@patch call.respond(
+                            HttpStatusCode.Conflict,
+                            "Team is not linked to SwissVolley"
+                        )
+                    }
+
+                    teamRepository.setGamesSyncEnabled(teamId, request.enabled)
+                    if (request.enabled) {
+                        syncService.syncTeam(teamId)
+                    }
+                    call.respond(HttpStatusCode.OK, GameSyncResponse(request.enabled))
                 }
 
                 delete {

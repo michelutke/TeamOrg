@@ -10,6 +10,7 @@ import ch.teamorg.infra.PushService
 import ch.teamorg.infra.PushServiceImpl
 import ch.teamorg.infra.SwissVolleyClient
 import ch.teamorg.infra.SwissVolleyClientImpl
+import ch.teamorg.infra.SwissVolleySyncService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -50,6 +51,7 @@ fun appModule(environment: ApplicationEnvironment) = module {
     single<NotificationRepository> { NotificationRepositoryImpl() }
     single { NotificationDispatcher(get(), get()) }
     single<IntegrationRepository> { IntegrationRepositoryImpl() }
+    single { SwissVolleySyncService(get(), get(), get(), get(), get(), get()) }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
     single<AdminRepository> { AdminRepositoryImpl() }
     single<MailService> { MailServiceImpl(environment.config) }

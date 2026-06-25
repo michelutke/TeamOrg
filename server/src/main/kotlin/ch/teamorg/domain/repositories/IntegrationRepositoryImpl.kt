@@ -30,6 +30,11 @@ class IntegrationRepositoryImpl : IntegrationRepository {
             .single()
     }
 
+    override suspend fun listClubIdsWithIntegration(): List<UUID> = transaction {
+        ClubIntegrationsTable.select(ClubIntegrationsTable.clubId)
+            .map { it[ClubIntegrationsTable.clubId] }
+    }
+
     override suspend fun getIntegration(clubId: UUID): ClubIntegration? = transaction {
         ClubIntegrationsTable.selectAll().where { ClubIntegrationsTable.clubId eq clubId }
             .map(::rowToIntegration)
@@ -111,6 +116,34 @@ class IntegrationRepositoryImpl : IntegrationRepository {
         }
     }
 
+    override suspend fun listSyncEnabledLinks(clubId: UUID): List<SyncEnabledLink> = transaction {
+        (TeamSvLinksTable innerJoin TeamsTable)
+            .select(TeamSvLinksTable.teamId, TeamSvLinksTable.svTeamId)
+            .where {
+                (TeamsTable.clubId eq clubId) and
+                    (TeamsTable.gamesSyncEnabled eq true) and
+                    TeamSvLinksTable.deprecatedAt.isNull()
+            }
+            .map {
+                SyncEnabledLink(
+                    teamId = it[TeamSvLinksTable.teamId].toString(),
+                    svTeamId = it[TeamSvLinksTable.svTeamId]
+                )
+            }
+    }
+
+    override suspend fun setKeyInvalid(clubId: UUID, reason: String?): ClubIntegration = transaction {
+        ClubIntegrationsTable.update({ ClubIntegrationsTable.clubId eq clubId }) {
+            it[ClubIntegrationsTable.keyValid] = false
+            it[ClubIntegrationsTable.syncPausedReason] = reason
+            it[ClubIntegrationsTable.updatedAt] = java.time.Instant.now()
+        }
+
+        ClubIntegrationsTable.selectAll().where { ClubIntegrationsTable.clubId eq clubId }
+            .map(::rowToIntegration)
+            .single()
+    }
+
     override suspend fun getState(clubId: UUID): SvSyncState? = transaction {
         SvSyncStateTable.selectAll().where { SvSyncStateTable.clubId eq clubId }
             .map(::rowToSyncState)
@@ -138,6 +171,9 @@ class IntegrationRepositoryImpl : IntegrationRepository {
             .map(::rowToSyncState)
             .single()
     }
+
+    override suspend fun upsertSyncState(clubId: UUID, lastSyncedAt: java.time.Instant?, status: String?, error: String?): SvSyncState =
+        upsertState(clubId, lastSyncedAt, status, error)
 
     private fun rowToIntegration(row: ResultRow) = ClubIntegration(
         clubId = row[ClubIntegrationsTable.clubId].toString(),

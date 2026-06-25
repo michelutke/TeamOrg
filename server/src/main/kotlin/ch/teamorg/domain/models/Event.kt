@@ -36,6 +36,16 @@ data class EventWithTeams(
 )
 
 @Serializable
+data class SyncedEventRef(
+    @Serializable(with = UUIDSerializer::class) val id: UUID,
+    val externalHash: String?,
+    val status: String,
+    val externalStatus: String?,
+    val finished: Boolean,
+    val live: Boolean
+)
+
+@Serializable
 data class MatchedTeam(
     @Serializable(with = UUIDSerializer::class) val id: UUID,
     val name: String

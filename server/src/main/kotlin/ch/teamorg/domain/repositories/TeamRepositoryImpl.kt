@@ -107,6 +107,13 @@ class TeamRepositoryImpl : TeamRepository {
             .singleOrNull()
     }
 
+    override suspend fun setGamesSyncEnabled(teamId: UUID, enabled: Boolean): Unit = transaction {
+        TeamsTable.update({ TeamsTable.id eq teamId }) {
+            it[TeamsTable.gamesSyncEnabled] = enabled
+            it[TeamsTable.updatedAt] = java.time.Instant.now()
+        }
+    }
+
     override suspend fun updateMemberRole(teamId: UUID, userId: UUID, newRole: String): TeamMember {
         require(newRole in listOf("coach", "player")) { "Invalid role: $newRole" }
         return transaction {

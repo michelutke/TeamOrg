@@ -501,6 +501,131 @@ class EventRepositoryImpl : EventRepository {
         }
     }
 
+    override suspend fun findByExternalGameId(source: String, gameId: Long): SyncedEventRef? = transaction {
+        EventsTable.selectAll()
+            .where { (EventsTable.externalSource eq source) and (EventsTable.externalGameId eq gameId) }
+            .map(::rowToSyncedEventRef)
+            .singleOrNull()
+    }
+
+    override suspend fun createSyncedMatch(
+        title: String,
+        startAt: Instant,
+        endAt: Instant,
+        location: String?,
+        externalSource: String,
+        externalGameId: Long,
+        externalHash: String,
+        createdBy: UUID,
+        teamIds: List<UUID>
+    ): Event = transaction {
+        val now = Instant.now()
+        val eventId = EventsTable.insert {
+            it[EventsTable.title] = title
+            it[EventsTable.type] = EventType.match
+            it[EventsTable.startAt] = startAt
+            it[EventsTable.endAt] = endAt
+            it[EventsTable.location] = location
+            it[EventsTable.status] = EventStatus.active
+            it[EventsTable.externalSource] = externalSource
+            it[EventsTable.externalGameId] = externalGameId
+            it[EventsTable.externalHash] = externalHash
+            it[EventsTable.externalSyncedAt] = now
+            it[EventsTable.externalStatus] = "synced"
+            it[EventsTable.needsReview] = false
+            it[EventsTable.createdBy] = createdBy
+        } get EventsTable.id
+
+        for (teamId in teamIds) {
+            EventTeamsTable.insert {
+                it[EventTeamsTable.eventId] = eventId
+                it[EventTeamsTable.teamId] = teamId
+            }
+        }
+
+        rowToEventWithRelations(eventId)
+    }
+
+    override suspend fun updateSyncedFacts(
+        eventId: UUID,
+        title: String,
+        startAt: Instant,
+        endAt: Instant,
+        location: String?,
+        newHash: String
+    ): Event? = transaction {
+        val now = Instant.now()
+        val updated = EventsTable.update({ EventsTable.id eq eventId }) {
+            it[EventsTable.title] = title
+            it[EventsTable.startAt] = startAt
+            it[EventsTable.endAt] = endAt
+            it[EventsTable.location] = location
+            it[EventsTable.externalHash] = newHash
+            it[EventsTable.externalSyncedAt] = now
+            it[EventsTable.needsReview] = true
+            it[EventsTable.updatedAt] = now
+        }
+        if (updated == 0) null
+        else rowToEventWithRelations(eventId)
+    }
+
+    override suspend fun markPostponed(eventId: UUID): Event? = transaction {
+        val updated = EventsTable.update({ EventsTable.id eq eventId }) {
+            it[EventsTable.externalStatus] = "postponed"
+            it[EventsTable.updatedAt] = Instant.now()
+        }
+        if (updated == 0) null
+        else rowToEventWithRelations(eventId)
+    }
+
+    override suspend fun clearPostponedToSynced(eventId: UUID): Event? = transaction {
+        val updated = EventsTable.update({ EventsTable.id eq eventId }) {
+            it[EventsTable.externalStatus] = "synced"
+            it[EventsTable.updatedAt] = Instant.now()
+        }
+        if (updated == 0) null
+        else rowToEventWithRelations(eventId)
+    }
+
+    override suspend fun listSyncedExternalGameIds(clubId: UUID): List<Long> = transaction {
+        (EventsTable innerJoin EventTeamsTable innerJoin TeamsTable)
+            .select(EventsTable.externalGameId)
+            .where {
+                (TeamsTable.clubId eq clubId) and
+                    (EventsTable.externalStatus eq "synced") and
+                    EventsTable.externalGameId.isNotNull()
+            }
+            .mapNotNull { it[EventsTable.externalGameId] }
+            .distinct()
+    }
+
+    override suspend fun hasSyncedGameWithin(clubId: UUID, windowStart: Instant, windowEnd: Instant): Boolean = transaction {
+        (EventsTable innerJoin EventTeamsTable innerJoin TeamsTable)
+            .select(EventsTable.id)
+            .where {
+                (TeamsTable.clubId eq clubId) and
+                    (EventsTable.externalStatus eq "synced") and
+                    (EventsTable.startAt greaterEq windowStart) and
+                    (EventsTable.startAt lessEq windowEnd)
+            }
+            .limit(1)
+            .any()
+    }
+
+    private fun rowToSyncedEventRef(row: ResultRow): SyncedEventRef {
+        val now = Instant.now()
+        val startAt = row[EventsTable.startAt]
+        val endAt = row[EventsTable.endAt]
+        return SyncedEventRef(
+            id = row[EventsTable.id],
+            externalHash = row[EventsTable.externalHash],
+            status = row[EventsTable.status].name,
+            externalStatus = row[EventsTable.externalStatus],
+            finished = now.isAfter(endAt),
+            live = !now.isBefore(startAt) && now.isBefore(endAt)
+        )
+    }
+
     private fun rowToEventWithRelations(id: UUID): Event {
         val event = EventsTable.selectAll().where { EventsTable.id eq id }
             .map(::rowToEvent)

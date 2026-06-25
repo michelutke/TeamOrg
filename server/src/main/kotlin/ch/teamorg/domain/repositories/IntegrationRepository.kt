@@ -31,8 +31,14 @@ data class SvSyncState(
     val lastError: String?
 )
 
+data class SyncEnabledLink(
+    val teamId: String,
+    val svTeamId: Int
+)
+
 interface IntegrationRepository {
     suspend fun upsertKey(clubId: UUID, apiKey: String, createdBy: UUID): ClubIntegration
+    suspend fun listClubIdsWithIntegration(): List<UUID>
     suspend fun getIntegration(clubId: UUID): ClubIntegration?
     suspend fun getApiKey(clubId: UUID): String?
     suspend fun setKeyValidity(clubId: UUID, valid: Boolean, validatedAt: java.time.Instant, pausedReason: String?): ClubIntegration
@@ -50,6 +56,10 @@ interface IntegrationRepository {
     ): TeamSvLink
     suspend fun listLinkedSvTeamIdsForClub(clubId: UUID): Set<Int>
 
+    suspend fun listSyncEnabledLinks(clubId: UUID): List<SyncEnabledLink>
+
     suspend fun getState(clubId: UUID): SvSyncState?
     suspend fun upsertState(clubId: UUID, lastSyncedAt: java.time.Instant?, lastStatus: String?, lastError: String?): SvSyncState
+    suspend fun setKeyInvalid(clubId: UUID, reason: String?): ClubIntegration
+    suspend fun upsertSyncState(clubId: UUID, lastSyncedAt: java.time.Instant?, status: String?, error: String?): SvSyncState
 }
