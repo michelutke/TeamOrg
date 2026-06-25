@@ -53,6 +53,36 @@ export interface Dict {
 	};
 	common: {
 		back: string;
+		edit: string;
+		save: string;
+		cancel: string;
+		create: string;
+	};
+	events: {
+		title: string;
+		none: string;
+		when: string;
+		where: string;
+		description: string;
+		allTeams: string;
+	};
+	eventTypes: {
+		training: string;
+		match: string;
+		other: string;
+	};
+	rsvp: {
+		yourResponse: string;
+		confirmed: string;
+		unsure: string;
+		declined: string;
+		noResponse: string;
+		reason: string;
+		reasonRequired: string;
+		save: string;
+		saved: string;
+		responses: string;
+		deadlinePassed: string;
 	};
 }
 
@@ -97,7 +127,37 @@ const de: Dict = {
 		empty: 'Noch keine Mitglieder in diesem Team.'
 	},
 	common: {
-		back: 'Zurück'
+		back: 'Zurück',
+		edit: 'Bearbeiten',
+		save: 'Speichern',
+		cancel: 'Abbrechen',
+		create: 'Erstellen'
+	},
+	events: {
+		title: 'Termine',
+		none: 'Keine anstehenden Termine.',
+		when: 'Wann',
+		where: 'Wo',
+		description: 'Beschreibung',
+		allTeams: 'Alle Teams'
+	},
+	eventTypes: {
+		training: 'Training',
+		match: 'Spiel',
+		other: 'Anlass'
+	},
+	rsvp: {
+		yourResponse: 'Deine Rückmeldung',
+		confirmed: 'Zusagen',
+		unsure: 'Unsicher',
+		declined: 'Absage',
+		noResponse: 'Keine Antwort',
+		reason: 'Grund',
+		reasonRequired: 'Bitte gib einen Grund an.',
+		save: 'Speichern',
+		saved: 'Gespeichert',
+		responses: 'Rückmeldungen',
+		deadlinePassed: 'Die Antwortfrist ist abgelaufen.'
 	}
 };
 
@@ -142,7 +202,37 @@ const en: Dict = {
 		empty: 'No members in this team yet.'
 	},
 	common: {
-		back: 'Back'
+		back: 'Back',
+		edit: 'Edit',
+		save: 'Save',
+		cancel: 'Cancel',
+		create: 'Create'
+	},
+	events: {
+		title: 'Events',
+		none: 'No upcoming events.',
+		when: 'When',
+		where: 'Where',
+		description: 'Description',
+		allTeams: 'All teams'
+	},
+	eventTypes: {
+		training: 'Training',
+		match: 'Match',
+		other: 'Event'
+	},
+	rsvp: {
+		yourResponse: 'Your response',
+		confirmed: 'Going',
+		unsure: 'Unsure',
+		declined: 'Declined',
+		noResponse: 'No response',
+		reason: 'Reason',
+		reasonRequired: 'Please provide a reason.',
+		save: 'Save',
+		saved: 'Saved',
+		responses: 'Responses',
+		deadlinePassed: 'The response deadline has passed.'
 	}
 };
 

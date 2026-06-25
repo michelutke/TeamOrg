@@ -37,3 +37,13 @@ export async function apiDelete(path: string, token: string): Promise<void> {
 	});
 	if (!res.ok) throw new ApiError(res.status, `API error: ${res.status} ${res.statusText}`);
 }
+
+export async function apiPut<T>(path: string, token: string, body: unknown): Promise<T> {
+	const res = await fetch(`${API_BASE}${path}`, {
+		method: 'PUT',
+		headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+	if (!res.ok) throw new ApiError(res.status, `API error: ${res.status} ${res.statusText}`);
+	return res.json();
+}
