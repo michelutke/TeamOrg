@@ -3,6 +3,7 @@ package ch.teamorg.routes
 import ch.teamorg.domain.models.CreateEventRequest
 import ch.teamorg.domain.models.EditEventRequest
 import ch.teamorg.domain.models.RecurringScope
+import ch.teamorg.domain.repositories.AttendanceRepository
 import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.TeamRepository
@@ -42,6 +43,14 @@ private data class EditEventWithScope(
 @Serializable
 private data class CancelScopeRequest(val scope: String? = "this_only")
 
+@Serializable
+private data class ReconcileRequest(
+    val meetupAt: String? = null,
+    val notes: String? = null,
+    val minAttendees: Int? = null,
+    val resetAvailability: Boolean = false
+)
+
 private val routeLogger = LoggerFactory.getLogger("EventRoutes")
 
 private fun formatDate(instant: Instant): String {
@@ -55,6 +64,7 @@ fun Route.eventRoutes() {
     val backfillJob by inject<AbwesenheitBackfillJob>()
     val dispatcher by inject<NotificationDispatcher>()
     val notificationRepo by inject<NotificationRepository>()
+    val attendanceRepository by inject<AttendanceRepository>()
 
     authenticate("jwt") {
         get("/users/me/events") {
@@ -314,6 +324,81 @@ fun Route.eventRoutes() {
             } else {
                 call.respond(HttpStatusCode.NotFound)
             }
+        }
+
+        post("/events/{id}/reconcile") {
+            val id = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(id, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
+            val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+
+            val existing = eventRepository.findById(id)
+            if (existing == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+            if (existing.externalSource != "swissvolley" || !existing.needsReview) {
+                call.respond(HttpStatusCode.Conflict)
+                return@post
+            }
+
+            val body = call.receive<ReconcileRequest>()
+            // Only coach-owned fields. SV-owned facts (title/start/end/location) are never touched.
+            val editRequest = EditEventRequest(
+                title = null,
+                type = null,
+                startAt = null,
+                endAt = null,
+                meetupAt = body.meetupAt?.let { Instant.parse(it) },
+                location = null,
+                description = body.notes,
+                minAttendees = body.minAttendees,
+                teamIds = null,
+                subgroupIds = null
+            )
+            eventRepository.update(id, editRequest)
+            eventRepository.clearNeedsReview(id)
+
+            val updated = eventRepository.findByIdWithTeams(id)
+            if (updated == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            if (body.resetAvailability) {
+                attendanceRepository.resetResponsesForEvent(id)
+                call.application.launch(Dispatchers.IO) {
+                    try {
+                        for (teamId in updated.event.teamIds) {
+                            dispatcher.notifyTeamMembers(
+                                teamId = teamId,
+                                excludeUserId = userId,
+                                type = "event_edit",
+                                title = "Event Updated",
+                                body = "${updated.event.title} has been updated",
+                                entityId = updated.event.id,
+                                entityType = "event",
+                                idempotencyKeySuffix = "edit"
+                            )
+                        }
+                        notificationRepo.deleteReminderRowsForEvent(id)
+                        for (teamId in updated.event.teamIds) {
+                            val memberIds = notificationRepo.getTeamMemberIds(teamId)
+                            val userIdToFireAt = memberIds.associateWith { memberId ->
+                                val settings = notificationRepo.getSettings(memberId, teamId)
+                                val leadMinutes = notificationRepo.getReminderOverride(memberId, id)
+                                    ?: settings?.reminderLeadMinutes
+                                    ?: 120
+                                updated.event.startAt.minusSeconds(leadMinutes.toLong() * 60)
+                            }
+                            notificationRepo.insertReminderRows(id, userIdToFireAt)
+                        }
+                    } catch (e: Exception) {
+                        routeLogger.warn("Event reconcile notification dispatch failed: ${e.message}")
+                    }
+                }
+            }
+
+            call.respond(updated)
         }
     }
 }

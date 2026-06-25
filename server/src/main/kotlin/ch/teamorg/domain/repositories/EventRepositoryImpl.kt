@@ -587,6 +587,15 @@ class EventRepositoryImpl : EventRepository {
         else rowToEventWithRelations(eventId)
     }
 
+    override suspend fun clearNeedsReview(eventId: UUID): Event? = transaction {
+        val updated = EventsTable.update({ EventsTable.id eq eventId }) {
+            it[EventsTable.needsReview] = false
+            it[EventsTable.updatedAt] = Instant.now()
+        }
+        if (updated == 0) null
+        else rowToEventWithRelations(eventId)
+    }
+
     override suspend fun listSyncedExternalGameIds(clubId: UUID): List<Long> = transaction {
         (EventsTable innerJoin EventTeamsTable innerJoin TeamsTable)
             .select(EventsTable.externalGameId)
@@ -656,7 +665,10 @@ class EventRepositoryImpl : EventRepository {
         seriesOverride = row[EventsTable.seriesOverride],
         createdBy = row[EventsTable.createdBy],
         createdAt = row[EventsTable.createdAt],
-        updatedAt = row[EventsTable.updatedAt]
+        updatedAt = row[EventsTable.updatedAt],
+        externalSource = row[EventsTable.externalSource],
+        externalStatus = row[EventsTable.externalStatus],
+        needsReview = row[EventsTable.needsReview]
     )
 
     private fun rowToEventSeries(row: ResultRow) = EventSeries(

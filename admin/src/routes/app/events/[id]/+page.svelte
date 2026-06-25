@@ -16,6 +16,14 @@
 	// Reason field is shown only when the user picks "unsure".
 	let chosen = $state<string | null>(data.myResponse?.status ?? null);
 
+	// `datetime-local` wants `YYYY-MM-DDTHH:mm` in local time.
+	function toLocalInput(iso: string | null): string {
+		if (!iso) return '';
+		const d = new Date(iso);
+		const pad = (n: number) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
+
 	function fmtDateTime(iso: string): string {
 		return new Date(iso).toLocaleString(data.lang, {
 			weekday: 'long',
@@ -52,15 +60,94 @@
 </a>
 
 <div class="mx-auto flex max-w-[720px] flex-col gap-6">
+	{#if data.canReconcile && data.event.needsReview}
+		<!-- SwissVolley needs-review banner + reconcile form -->
+		<section class="rounded-[28px] bg-[#FFF3CD] p-6 text-[#7A5B00]">
+			<h2 class="font-display text-[18px] font-extrabold">{data.m.reconcile.needsReviewTitle}</h2>
+			<p class="mt-1 text-[13px]">{data.m.reconcile.needsReviewBody}</p>
+
+			<form method="POST" action="?/reconcile" use:enhance class="mt-4 flex flex-col gap-3">
+				<label class="flex flex-col gap-1 text-[13px] font-semibold">
+					{data.m.reconcile.meetupAt}
+					<input
+						type="datetime-local"
+						name="meetupAt"
+						value={toLocalInput(data.event.meetupAt)}
+						class="rounded-2xl bg-surface px-4 py-3 text-[14px] font-normal text-on-surface outline-none"
+					/>
+				</label>
+
+				<label class="flex flex-col gap-1 text-[13px] font-semibold">
+					{data.m.reconcile.notes}
+					<textarea
+						name="notes"
+						rows="2"
+						value={data.event.description ?? ''}
+						class="rounded-2xl bg-surface px-4 py-3 text-[14px] font-normal text-on-surface outline-none"
+					></textarea>
+				</label>
+
+				<label class="flex flex-col gap-1 text-[13px] font-semibold">
+					{data.m.reconcile.minAttendees}
+					<input
+						type="number"
+						name="minAttendees"
+						min="0"
+						value={data.event.minAttendees ?? ''}
+						class="rounded-2xl bg-surface px-4 py-3 text-[14px] font-normal text-on-surface outline-none"
+					/>
+				</label>
+
+				<fieldset class="flex flex-col gap-2">
+					<legend class="text-[13px] font-semibold">{data.m.reconcile.availabilityTitle}</legend>
+					<label class="flex items-center gap-2 text-[14px] font-normal">
+						<input type="checkbox" name="resetAvailability" class="size-4" />
+						{data.m.reconcile.resetAvailability}
+					</label>
+					<p class="text-[12px] font-normal opacity-80">{data.m.reconcile.keepAvailability}</p>
+				</fieldset>
+
+				<button
+					type="submit"
+					class="self-start rounded-full bg-primary px-5 py-3 text-[14px] font-bold text-on-primary hover:opacity-90"
+				>
+					{data.m.reconcile.submit}
+				</button>
+
+				{#if form?.reconcileError}
+					<p class="text-[12px] font-medium text-error">{form.reconcileError}</p>
+				{:else if form?.reconciled}
+					<p class="text-[12px] font-medium text-success">{data.m.reconcile.reconciled}</p>
+				{/if}
+			</form>
+		</section>
+	{/if}
+
 	<!-- Header -->
 	<header class="rounded-[28px] bg-surface p-6">
 		<div class="flex items-start justify-between gap-4">
 			<div>
-				<span
-					class="mb-2 inline-block rounded-full bg-primary-container px-3 py-1 text-[11px] font-semibold text-on-primary-container"
-				>
-					{typeLabel(data.event.type)}
-				</span>
+				<div class="mb-2 flex flex-wrap items-center gap-2">
+					<span
+						class="inline-block rounded-full bg-primary-container px-3 py-1 text-[11px] font-semibold text-on-primary-container"
+					>
+						{typeLabel(data.event.type)}
+					</span>
+					{#if data.event.externalStatus === 'postponed'}
+						<span
+							class="inline-block rounded-full bg-[#FFF3CD] px-3 py-1 text-[11px] font-semibold text-[#7A5B00]"
+						>
+							{data.m.swissvolley.postponed}
+						</span>
+					{/if}
+					{#if data.event.externalSource === 'swissvolley'}
+						<span
+							class="inline-block rounded-full bg-surface-container-high px-3 py-1 text-[11px] font-semibold text-on-surface-variant"
+						>
+							{data.m.swissvolley.sourceLabel}
+						</span>
+					{/if}
+				</div>
 				<h1 class="font-display text-[26px] font-extrabold text-on-surface">{data.event.title}</h1>
 			</div>
 			{#if data.canManage}

@@ -86,6 +86,18 @@
 								{typeLabel(event.type)}
 							</span>
 						{/if}
+						{#if event.externalStatus === 'postponed'}
+							<span class="rounded-full bg-[#FFF3CD] px-2 py-0.5 text-[10px] font-semibold text-[#7A5B00]">
+								{data.m.swissvolley.postponed}
+							</span>
+						{/if}
+						{#if event.externalSource === 'swissvolley'}
+							<span
+								class="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant"
+							>
+								{data.m.swissvolley.sourceLabel}
+							</span>
+						{/if}
 					</div>
 					<p class="truncate text-[12px] text-on-surface-variant">
 						{fmtTime(event.startAt)} · {typeLabel(event.type)}

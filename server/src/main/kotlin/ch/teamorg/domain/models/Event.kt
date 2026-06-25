@@ -26,7 +26,10 @@ data class Event(
     @Serializable(with = InstantSerializer::class) val createdAt: Instant,
     @Serializable(with = InstantSerializer::class) val updatedAt: Instant,
     val teamIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList(),
-    val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList()
+    val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList(),
+    val externalSource: String? = null,
+    val externalStatus: String? = null,
+    val needsReview: Boolean = false
 )
 
 @Serializable

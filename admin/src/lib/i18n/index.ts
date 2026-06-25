@@ -170,6 +170,22 @@ export interface Dict {
 		resultCreated: string;
 		resultSkipped: string;
 		resultNone: string;
+		postponed: string;
+		sourceLabel: string;
+	};
+	reconcile: {
+		needsReviewTitle: string;
+		needsReviewBody: string;
+		meetupAt: string;
+		notes: string;
+		minAttendees: string;
+		availabilityTitle: string;
+		keepAvailability: string;
+		resetAvailability: string;
+		submit: string;
+		saving: string;
+		reconciled: string;
+		failed: string;
 	};
 }
 
@@ -332,7 +348,24 @@ const de: Dict = {
 		importFailed: 'Import fehlgeschlagen. Bitte versuche es erneut.',
 		resultCreated: 'erstellt',
 		resultSkipped: 'übersprungen',
-		resultNone: 'Keine neuen Teams importiert.'
+		resultNone: 'Keine neuen Teams importiert.',
+		postponed: 'Verschoben',
+		sourceLabel: 'SwissVolley'
+	},
+	reconcile: {
+		needsReviewTitle: 'Spiel wurde geändert',
+		needsReviewBody:
+			'SwissVolley hat die Spieldaten (Datum, Zeit oder Halle) aktualisiert. Bitte überprüfe die Angaben und entscheide, ob die bereits erfassten Rückmeldungen erhalten bleiben.',
+		meetupAt: 'Besammlung',
+		notes: 'Notizen',
+		minAttendees: 'Mindestteilnehmer',
+		availabilityTitle: 'Rückmeldungen',
+		keepAvailability: 'Rückmeldungen behalten',
+		resetAvailability: 'Rückmeldungen zurücksetzen und neu anfragen',
+		submit: 'Überprüfung abschliessen',
+		saving: 'Wird gespeichert…',
+		reconciled: 'Überprüfung abgeschlossen.',
+		failed: 'Speichern fehlgeschlagen. Bitte versuche es erneut.'
 	}
 };
 
@@ -495,7 +528,24 @@ const en: Dict = {
 		importFailed: 'Import failed. Please try again.',
 		resultCreated: 'created',
 		resultSkipped: 'skipped',
-		resultNone: 'No new teams imported.'
+		resultNone: 'No new teams imported.',
+		postponed: 'Postponed',
+		sourceLabel: 'SwissVolley'
+	},
+	reconcile: {
+		needsReviewTitle: 'Game was changed',
+		needsReviewBody:
+			'SwissVolley updated the game details (date, time or venue). Please review and decide whether the already-collected availability should be kept.',
+		meetupAt: 'Meetup time',
+		notes: 'Notes',
+		minAttendees: 'Min. attendees',
+		availabilityTitle: 'Availability',
+		keepAvailability: 'Keep availability',
+		resetAvailability: 'Reset availability and ask again',
+		submit: 'Finish review',
+		saving: 'Saving…',
+		reconciled: 'Review completed.',
+		failed: 'Could not save. Please try again.'
 	}
 };
 
