@@ -4,9 +4,14 @@ import type { EventWithTeams, MatchedTeam } from '$lib/server/events';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	requireUser(locals);
+	const user = requireUser(locals);
 	const token = locals.token!;
 	const teamFilter = url.searchParams.get('team');
+
+	const canCreate =
+		user.isSuperAdmin ||
+		user.managedClubIds.length > 0 ||
+		user.teamRoles.some((r) => r.role === 'coach');
 
 	const all = await apiGet<EventWithTeams[]>('/users/me/events', token);
 
@@ -20,5 +25,5 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		: all
 	).sort((a, b) => a.event.startAt.localeCompare(b.event.startAt));
 
-	return { events, teams, teamFilter };
+	return { events, teams, teamFilter, canCreate };
 };

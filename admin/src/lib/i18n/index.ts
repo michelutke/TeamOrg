@@ -84,6 +84,21 @@ export interface Dict {
 		responses: string;
 		deadlinePassed: string;
 	};
+	eventForm: {
+		newTitle: string;
+		editTitle: string;
+		fTeams: string;
+		fTitle: string;
+		fType: string;
+		fStart: string;
+		fEnd: string;
+		fMeetup: string;
+		fLocation: string;
+		fDescription: string;
+		fMinAttendees: string;
+		selectTeams: string;
+		required: string;
+	};
 }
 
 const de: Dict = {
@@ -158,6 +173,21 @@ const de: Dict = {
 		saved: 'Gespeichert',
 		responses: 'Rückmeldungen',
 		deadlinePassed: 'Die Antwortfrist ist abgelaufen.'
+	},
+	eventForm: {
+		newTitle: 'Neuer Termin',
+		editTitle: 'Termin bearbeiten',
+		fTeams: 'Teams',
+		fTitle: 'Titel',
+		fType: 'Art',
+		fStart: 'Beginn',
+		fEnd: 'Ende',
+		fMeetup: 'Treffpunkt (optional)',
+		fLocation: 'Ort',
+		fDescription: 'Beschreibung',
+		fMinAttendees: 'Mindestteilnehmer',
+		selectTeams: 'Mindestens ein Team wählen',
+		required: 'Pflichtfeld'
 	}
 };
 
@@ -233,6 +263,21 @@ const en: Dict = {
 		saved: 'Saved',
 		responses: 'Responses',
 		deadlinePassed: 'The response deadline has passed.'
+	},
+	eventForm: {
+		newTitle: 'New event',
+		editTitle: 'Edit event',
+		fTeams: 'Teams',
+		fTitle: 'Title',
+		fType: 'Type',
+		fStart: 'Start',
+		fEnd: 'End',
+		fMeetup: 'Meetup (optional)',
+		fLocation: 'Location',
+		fDescription: 'Description',
+		fMinAttendees: 'Min. attendees',
+		selectTeams: 'Select at least one team',
+		required: 'Required'
 	}
 };
 

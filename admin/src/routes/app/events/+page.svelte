@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CalendarDays, MapPin } from 'lucide-svelte';
+	import { CalendarDays, MapPin, Plus } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -27,8 +27,16 @@
 	<title>{data.m.events.title} — TeamOrg</title>
 </svelte:head>
 
-<header class="mb-6">
+<header class="mb-6 flex items-center justify-between">
 	<h1 class="font-display text-[28px] font-extrabold text-on-surface">{data.m.events.title}</h1>
+	{#if data.canCreate}
+		<a
+			href="/app/events/new"
+			class="flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-[14px] font-bold text-on-primary hover:opacity-90"
+		>
+			<Plus size={18} /> {data.m.eventForm.newTitle}
+		</a>
+	{/if}
 </header>
 
 {#if data.teams.length > 1}
