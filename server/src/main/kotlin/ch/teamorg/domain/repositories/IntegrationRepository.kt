@@ -41,6 +41,14 @@ interface IntegrationRepository {
     suspend fun listLinksForClub(clubId: UUID): List<TeamSvLink>
     suspend fun listLinksForTeam(teamId: UUID): List<TeamSvLink>
     suspend fun deprecateLinksForClub(clubId: UUID)
+    suspend fun createLink(
+        teamId: UUID,
+        svTeamId: Int,
+        svSeasonalTeamId: Int?,
+        svLeagueCaption: String?,
+        svGender: String?
+    ): TeamSvLink
+    suspend fun listLinkedSvTeamIdsForClub(clubId: UUID): Set<Int>
 
     suspend fun getState(clubId: UUID): SvSyncState?
     suspend fun upsertState(clubId: UUID, lastSyncedAt: java.time.Instant?, lastStatus: String?, lastError: String?): SvSyncState

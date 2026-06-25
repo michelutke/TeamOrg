@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Plus } from 'lucide-svelte';
+	import { Plus, Download } from 'lucide-svelte';
+	import SwissVolleyImportDialog from '$lib/components/SwissVolleyImportDialog.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	interface Props {
@@ -10,6 +11,7 @@
 	let { data, form }: Props = $props();
 
 	let showCreateForm = $state(false);
+	let showSwissVolleyImport = $state(false);
 
 	const activeTeams = $derived(data.teams.filter((t) => !t.archivedAt));
 	const archivedTeams = $derived(data.teams.filter((t) => t.archivedAt));
@@ -30,15 +32,35 @@
 			<h1 class="font-display text-[30px] font-extrabold text-on-surface">Teams</h1>
 			<p class="text-[13px] text-on-surface-variant">{data.club.name}</p>
 		</div>
-		<button
-			type="button"
-			onclick={() => (showCreateForm = !showCreateForm)}
-			class="flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary py-[13px] pl-[22px] pr-6 text-[14px] font-bold text-on-primary hover:opacity-90"
-		>
-			<Plus size={16} />
-			New team
-		</button>
+		<div class="flex items-center gap-3">
+			{#if data.swissVolleyConnected}
+				<button
+					type="button"
+					onclick={() => (showSwissVolleyImport = true)}
+					class="flex cursor-pointer items-center gap-2 rounded-full border border-outline-variant bg-transparent py-[13px] pl-[22px] pr-6 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
+				>
+					<Download size={16} />
+					{data.m.swissvolley.importButton}
+				</button>
+			{/if}
+			<button
+				type="button"
+				onclick={() => (showCreateForm = !showCreateForm)}
+				class="flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary py-[13px] pl-[22px] pr-6 text-[14px] font-bold text-on-primary hover:opacity-90"
+			>
+				<Plus size={16} />
+				New team
+			</button>
+		</div>
 	</div>
+
+	{#if showSwissVolleyImport}
+		<SwissVolleyImportDialog
+			clubId={data.clubId}
+			m={data.m.swissvolley}
+			onClose={() => (showSwissVolleyImport = false)}
+		/>
+	{/if}
 
 	<!-- Create form -->
 	{#if showCreateForm}

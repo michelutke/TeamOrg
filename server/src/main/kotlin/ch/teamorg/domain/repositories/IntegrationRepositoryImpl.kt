@@ -70,6 +70,35 @@ class IntegrationRepositoryImpl : IntegrationRepository {
             .map(::rowToLink)
     }
 
+    override suspend fun createLink(
+        teamId: UUID,
+        svTeamId: Int,
+        svSeasonalTeamId: Int?,
+        svLeagueCaption: String?,
+        svGender: String?
+    ): TeamSvLink = transaction {
+        val newId = UUID.randomUUID()
+        TeamSvLinksTable.insert {
+            it[TeamSvLinksTable.id] = newId
+            it[TeamSvLinksTable.teamId] = teamId
+            it[TeamSvLinksTable.svTeamId] = svTeamId
+            it[TeamSvLinksTable.svSeasonalTeamId] = svSeasonalTeamId
+            it[TeamSvLinksTable.svLeagueCaption] = svLeagueCaption
+            it[TeamSvLinksTable.svGender] = svGender
+        }
+
+        TeamSvLinksTable.selectAll().where { TeamSvLinksTable.id eq newId }
+            .map(::rowToLink)
+            .single()
+    }
+
+    override suspend fun listLinkedSvTeamIdsForClub(clubId: UUID): Set<Int> = transaction {
+        (TeamSvLinksTable innerJoin TeamsTable).select(TeamSvLinksTable.svTeamId)
+            .where { TeamsTable.clubId eq clubId }
+            .map { it[TeamSvLinksTable.svTeamId] }
+            .toSet()
+    }
+
     override suspend fun deprecateLinksForClub(clubId: UUID): Unit = transaction {
         val teamIds = TeamsTable.select(TeamsTable.id).where { TeamsTable.clubId eq clubId }
             .map { it[TeamsTable.id] }

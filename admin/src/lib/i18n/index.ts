@@ -148,6 +148,29 @@ export interface Dict {
 		emailTaken: string;
 		failed: string;
 	};
+	swissvolley: {
+		importButton: string;
+		title: string;
+		subtitle: string;
+		loading: string;
+		noTeams: string;
+		noKeyTitle: string;
+		noKeyBody: string;
+		loadFailed: string;
+		selectAll: string;
+		clearAll: string;
+		genderM: string;
+		genderF: string;
+		genderMixed: string;
+		import: string;
+		importing: string;
+		cancel: string;
+		selectAtLeastOne: string;
+		importFailed: string;
+		resultCreated: string;
+		resultSkipped: string;
+		resultNone: string;
+	};
 }
 
 const de: Dict = {
@@ -287,6 +310,29 @@ const de: Dict = {
 		invalidBody: 'Diese Einladung ist nicht mehr gültig. Bitte fordere beim Verein eine neue an.',
 		emailTaken: 'Für diese E-Mail existiert bereits ein Konto. Bitte melde dich an.',
 		failed: 'Beitritt fehlgeschlagen. Bitte versuche es erneut.'
+	},
+	swissvolley: {
+		importButton: 'Aus SwissVolley importieren',
+		title: 'Teams aus SwissVolley importieren',
+		subtitle: 'Wähle die Teams, die du als TeamOrg-Teams anlegen möchtest.',
+		loading: 'Teams werden geladen…',
+		noTeams: 'Keine Teams bei SwissVolley gefunden.',
+		noKeyTitle: 'Kein gültiger SwissVolley-Schlüssel',
+		noKeyBody: 'Hinterlege zuerst einen gültigen SwissVolley-API-Schlüssel in den Integrationseinstellungen.',
+		loadFailed: 'Teams konnten nicht geladen werden. Bitte versuche es erneut.',
+		selectAll: 'Alle auswählen',
+		clearAll: 'Auswahl aufheben',
+		genderM: 'Herren',
+		genderF: 'Damen',
+		genderMixed: 'Mixed',
+		import: 'Importieren',
+		importing: 'Wird importiert…',
+		cancel: 'Abbrechen',
+		selectAtLeastOne: 'Mindestens ein Team wählen.',
+		importFailed: 'Import fehlgeschlagen. Bitte versuche es erneut.',
+		resultCreated: 'erstellt',
+		resultSkipped: 'übersprungen',
+		resultNone: 'Keine neuen Teams importiert.'
 	}
 };
 
@@ -427,6 +473,29 @@ const en: Dict = {
 		invalidBody: 'This invitation is no longer valid. Please ask the club for a new one.',
 		emailTaken: 'An account already exists for this email. Please sign in.',
 		failed: 'Could not join. Please try again.'
+	},
+	swissvolley: {
+		importButton: 'Import from SwissVolley',
+		title: 'Import teams from SwissVolley',
+		subtitle: 'Select the teams you want to create as TeamOrg teams.',
+		loading: 'Loading teams…',
+		noTeams: 'No teams found at SwissVolley.',
+		noKeyTitle: 'No valid SwissVolley key',
+		noKeyBody: 'Set a valid SwissVolley API key in the integration settings first.',
+		loadFailed: 'Could not load teams. Please try again.',
+		selectAll: 'Select all',
+		clearAll: 'Clear selection',
+		genderM: 'Men',
+		genderF: 'Women',
+		genderMixed: 'Mixed',
+		import: 'Import',
+		importing: 'Importing…',
+		cancel: 'Cancel',
+		selectAtLeastOne: 'Select at least one team.',
+		importFailed: 'Import failed. Please try again.',
+		resultCreated: 'created',
+		resultSkipped: 'skipped',
+		resultNone: 'No new teams imported.'
 	}
 };
 
