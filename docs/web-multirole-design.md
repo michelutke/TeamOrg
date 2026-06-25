@@ -421,9 +421,11 @@ self-edit branch (`userId == caller` → allow jersey/position only) or a dedica
 - **Cookie:** rename `admin_session` → `to_session` with a **dual-read grace period**
   (read both names for one release, write only `to_session`, then drop the shim) — no
   forced re-login.
-- **i18n:** **Paraglide JS (inlang)** — no lib in use anywhere in the repo (landing
-  included), so chosen on usability + type-safety + build-time output. DE default, EN
-  second.
+- **i18n:** **dependency-free typed dictionary** mirroring `landing/src/lib/i18n`
+  (typed `Dict`, `de`/`en` consts, `lang` cookie resolved server-side, `?lang=` toggle).
+  Chosen over Paraglide: the landing site already ships this exact pattern — reusing it
+  keeps both web apps consistent, adds zero deps, and is SSR-correct + type-checked.
+  DE default, EN second. Cookie name `lang` (matches landing), not `to_locale`.
 - **Player self jersey/position:** **new `/users/me/teams/{teamId}/profile`** (PUT) —
   self-scoped, jersey/position only. Do NOT widen the coach/manager
   `/teams/{id}/members/{u}/profile` guard. App reads the same field.

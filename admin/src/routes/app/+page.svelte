@@ -8,22 +8,18 @@
 
 	let { data }: Props = $props();
 
-	const roleLabel: Record<string, string> = {
-		coach: 'Trainer',
-		player: 'Spieler',
-		club_manager: 'Manager'
-	};
+	const roleLabel = $derived(data.m.roles);
 </script>
 
 <svelte:head>
-	<title>Start — TeamOrg</title>
+	<title>{data.m.nav.start} — TeamOrg</title>
 </svelte:head>
 
 <header class="mb-8">
 	<h1 class="font-display text-[28px] font-extrabold text-on-surface">
-		Hallo {data.user.displayName.split(' ')[0]}
+		{data.m.home.greeting} {data.user.displayName.split(' ')[0]}
 	</h1>
-	<p class="text-[14px] text-on-surface-variant">Deine Teams auf einen Blick</p>
+	<p class="text-[14px] text-on-surface-variant">{data.m.home.teamsSub}</p>
 </header>
 
 {#if data.teams.length === 0}
@@ -33,10 +29,8 @@
 		<span class="flex size-16 items-center justify-center rounded-full bg-primary-container">
 			<Inbox size={28} class="text-on-primary-container" />
 		</span>
-		<h2 class="font-display text-[20px] font-bold text-on-surface">Noch kein Team</h2>
-		<p class="text-[14px] text-on-surface-variant">
-			Du gehörst noch keinem Team an. Löse eine Einladung ein, um loszulegen.
-		</p>
+		<h2 class="font-display text-[20px] font-bold text-on-surface">{data.m.home.emptyTitle}</h2>
+		<p class="text-[14px] text-on-surface-variant">{data.m.home.emptyBody}</p>
 	</div>
 {:else}
 	<section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -59,7 +53,7 @@
 				<span
 					class="mt-1 flex items-center gap-1 text-[13px] font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100"
 				>
-					Öffnen <ArrowRight size={14} />
+					{data.m.home.open} <ArrowRight size={14} />
 				</span>
 			</a>
 		{/each}

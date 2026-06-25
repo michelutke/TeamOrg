@@ -11,13 +11,13 @@
 
 	let { data, children }: Props = $props();
 
-	const nav = [
-		{ href: '/app', label: 'Start', icon: House },
-		{ href: '/app/events', label: 'Termine', icon: CalendarDays },
-		{ href: '/app/teams', label: 'Teams', icon: Users },
-		{ href: '/app/inbox', label: 'Inbox', icon: Inbox },
-		{ href: '/app/profile', label: 'Profil', icon: User }
-	];
+	const nav = $derived([
+		{ href: '/app', label: data.m.nav.start, icon: House },
+		{ href: '/app/events', label: data.m.nav.termine, icon: CalendarDays },
+		{ href: '/app/teams', label: data.m.nav.teams, icon: Users },
+		{ href: '/app/inbox', label: data.m.nav.inbox, icon: Inbox },
+		{ href: '/app/profile', label: data.m.nav.profil, icon: User }
+	]);
 
 	const pathname = $derived($page.url.pathname);
 	function isActive(href: string): boolean {
@@ -56,6 +56,23 @@
 		</nav>
 
 		<div class="flex flex-col gap-2 border-t border-outline-variant pt-4">
+			<!-- Language toggle -->
+			<div class="flex items-center gap-1 px-2 text-[12px] font-medium">
+				<a
+					href="?lang=de"
+					data-sveltekit-reload
+					class="rounded-full px-3 py-1 transition-colors {data.lang === 'de'
+						? 'bg-secondary-container text-on-secondary-container'
+						: 'text-on-surface-variant hover:bg-surface-container-high'}">DE</a
+				>
+				<a
+					href="?lang=en"
+					data-sveltekit-reload
+					class="rounded-full px-3 py-1 transition-colors {data.lang === 'en'
+						? 'bg-secondary-container text-on-secondary-container'
+						: 'text-on-surface-variant hover:bg-surface-container-high'}">EN</a
+				>
+			</div>
 			<div class="px-4">
 				<p class="truncate text-[13px] font-semibold text-on-surface">{data.user.displayName}</p>
 				<p class="truncate text-[11px] text-on-surface-variant">{data.user.email}</p>
@@ -65,7 +82,7 @@
 					href="/admin/dashboard"
 					class="rounded-full px-4 py-2 text-[13px] font-medium text-on-surface-variant hover:bg-surface-container-high"
 				>
-					Admin-Bereich
+					{data.m.nav.adminArea}
 				</a>
 			{/if}
 			<form method="POST" action="/logout">
@@ -74,7 +91,7 @@
 					class="flex w-full items-center gap-3 rounded-full border-none bg-transparent px-4 py-3 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
 				>
 					<LogOut size={20} />
-					Abmelden
+					{data.m.nav.logout}
 				</button>
 			</form>
 		</div>
