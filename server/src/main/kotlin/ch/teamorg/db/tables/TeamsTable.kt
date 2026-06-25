@@ -13,6 +13,8 @@ object TeamsTable : Table("teams") {
     val appearanceShape = text("appearance_shape").nullable()
     val appearanceColor = text("appearance_color").nullable()
     val archivedAt = timestamp("archived_at").nullable()
+    val gamesSyncEnabled = bool("games_sync_enabled").default(false)
+    val predecessorTeamId = uuid("predecessor_team_id").references(id).nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
 

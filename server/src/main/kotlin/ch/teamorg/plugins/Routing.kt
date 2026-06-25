@@ -9,6 +9,7 @@ import ch.teamorg.routes.clubRoutes
 import ch.teamorg.routes.contactRoutes
 import ch.teamorg.routes.eventRoutes
 import ch.teamorg.routes.impersonationRoutes
+import ch.teamorg.routes.integrationRoutes
 import ch.teamorg.routes.inviteRoutes
 import ch.teamorg.routes.notificationRoutes
 import ch.teamorg.routes.subGroupRoutes
@@ -36,5 +37,6 @@ fun Application.configureRouting() {
         adminRoutes()
         impersonationRoutes()
         contactRoutes()
+        integrationRoutes()
     }
 }

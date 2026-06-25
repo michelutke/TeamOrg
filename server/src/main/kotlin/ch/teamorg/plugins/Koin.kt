@@ -8,6 +8,8 @@ import ch.teamorg.infra.AbwesenheitBackfillJob
 import ch.teamorg.infra.NotificationDispatcher
 import ch.teamorg.infra.PushService
 import ch.teamorg.infra.PushServiceImpl
+import ch.teamorg.infra.SwissVolleyClient
+import ch.teamorg.infra.SwissVolleyClientImpl
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -36,8 +38,18 @@ fun appModule(environment: ApplicationEnvironment) = module {
             apiKey = config.propertyOrNull("onesignal.api-key")?.getString() ?: ""
         )
     }
+    single<SwissVolleyClient> {
+        val config = environment.config
+        SwissVolleyClientImpl(
+            client = HttpClient(CIO) {
+                install(ContentNegotiation) { json() }
+            },
+            baseUrl = config.propertyOrNull("swissvolley.base-url")?.getString() ?: "https://api.volleyball.ch"
+        )
+    }
     single<NotificationRepository> { NotificationRepositoryImpl() }
     single { NotificationDispatcher(get(), get()) }
+    single<IntegrationRepository> { IntegrationRepositoryImpl() }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
     single<AdminRepository> { AdminRepositoryImpl() }
     single<MailService> { MailServiceImpl(environment.config) }

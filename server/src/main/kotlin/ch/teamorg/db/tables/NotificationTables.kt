@@ -30,6 +30,7 @@ object NotificationSettingsTable : Table("notification_settings") {
     val reminderLeadMinutes = integer("reminder_lead_minutes").default(120)
     val coachResponseMode = text("coach_response_mode").default("per_response")
     val absencesEnabled = bool("absences_enabled").default(true)
+    val svGames = bool("sv_games").default(true)
     override val primaryKey = PrimaryKey(userId, teamId)
 }
 

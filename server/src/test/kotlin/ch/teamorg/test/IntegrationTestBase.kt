@@ -10,6 +10,8 @@ import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.koin.core.module.Module
+import org.koin.ktor.ext.getKoin
 import org.testcontainers.containers.PostgreSQLContainer
 import java.util.UUID
 
@@ -23,7 +25,18 @@ abstract class IntegrationTestBase {
             .also { it.start() }
     }
 
-    fun withTeamorgTestApplication(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
+    fun withTeamorgTestApplication(block: suspend ApplicationTestBuilder.() -> Unit) =
+        withTeamorgTestApplication(koinOverride = null, block = block)
+
+    /**
+     * Variant that loads an extra Koin module (with override enabled) after the production
+     * [module] has wired the default bindings — lets a test swap a `single` (e.g. the
+     * SwissVolleyClient) for a fake/stub.
+     */
+    fun withTeamorgTestApplication(
+        koinOverride: Module?,
+        block: suspend ApplicationTestBuilder.() -> Unit
+    ) = testApplication {
         val testConfig = MapApplicationConfig(
             "jwt.secret" to "test_secret_32_chars_long_minimum_required",
             "jwt.issuer" to "teamorg",
@@ -37,7 +50,12 @@ abstract class IntegrationTestBase {
         )
 
         environment { config = testConfig }
-        application { module() }
+        application {
+            module()
+            if (koinOverride != null) {
+                getKoin().loadModules(listOf(koinOverride), allowOverride = true)
+            }
+        }
         block()
     }
 
