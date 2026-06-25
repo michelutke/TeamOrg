@@ -41,6 +41,19 @@ export interface Dict {
 		player: string;
 		club_manager: string;
 	};
+	teams: {
+		title: string;
+		members: string;
+	};
+	roster: {
+		title: string;
+		coaches: string;
+		players: string;
+		empty: string;
+	};
+	common: {
+		back: string;
+	};
 }
 
 const de: Dict = {
@@ -72,6 +85,19 @@ const de: Dict = {
 		coach: 'Trainer',
 		player: 'Spieler',
 		club_manager: 'Manager'
+	},
+	teams: {
+		title: 'Teams',
+		members: 'Mitglieder'
+	},
+	roster: {
+		title: 'Kader',
+		coaches: 'Trainer',
+		players: 'Spieler',
+		empty: 'Noch keine Mitglieder in diesem Team.'
+	},
+	common: {
+		back: 'Zurück'
 	}
 };
 
@@ -104,6 +130,19 @@ const en: Dict = {
 		coach: 'Coach',
 		player: 'Player',
 		club_manager: 'Manager'
+	},
+	teams: {
+		title: 'Teams',
+		members: 'Members'
+	},
+	roster: {
+		title: 'Roster',
+		coaches: 'Coaches',
+		players: 'Players',
+		empty: 'No members in this team yet.'
+	},
+	common: {
+		back: 'Back'
 	}
 };
 
