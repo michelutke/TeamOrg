@@ -450,3 +450,25 @@ self-edit branch (`userId == caller` → allow jersey/position only) or a dedica
   foundations so the Figma Team-Einstellungen screen has a real backing.
 - **Coach `/app/events`:** **merged across all the user's teams**; the top filter chips
   narrow by team. No per-team default.
+
+## 11. Domain + web invite redeem (2026-06-25)
+
+- **Single signed-in app on its own subdomain `app.teamorg.ch`** (the `admin/`
+  codebase: players → super-admins). Role-branch happens **inside** one origin via
+  `landingPathFor()` (super-admin → `/admin/*`, everyone else → `/app`). No
+  cross-domain redirect — the host-only session cookie would not survive a hop to a
+  different host (and `admin.teamorg.michelutke.com` is a different registrable domain
+  entirely). `teamorg.ch` = marketing only; cookie stays host-only on `app.teamorg.ch`.
+  Set `APP_URL=https://app.teamorg.ch` on the landing service; retire the old admin host.
+- **Web invite redeem is additive, canonical URL unchanged.** Emails + the
+  `teamorg://` deep-link + `INVITE_BASE_URL` keep pointing at `teamorg.ch/i/{token}`
+  (no https App Link exists today — the app uses the custom scheme). The landing invite
+  page gains a **"Join on the web"** button → `app.teamorg.ch/i/{token}`, which does the
+  actual redeem against the existing auth-gated `POST /invites/{token}/redeem`.
+- **New invitees:** registration is **invite-only** (no public `/register`) and lives
+  inside the redeem flow. For **personal** invites the invited email is **prefilled +
+  locked** (avoids the email-mismatch 403); reusable invites get an open field. Register
+  → auto-login → redeem → `/app`.
+- **Hardening:** `redirectTo` is validated (`safeRedirect`, no open-redirect); redeem
+  page is `noindex`; redeem is idempotent server-side (`ALREADY_MEMBER`→200);
+  404/410/403/email-taken all handled; SvelteKit same-origin CSRF check kept.
