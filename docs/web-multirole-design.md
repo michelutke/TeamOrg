@@ -415,6 +415,22 @@ self-edit branch (`userId == caller` → allow jersey/position only) or a dedica
 2a (foundations) → 2b (coach) → 3 (player, incl. self-profile backend fix) → 4 (polish).
 2a is the critical path; 3 is a thin delta on 2b once components are `canManage`-driven.
 
+## 9.7 Implementation status (2026-06-25, branch `feat/web-app-foundations`)
+
+- **2a foundations — DONE**: team roles in session, `to_session` cookie (dual-read),
+  neutral `/login`, role-branched landing, web guards, M3 `/app` shell, DE/EN i18n,
+  backend `teams.appearance`.
+- **2b coach — DONE**: teams list + roster, events list (merged + filter chips) +
+  detail + RSVP, event create/edit forms, check-in screen. All load-guarded.
+- **3 player — DONE (core)**: backend self-profile `PUT /users/me/teams/{id}/profile`
+  + member profile page (self/coach edit). Players already had read + RSVP via the
+  shared guarded routes.
+- **4 polish — PARTIAL**: inbox (list + mark read) + profile (info + language) done.
+- **Still open**: own absences (Abwesenheit) UI; per-team notification settings
+  (`/app/inbox/settings`); avatar upload; Team-Einstellungen shape/color picker UI
+  (backend ready); event cancel/duplicate UI (backend ready); extracting shared
+  components out of the `/manage` tree (2a item 9 — deferred, no blocker).
+
 ## 10. Resolved decisions (2026-06-25)
 
 - **Login URL:** neutral `/login` for **all** roles. `/admin/login` 302 → `/login`.
