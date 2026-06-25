@@ -1,6 +1,7 @@
 package ch.teamorg.routes
 
 import ch.teamorg.domain.models.TeamAppearance
+import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.IntegrationRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
@@ -47,6 +48,7 @@ fun Route.teamRoutes() {
     val teamRepository by inject<TeamRepository>()
     val userRepository by inject<UserRepository>()
     val integrationRepository by inject<IntegrationRepository>()
+    val eventRepository by inject<EventRepository>()
     val syncService by inject<SwissVolleySyncService>()
 
     authenticate("jwt") {
@@ -113,6 +115,12 @@ fun Route.teamRoutes() {
 
                     val team = teamRepository.archive(teamId)
                     call.respond(team)
+                }
+
+                get("/importable-series") {
+                    val teamId = UUID.fromString(call.parameters["teamId"])
+                    if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@get
+                    call.respond(eventRepository.listImportableSeries(teamId))
                 }
 
                 get("/members") {

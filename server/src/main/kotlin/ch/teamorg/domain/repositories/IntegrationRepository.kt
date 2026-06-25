@@ -47,6 +47,15 @@ interface IntegrationRepository {
     suspend fun listLinksForClub(clubId: UUID): List<TeamSvLink>
     suspend fun listLinksForTeam(teamId: UUID): List<TeamSvLink>
     suspend fun deprecateLinksForClub(clubId: UUID)
+    suspend fun updateLinkSeasonal(
+        clubId: UUID,
+        svTeamId: Int,
+        svSeasonalTeamId: Int?,
+        svLeagueCaption: String?,
+        svGender: String?
+    )
+    suspend fun deprecateLink(clubId: UUID, svTeamId: Int)
+    suspend fun listActiveLinkSvTeamIds(clubId: UUID): Set<Int>
     suspend fun createLink(
         teamId: UUID,
         svTeamId: Int,

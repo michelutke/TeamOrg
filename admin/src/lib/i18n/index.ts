@@ -98,6 +98,32 @@ export interface Dict {
 		fMinAttendees: string;
 		selectTeams: string;
 		required: string;
+		recurringSection: string;
+		recurringEnable: string;
+		fPattern: string;
+		patternWeekly: string;
+		patternDaily: string;
+		patternCustom: string;
+		fWeekdays: string;
+		fIntervalDays: string;
+		fSeriesEnd: string;
+		weekdayMon: string;
+		weekdayTue: string;
+		weekdayWed: string;
+		weekdayThu: string;
+		weekdayFri: string;
+		weekdaySat: string;
+		weekdaySun: string;
+	};
+	schedule: {
+		carryOverTitle: string;
+		carryOverBody: string;
+		carryOverAction: string;
+		pickSeries: string;
+		loading: string;
+		loadFailed: string;
+		empty: string;
+		takeOver: string;
 	};
 	checkin: {
 		title: string;
@@ -187,6 +213,23 @@ export interface Dict {
 		reconciled: string;
 		failed: string;
 	};
+	teamMigrate: {
+		deprecatedBadge: string;
+		action: string;
+		title: string;
+		subtitle: string;
+		targetLabel: string;
+		selectPlaceholder: string;
+		noTargets: string;
+		submit: string;
+		submitting: string;
+		cancel: string;
+		selectTarget: string;
+		resultMoved: string; // "{n} Mitglieder verschoben" — {n} replaced at call site
+		errSourceNotDeprecated: string;
+		errTargetNotLive: string;
+		errFailed: string;
+	};
 }
 
 const de: Dict = {
@@ -275,7 +318,34 @@ const de: Dict = {
 		fDescription: 'Beschreibung',
 		fMinAttendees: 'Mindestteilnehmer',
 		selectTeams: 'Mindestens ein Team wählen',
-		required: 'Pflichtfeld'
+		required: 'Pflichtfeld',
+		recurringSection: 'Wiederholung',
+		recurringEnable: 'Als Serie wiederholen',
+		fPattern: 'Muster',
+		patternWeekly: 'Wöchentlich',
+		patternDaily: 'Täglich',
+		patternCustom: 'Benutzerdefiniert',
+		fWeekdays: 'Wochentage',
+		fIntervalDays: 'Intervall (Tage)',
+		fSeriesEnd: 'Serienende',
+		weekdayMon: 'Mo',
+		weekdayTue: 'Di',
+		weekdayWed: 'Mi',
+		weekdayThu: 'Do',
+		weekdayFri: 'Fr',
+		weekdaySat: 'Sa',
+		weekdaySun: 'So'
+	},
+	schedule: {
+		carryOverTitle: 'Vorherigen Trainingsplan übernehmen',
+		carryOverBody:
+			'Das Vorgängerteam hatte einen wiederkehrenden Trainingsplan. Übernimm einzelne Serien und passe Daten und Felder für die neue Saison an.',
+		carryOverAction: 'Plan übernehmen',
+		pickSeries: 'Serie zum Übernehmen wählen',
+		loading: 'Wird geladen…',
+		loadFailed: 'Serien konnten nicht geladen werden.',
+		empty: 'Keine übernehmbaren Serien gefunden.',
+		takeOver: 'Übernehmen'
 	},
 	checkin: {
 		title: 'Check-in',
@@ -366,6 +436,23 @@ const de: Dict = {
 		saving: 'Wird gespeichert…',
 		reconciled: 'Überprüfung abgeschlossen.',
 		failed: 'Speichern fehlgeschlagen. Bitte versuche es erneut.'
+	},
+	teamMigrate: {
+		deprecatedBadge: 'Veraltet',
+		action: 'Migrieren zu…',
+		title: 'Team migrieren',
+		subtitle: 'Verschiebe alle Mitglieder dieses Teams in ein aktives Nachfolge-Team.',
+		targetLabel: 'Zielteam',
+		selectPlaceholder: 'Zielteam wählen…',
+		noTargets: 'Kein aktives Zielteam verfügbar.',
+		submit: 'Mitglieder verschieben',
+		submitting: 'Wird migriert…',
+		cancel: 'Abbrechen',
+		selectTarget: 'Bitte wähle ein Zielteam.',
+		resultMoved: 'Mitglieder verschoben',
+		errSourceNotDeprecated: 'Dieses Team ist nicht veraltet und kann nicht migriert werden.',
+		errTargetNotLive: 'Das Zielteam ist kein aktives SwissVolley-Team.',
+		errFailed: 'Migration fehlgeschlagen. Bitte versuche es erneut.'
 	}
 };
 
@@ -455,7 +542,34 @@ const en: Dict = {
 		fDescription: 'Description',
 		fMinAttendees: 'Min. attendees',
 		selectTeams: 'Select at least one team',
-		required: 'Required'
+		required: 'Required',
+		recurringSection: 'Recurrence',
+		recurringEnable: 'Repeat as series',
+		fPattern: 'Pattern',
+		patternWeekly: 'Weekly',
+		patternDaily: 'Daily',
+		patternCustom: 'Custom',
+		fWeekdays: 'Weekdays',
+		fIntervalDays: 'Interval (days)',
+		fSeriesEnd: 'Series end',
+		weekdayMon: 'Mon',
+		weekdayTue: 'Tue',
+		weekdayWed: 'Wed',
+		weekdayThu: 'Thu',
+		weekdayFri: 'Fri',
+		weekdaySat: 'Sat',
+		weekdaySun: 'Sun'
+	},
+	schedule: {
+		carryOverTitle: 'Take over previous schedule',
+		carryOverBody:
+			'The predecessor team had a recurring schedule. Take over individual series and adjust dates and fields for the new season.',
+		carryOverAction: 'Take over schedule',
+		pickSeries: 'Select a series to take over',
+		loading: 'Loading…',
+		loadFailed: 'Could not load series.',
+		empty: 'No importable series found.',
+		takeOver: 'Take over'
 	},
 	checkin: {
 		title: 'Check-in',
@@ -546,6 +660,23 @@ const en: Dict = {
 		saving: 'Saving…',
 		reconciled: 'Review completed.',
 		failed: 'Could not save. Please try again.'
+	},
+	teamMigrate: {
+		deprecatedBadge: 'Deprecated',
+		action: 'Migrate to…',
+		title: 'Migrate team',
+		subtitle: 'Move all members of this team into an active successor team.',
+		targetLabel: 'Target team',
+		selectPlaceholder: 'Select target team…',
+		noTargets: 'No active target team available.',
+		submit: 'Move members',
+		submitting: 'Migrating…',
+		cancel: 'Cancel',
+		selectTarget: 'Please select a target team.',
+		resultMoved: 'members moved',
+		errSourceNotDeprecated: 'This team is not deprecated and cannot be migrated.',
+		errTargetNotLive: 'The target team is not an active SwissVolley team.',
+		errFailed: 'Migration failed. Please try again.'
 	}
 };
 

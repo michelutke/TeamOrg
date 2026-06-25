@@ -12,6 +12,9 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.UUID
 
+// 0=Mon..6=Sun, matching the recurrence generator's weekday encoding.
+private val WEEKDAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
 class EventRepositoryImpl : EventRepository {
 
     override suspend fun create(request: CreateEventRequest, createdBy: UUID): Event = transaction {
@@ -594,6 +597,86 @@ class EventRepositoryImpl : EventRepository {
         }
         if (updated == 0) null
         else rowToEventWithRelations(eventId)
+    }
+
+    override suspend fun listImportableSeries(teamId: UUID): ImportableSeriesResult = transaction {
+        val hasOwnSeries = (EventsTable innerJoin EventTeamsTable)
+            .select(EventsTable.id)
+            .where { (EventTeamsTable.teamId eq teamId) and EventsTable.seriesId.isNotNull() }
+            .limit(1)
+            .any()
+
+        val predecessorTeamId = TeamsTable
+            .select(TeamsTable.predecessorTeamId)
+            .where { TeamsTable.id eq teamId }
+            .firstOrNull()
+            ?.get(TeamsTable.predecessorTeamId)
+
+        val series = if (predecessorTeamId == null) {
+            emptyList()
+        } else {
+            val seriesIds = (EventsTable innerJoin EventTeamsTable)
+                .select(EventsTable.seriesId)
+                .where { (EventTeamsTable.teamId eq predecessorTeamId) and EventsTable.seriesId.isNotNull() }
+                .mapNotNull { it[EventsTable.seriesId] }
+                .distinct()
+
+            if (seriesIds.isEmpty()) {
+                emptyList()
+            } else {
+                EventSeriesTable.selectAll()
+                    .where { EventSeriesTable.id inList seriesIds }
+                    .map(::rowToImportableSeries)
+            }
+        }
+
+        ImportableSeriesResult(
+            hasOwnSeries = hasOwnSeries,
+            predecessorTeamId = predecessorTeamId?.toString(),
+            series = series
+        )
+    }
+
+    private fun rowToImportableSeries(row: ResultRow): ImportableSeries {
+        val type = row[EventSeriesTable.templateType].name
+        val weekdays = row[EventSeriesTable.weekdays]
+        val patternType = row[EventSeriesTable.patternType].name
+        return ImportableSeries(
+            seriesId = row[EventSeriesTable.id],
+            patternType = patternType,
+            weekdays = weekdays,
+            intervalDays = row[EventSeriesTable.intervalDays],
+            templateStartTime = row[EventSeriesTable.templateStartTime],
+            templateEndTime = row[EventSeriesTable.templateEndTime],
+            templateMeetupTime = row[EventSeriesTable.templateMeetupTime],
+            templateTitle = row[EventSeriesTable.templateTitle],
+            templateType = type,
+            templateLocation = row[EventSeriesTable.templateLocation],
+            templateMinAttendees = row[EventSeriesTable.templateMinAttendees],
+            seriesStartDate = row[EventSeriesTable.seriesStartDate],
+            seriesEndDate = row[EventSeriesTable.seriesEndDate],
+            label = buildSeriesLabel(type, patternType, weekdays, row[EventSeriesTable.intervalDays])
+        )
+    }
+
+    // Human label e.g. "Training · Mon, Wed · weekly" (design §15).
+    private fun buildSeriesLabel(
+        type: String,
+        patternType: String,
+        weekdays: List<Short>?,
+        intervalDays: Int?
+    ): String {
+        val typeLabel = type.replaceFirstChar { it.uppercase() }
+        val parts = mutableListOf(typeLabel)
+        if (!weekdays.isNullOrEmpty()) {
+            parts.add(weekdays.sorted().joinToString(", ") { WEEKDAY_NAMES.getOrElse(it.toInt()) { _ -> "?" } })
+        }
+        val cadence = when (patternType) {
+            "custom" -> if (intervalDays != null) "every $intervalDays days" else patternType
+            else -> patternType
+        }
+        parts.add(cadence)
+        return parts.joinToString(" · ")
     }
 
     override suspend fun listSyncedExternalGameIds(clubId: UUID): List<Long> = transaction {

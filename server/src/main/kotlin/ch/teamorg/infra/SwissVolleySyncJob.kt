@@ -49,6 +49,8 @@ private suspend fun runPass(
     for (clubId in clubIds) {
         try {
             if (isDue(clubId, integrationRepository, eventRepository)) {
+                // Refresh team links (season rollover, §6/§14) before pulling games.
+                syncService.refreshClubTeams(clubId)
                 syncService.syncClub(clubId)
             }
         } catch (e: Exception) {

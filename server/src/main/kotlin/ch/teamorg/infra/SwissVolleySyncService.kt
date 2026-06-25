@@ -37,6 +37,78 @@ class SwissVolleySyncService(
         runSync(clubId, restrictToTeamId = null)
     }
 
+    /**
+     * Season-rollover refresh for a single club (design §6 "Season rollover", §14 deprecation).
+     *
+     * Re-reads `/indoor/teams` and, matching by the stable `sv_team_id`:
+     *  - refreshes seasonal id / league / gender on existing active links,
+     *  - deprecates active links whose `sv_team_id` vanished from the feed,
+     *  - alerts club managers (always-on, user-targeted) about NEW SV teams not yet linked —
+     *    it never auto-creates teams (the manager stays in control).
+     *
+     * Does NOT sync games; the polling job calls this before [syncClub].
+     */
+    suspend fun refreshClubTeams(clubId: UUID) {
+        val integration = integrationRepository.getIntegration(clubId)
+        if (integration == null || integration.keyValid != true) {
+            logger.info("refreshClubTeams $clubId: no valid integration, skipping")
+            return
+        }
+        val apiKey = integrationRepository.getApiKey(clubId) ?: run {
+            logger.info("refreshClubTeams $clubId: no api key, skipping")
+            return
+        }
+
+        val svTeams: List<SVTeam> = try {
+            swissVolleyClient.listTeams(apiKey)
+        } catch (e: InvalidApiKeyException) {
+            handleInvalidKey(clubId)
+            return
+        }
+
+        val svTeamsById: Map<Int, SVTeam> = svTeams
+            .mapNotNull { team -> team.teamId?.let { it to team } }
+            .toMap()
+
+        // Match existing active links by stable sv_team_id: refresh present ones, deprecate vanished.
+        val activeSvIds = integrationRepository.listActiveLinkSvTeamIds(clubId)
+        for (svTeamId in activeSvIds) {
+            val svTeam = svTeamsById[svTeamId]
+            if (svTeam != null) {
+                integrationRepository.updateLinkSeasonal(
+                    clubId = clubId,
+                    svTeamId = svTeamId,
+                    svSeasonalTeamId = svTeam.seasonalTeamId,
+                    svLeagueCaption = svTeam.league?.caption,
+                    svGender = svTeam.gender
+                )
+            } else {
+                integrationRepository.deprecateLink(clubId, svTeamId)
+            }
+        }
+
+        // New SV teams not linked anywhere in the club -> notify managers (always-on, user-targeted).
+        val linkedSvIds = integrationRepository.listLinkedSvTeamIdsForClub(clubId)
+        val newSvTeams = svTeamsById.filterKeys { it !in linkedSvIds }.values
+        if (newSvTeams.isNotEmpty()) {
+            val managerIds = notificationRepository.getManagerIdsForClub(clubId)
+            if (managerIds.isNotEmpty()) {
+                for (svTeam in newSvTeams) {
+                    val svTeamId = svTeam.teamId ?: continue
+                    notificationDispatcher.notifyUsers(
+                        userIds = managerIds,
+                        type = "sv_team_available",
+                        title = "Neues SwissVolley-Team",
+                        body = svTeam.caption ?: "Neues Team verfügbar",
+                        entityId = clubId,
+                        entityType = "club",
+                        idempotencyKeySuffix = svTeamId.toString()
+                    )
+                }
+            }
+        }
+    }
+
     /** Immediate sync for a single team (toggle-on); same per-game logic, scoped to the team. */
     suspend fun syncTeam(teamId: UUID) {
         val clubId = teamRepository.getClubId(teamId) ?: run {

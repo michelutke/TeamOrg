@@ -9,6 +9,12 @@
 		description: string | null;
 		minAttendees: number | null;
 		teamIds: string[];
+		recurring?: {
+			patternType: string;
+			weekdays?: number[] | null;
+			intervalDays?: number | null;
+			seriesEndDate?: string | null;
+		} | null;
 	}
 </script>
 
@@ -62,7 +68,30 @@
 		selected = selected.includes(id) ? selected.filter((t) => t !== id) : [...selected, id];
 	}
 
+	// Recurrence (0=Mon..6=Sun, matching the backend's weekday encoding).
+	let recurringEnabled = $state(initial.recurring != null);
+	let patternType = $state(initial.recurring?.patternType ?? 'weekly');
+	let weekdays = $state<number[]>(initial.recurring?.weekdays ?? []);
+	let intervalDays = $state(
+		initial.recurring?.intervalDays != null ? String(initial.recurring.intervalDays) : ''
+	);
+	let seriesEndDate = $state(initial.recurring?.seriesEndDate ?? '');
+
+	function toggleWeekday(d: number) {
+		weekdays = weekdays.includes(d) ? weekdays.filter((w) => w !== d) : [...weekdays, d].sort();
+	}
+
 	const types = ['training', 'match', 'other'] as const;
+	const patterns = ['weekly', 'daily', 'custom'] as const;
+	const weekdayKeys = [
+		'weekdayMon',
+		'weekdayTue',
+		'weekdayWed',
+		'weekdayThu',
+		'weekdayFri',
+		'weekdaySat',
+		'weekdaySun'
+	] as const;
 	const inputCls =
 		'w-full rounded-2xl bg-surface-container-high px-4 py-3 text-[14px] text-on-surface outline-none';
 </script>
@@ -140,6 +169,85 @@
 		<span class="text-[12px] font-medium text-primary">{m.eventForm.fMinAttendees}</span>
 		<input type="number" name="minAttendees" bind:value={minAttendees} min="0" class={inputCls} />
 	</label>
+
+	<!-- Recurrence -->
+	<fieldset class="flex flex-col gap-3 rounded-2xl bg-surface-container-low p-4">
+		<legend class="px-1 text-[12px] font-medium text-primary">
+			{m.eventForm.recurringSection}
+		</legend>
+		<label class="flex cursor-pointer items-center gap-2">
+			<input
+				type="checkbox"
+				bind:checked={recurringEnabled}
+				class="h-4 w-4 accent-primary"
+			/>
+			<span class="text-[14px] text-on-surface">{m.eventForm.recurringEnable}</span>
+		</label>
+
+		{#if recurringEnabled}
+			<input type="hidden" name="recurringEnabled" value="true" />
+			<input type="hidden" name="patternType" value={patternType} />
+
+			<label class="flex flex-col gap-1">
+				<span class="text-[12px] font-medium text-primary">{m.eventForm.fPattern}</span>
+				<select bind:value={patternType} class={inputCls}>
+					{#each patterns as p (p)}
+						<option value={p}>
+							{p === 'weekly'
+								? m.eventForm.patternWeekly
+								: p === 'daily'
+									? m.eventForm.patternDaily
+									: m.eventForm.patternCustom}
+						</option>
+					{/each}
+				</select>
+			</label>
+
+			{#if patternType === 'weekly'}
+				<fieldset class="flex flex-col gap-2">
+					<legend class="mb-1 text-[12px] font-medium text-primary">
+						{m.eventForm.fWeekdays}
+					</legend>
+					<div class="flex flex-wrap gap-2">
+						{#each weekdayKeys as key, d (d)}
+							<button
+								type="button"
+								onclick={() => toggleWeekday(d)}
+								class="rounded-full px-3 py-2 text-[13px] font-medium transition-colors {weekdays.includes(
+									d
+								)
+									? 'bg-secondary-container text-on-secondary-container'
+									: 'bg-surface-container-high text-on-surface-variant'}"
+							>
+								{m.eventForm[key]}
+							</button>
+						{/each}
+					</div>
+					{#each weekdays as d (d)}
+						<input type="hidden" name="weekdays" value={d} />
+					{/each}
+				</fieldset>
+			{/if}
+
+			{#if patternType === 'custom'}
+				<label class="flex flex-col gap-1">
+					<span class="text-[12px] font-medium text-primary">{m.eventForm.fIntervalDays}</span>
+					<input
+						type="number"
+						name="intervalDays"
+						bind:value={intervalDays}
+						min="1"
+						class={inputCls}
+					/>
+				</label>
+			{/if}
+
+			<label class="flex flex-col gap-1">
+				<span class="text-[12px] font-medium text-primary">{m.eventForm.fSeriesEnd}</span>
+				<input type="date" name="seriesEndDate" bind:value={seriesEndDate} class={inputCls} />
+			</label>
+		{/if}
+	</fieldset>
 
 	{#if error}
 		<p class="text-[13px] font-medium text-error">{error}</p>

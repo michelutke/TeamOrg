@@ -11,6 +11,7 @@ interface Team {
 	memberCount: number;
 	description: string | null;
 	archivedAt: string | null;
+	deprecated: boolean;
 	createdAt: string;
 }
 
@@ -30,6 +31,11 @@ interface ImportedTeam {
 interface ImportResult {
 	created: ImportedTeam[];
 	skipped: number[];
+}
+
+interface MigrateResult {
+	movedMembers: number;
+	targetTeamId: string;
 }
 
 export const load: PageServerLoad = async ({ params, locals, cookies }) => {
@@ -66,6 +72,29 @@ export const actions: Actions = {
 			if (err instanceof ApiError && err.status === 403)
 				return fail(403, { error: 'Not authorized to create teams for this club' });
 			return fail(500, { error: 'Failed to create team' });
+		}
+	},
+
+	migrateTo: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const sourceTeamId = data.get('sourceTeamId') as string;
+		const targetTeamId = data.get('targetTeamId') as string;
+		if (!sourceTeamId || !targetTeamId) return fail(400, { migrateError: 'selectTarget' });
+
+		try {
+			const result = await apiPost<MigrateResult>(
+				`/clubs/${params.clubId}/teams/${sourceTeamId}/migrate-to`,
+				locals.token!,
+				{ targetTeamId }
+			);
+			return { migrated: result };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 409)
+				return fail(409, { migrateError: 'errSourceNotDeprecated' });
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { migrateError: 'errFailed' });
+			return fail(500, { migrateError: 'errFailed' });
 		}
 	},
 

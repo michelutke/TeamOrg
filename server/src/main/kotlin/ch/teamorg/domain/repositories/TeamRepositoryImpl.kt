@@ -1,6 +1,7 @@
 package ch.teamorg.domain.repositories
 
 import ch.teamorg.db.tables.ClubRolesTable
+import ch.teamorg.db.tables.NotificationSettingsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
@@ -59,6 +60,71 @@ class TeamRepositoryImpl : TeamRepository {
         TeamsTable.selectAll().where { TeamsTable.id eq id }
             .map { rowToTeam(it, countMembers(id)) }
             .single()
+    }
+
+    override suspend fun migrateTeam(sourceTeamId: UUID, targetTeamId: UUID): Int = transaction {
+        // 1. Copy team_roles source -> target. insertIgnore => ON CONFLICT (user_id, team_id, role)
+        //    DO NOTHING, so jersey_number/position are preserved only on newly-inserted rows.
+        val sourceRoles = TeamRolesTable.selectAll().where { TeamRolesTable.teamId eq sourceTeamId }.toList()
+        var movedMembers = 0
+        for (r in sourceRoles) {
+            val inserted = TeamRolesTable.insertIgnore {
+                it[userId] = r[TeamRolesTable.userId]
+                it[teamId] = targetTeamId
+                it[role] = r[TeamRolesTable.role]
+                it[jerseyNumber] = r[TeamRolesTable.jerseyNumber]
+                it[position] = r[TeamRolesTable.position]
+            }.insertedCount
+            if (inserted > 0) movedMembers++
+        }
+
+        // 2. Carry games_sync_enabled to the target only when the target is still default (false).
+        val sourceGamesSync = TeamsTable.select(TeamsTable.gamesSyncEnabled)
+            .where { TeamsTable.id eq sourceTeamId }
+            .map { it[TeamsTable.gamesSyncEnabled] }
+            .single()
+        val targetGamesSync = TeamsTable.select(TeamsTable.gamesSyncEnabled)
+            .where { TeamsTable.id eq targetTeamId }
+            .map { it[TeamsTable.gamesSyncEnabled] }
+            .single()
+        if (sourceGamesSync && !targetGamesSync) {
+            TeamsTable.update({ TeamsTable.id eq targetTeamId }) {
+                it[TeamsTable.gamesSyncEnabled] = true
+                it[TeamsTable.updatedAt] = java.time.Instant.now()
+            }
+        }
+
+        // 3. Copy each member's notification_settings source -> target where no target row exists.
+        //    insertIgnore => ON CONFLICT (user_id, team_id) DO NOTHING.
+        val sourceSettings = NotificationSettingsTable.selectAll()
+            .where { NotificationSettingsTable.teamId eq sourceTeamId }
+            .toList()
+        for (s in sourceSettings) {
+            NotificationSettingsTable.insertIgnore {
+                it[userId] = s[NotificationSettingsTable.userId]
+                it[teamId] = targetTeamId
+                it[eventsNew] = s[NotificationSettingsTable.eventsNew]
+                it[eventsEdit] = s[NotificationSettingsTable.eventsEdit]
+                it[eventsCancel] = s[NotificationSettingsTable.eventsCancel]
+                it[remindersEnabled] = s[NotificationSettingsTable.remindersEnabled]
+                it[reminderLeadMinutes] = s[NotificationSettingsTable.reminderLeadMinutes]
+                it[coachResponseMode] = s[NotificationSettingsTable.coachResponseMode]
+                it[absencesEnabled] = s[NotificationSettingsTable.absencesEnabled]
+                it[svGames] = s[NotificationSettingsTable.svGames]
+            }
+        }
+
+        // 4. Lineage + archive the source.
+        TeamsTable.update({ TeamsTable.id eq targetTeamId }) {
+            it[TeamsTable.predecessorTeamId] = sourceTeamId
+            it[TeamsTable.updatedAt] = java.time.Instant.now()
+        }
+        TeamsTable.update({ TeamsTable.id eq sourceTeamId }) {
+            it[TeamsTable.archivedAt] = java.time.Instant.now()
+            it[TeamsTable.updatedAt] = java.time.Instant.now()
+        }
+
+        movedMembers
     }
 
     override suspend fun listMembers(teamId: UUID): List<TeamMember> = transaction {

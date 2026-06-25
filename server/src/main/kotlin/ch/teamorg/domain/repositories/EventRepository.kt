@@ -51,6 +51,7 @@ interface EventRepository {
     suspend fun markPostponed(eventId: UUID): Event?
     suspend fun clearPostponedToSynced(eventId: UUID): Event?
     suspend fun clearNeedsReview(eventId: UUID): Event?
+    suspend fun listImportableSeries(teamId: UUID): ImportableSeriesResult
     suspend fun listSyncedExternalGameIds(clubId: UUID): List<Long>
     suspend fun hasSyncedGameWithin(clubId: UUID, windowStart: Instant, windowEnd: Instant): Boolean
 }

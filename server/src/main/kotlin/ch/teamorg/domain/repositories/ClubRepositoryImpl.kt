@@ -3,6 +3,7 @@ package ch.teamorg.domain.repositories
 import ch.teamorg.db.tables.ClubRolesTable
 import ch.teamorg.db.tables.ClubsTable
 import ch.teamorg.db.tables.TeamRolesTable
+import ch.teamorg.db.tables.TeamSvLinksTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.Team
@@ -55,8 +56,30 @@ class ClubRepositoryImpl : ClubRepository {
             .groupBy(TeamRolesTable.teamId)
             .associate { it[TeamRolesTable.teamId] to it[TeamRolesTable.teamId.count()].toInt() }
 
-        TeamsTable.selectAll().where { (TeamsTable.clubId eq clubId) and TeamsTable.archivedAt.isNull() }
-            .map { row -> rowToTeam(row, memberCounts[row[TeamsTable.id]] ?: 0) }
+        // Per-team SV link state: a team is "deprecated" iff it has >=1 link and none remain
+        // active (all `deprecated_at` set), see §14.
+        val teamsWithLinks = TeamSvLinksTable
+            .select(TeamSvLinksTable.teamId)
+            .withDistinct()
+            .map { it[TeamSvLinksTable.teamId] }
+            .toSet()
+        val teamsWithActiveLink = TeamSvLinksTable
+            .select(TeamSvLinksTable.teamId)
+            .where { TeamSvLinksTable.deprecatedAt.isNull() }
+            .withDistinct()
+            .map { it[TeamSvLinksTable.teamId] }
+            .toSet()
+
+        // Non-archived teams only. Deprecated-but-not-yet-migrated teams are still unarchived
+        // (archived_at is set only at migration time, §14), so they pass this filter and the
+        // manager UI can surface the migrate-to flow; already-migrated sources stay hidden.
+        TeamsTable.selectAll().where { TeamsTable.clubId eq clubId }
+            .map { row ->
+                val teamId = row[TeamsTable.id]
+                val deprecated = teamId in teamsWithLinks && teamId !in teamsWithActiveLink
+                rowToTeam(row, memberCounts[teamId] ?: 0, deprecated)
+            }
+            .filter { it.archivedAt == null }
     }
 
     override suspend fun hasRole(userId: UUID, clubId: UUID, role: String): Boolean = transaction {
@@ -90,7 +113,7 @@ class ClubRepositoryImpl : ClubRepository {
         updatedAt = row[ClubsTable.updatedAt].toString()
     )
 
-    private fun rowToTeam(row: ResultRow, memberCount: Int = 0): Team {
+    private fun rowToTeam(row: ResultRow, memberCount: Int = 0, deprecated: Boolean = false): Team {
         val shape = row[TeamsTable.appearanceShape]
         val color = row[TeamsTable.appearanceColor]
         return Team(
@@ -101,6 +124,7 @@ class ClubRepositoryImpl : ClubRepository {
             description = row[TeamsTable.description],
             appearance = if (shape != null && color != null) TeamAppearance(shape, color) else null,
             archivedAt = row[TeamsTable.archivedAt]?.toString(),
+            deprecated = deprecated,
             createdAt = row[TeamsTable.createdAt].toString(),
             updatedAt = row[TeamsTable.updatedAt].toString()
         )

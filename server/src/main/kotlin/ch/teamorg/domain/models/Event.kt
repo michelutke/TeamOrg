@@ -75,6 +75,31 @@ data class EventSeries(
 )
 
 @Serializable
+data class ImportableSeries(
+    @Serializable(with = UUIDSerializer::class) val seriesId: UUID,
+    val patternType: String,
+    val weekdays: List<Short>?,
+    val intervalDays: Int?,
+    @Serializable(with = LocalTimeSerializer::class) val templateStartTime: LocalTime,
+    @Serializable(with = LocalTimeSerializer::class) val templateEndTime: LocalTime,
+    @Serializable(with = LocalTimeSerializer::class) val templateMeetupTime: LocalTime?,
+    val templateTitle: String,
+    val templateType: String,
+    val templateLocation: String?,
+    val templateMinAttendees: Int?,
+    @Serializable(with = LocalDateSerializer::class) val seriesStartDate: LocalDate,
+    @Serializable(with = LocalDateSerializer::class) val seriesEndDate: LocalDate?,
+    val label: String
+)
+
+@Serializable
+data class ImportableSeriesResult(
+    val hasOwnSeries: Boolean,
+    val predecessorTeamId: String?,
+    val series: List<ImportableSeries>
+)
+
+@Serializable
 data class CreateEventRequest(
     val title: String,
     val type: String,

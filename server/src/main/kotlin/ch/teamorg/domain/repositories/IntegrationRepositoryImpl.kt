@@ -116,6 +116,49 @@ class IntegrationRepositoryImpl : IntegrationRepository {
         }
     }
 
+    override suspend fun updateLinkSeasonal(
+        clubId: UUID,
+        svTeamId: Int,
+        svSeasonalTeamId: Int?,
+        svLeagueCaption: String?,
+        svGender: String?
+    ): Unit = transaction {
+        val teamIds = TeamsTable.select(TeamsTable.id).where { TeamsTable.clubId eq clubId }
+            .map { it[TeamsTable.id] }
+        if (teamIds.isNotEmpty()) {
+            TeamSvLinksTable.update({
+                (TeamSvLinksTable.teamId inList teamIds) and
+                    (TeamSvLinksTable.svTeamId eq svTeamId) and
+                    TeamSvLinksTable.deprecatedAt.isNull()
+            }) {
+                it[TeamSvLinksTable.svSeasonalTeamId] = svSeasonalTeamId
+                it[TeamSvLinksTable.svLeagueCaption] = svLeagueCaption
+                it[TeamSvLinksTable.svGender] = svGender
+            }
+        }
+    }
+
+    override suspend fun deprecateLink(clubId: UUID, svTeamId: Int): Unit = transaction {
+        val teamIds = TeamsTable.select(TeamsTable.id).where { TeamsTable.clubId eq clubId }
+            .map { it[TeamsTable.id] }
+        if (teamIds.isNotEmpty()) {
+            TeamSvLinksTable.update({
+                (TeamSvLinksTable.teamId inList teamIds) and
+                    (TeamSvLinksTable.svTeamId eq svTeamId) and
+                    TeamSvLinksTable.deprecatedAt.isNull()
+            }) {
+                it[TeamSvLinksTable.deprecatedAt] = java.time.Instant.now()
+            }
+        }
+    }
+
+    override suspend fun listActiveLinkSvTeamIds(clubId: UUID): Set<Int> = transaction {
+        (TeamSvLinksTable innerJoin TeamsTable).select(TeamSvLinksTable.svTeamId)
+            .where { (TeamsTable.clubId eq clubId) and TeamSvLinksTable.deprecatedAt.isNull() }
+            .map { it[TeamSvLinksTable.svTeamId] }
+            .toSet()
+    }
+
     override suspend fun listSyncEnabledLinks(clubId: UUID): List<SyncEnabledLink> = transaction {
         (TeamSvLinksTable innerJoin TeamsTable)
             .select(TeamSvLinksTable.teamId, TeamSvLinksTable.svTeamId)
