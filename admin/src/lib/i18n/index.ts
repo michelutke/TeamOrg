@@ -112,6 +112,18 @@ export interface Dict {
 		editOwn: string;
 		saved: string;
 	};
+	inbox: {
+		title: string;
+		empty: string;
+		markAllRead: string;
+	};
+	profile: {
+		title: string;
+		account: string;
+		language: string;
+		name: string;
+		email: string;
+	};
 }
 
 const de: Dict = {
@@ -214,6 +226,18 @@ const de: Dict = {
 		position: 'Position',
 		editOwn: 'Mein Profil bearbeiten',
 		saved: 'Gespeichert'
+	},
+	inbox: {
+		title: 'Inbox',
+		empty: 'Keine Benachrichtigungen.',
+		markAllRead: 'Alle gelesen'
+	},
+	profile: {
+		title: 'Profil',
+		account: 'Konto',
+		language: 'Sprache',
+		name: 'Name',
+		email: 'E-Mail'
 	}
 };
 
@@ -317,6 +341,18 @@ const en: Dict = {
 		position: 'Position',
 		editOwn: 'Edit my profile',
 		saved: 'Saved'
+	},
+	inbox: {
+		title: 'Inbox',
+		empty: 'No notifications.',
+		markAllRead: 'Mark all read'
+	},
+	profile: {
+		title: 'Profile',
+		account: 'Account',
+		language: 'Language',
+		name: 'Name',
+		email: 'Email'
 	}
 };
 
