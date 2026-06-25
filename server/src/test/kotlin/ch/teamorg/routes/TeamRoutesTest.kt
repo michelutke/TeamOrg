@@ -2,6 +2,7 @@ package ch.teamorg.routes
 
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.Team
+import ch.teamorg.domain.models.TeamAppearance
 import ch.teamorg.domain.models.TeamMember
 import ch.teamorg.test.IntegrationTestBase
 import io.ktor.client.call.*
@@ -104,6 +105,87 @@ class TeamRoutesTest : IntegrationTestBase() {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("New Team Name", response.body<Team>().name)
+    }
+
+    @Test
+    fun `update team appearance round-trips`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val auth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("teamappear@example.com", "password123", "Creator"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Team Club"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Look Team"))
+        }.body<Team>().id
+
+        // Defaults to null until set
+        assertNull(client.get("/teams/$teamId") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+        }.body<Team>().appearance)
+
+        val updated = client.patch("/teams/$teamId") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(UpdateTeamRequest(appearance = TeamAppearance("clover", "#EADDFF")))
+        }
+        assertEquals(HttpStatusCode.OK, updated.status)
+        assertEquals(TeamAppearance("clover", "#EADDFF"), updated.body<Team>().appearance)
+
+        // Persists on subsequent GET
+        assertEquals(
+            TeamAppearance("clover", "#EADDFF"),
+            client.get("/teams/$teamId") {
+                header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            }.body<Team>().appearance
+        )
+    }
+
+    @Test
+    fun `update team appearance rejects invalid values`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val auth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("teambadlook@example.com", "password123", "Creator"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Team Club"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Bad Look Team"))
+        }.body<Team>().id
+
+        // Unknown shape
+        assertEquals(HttpStatusCode.BadRequest, client.patch("/teams/$teamId") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(UpdateTeamRequest(appearance = TeamAppearance("triangle", "#EADDFF")))
+        }.status)
+
+        // Malformed color
+        assertEquals(HttpStatusCode.BadRequest, client.patch("/teams/$teamId") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(UpdateTeamRequest(appearance = TeamAppearance("clover", "purple")))
+        }.status)
     }
 
     @Test

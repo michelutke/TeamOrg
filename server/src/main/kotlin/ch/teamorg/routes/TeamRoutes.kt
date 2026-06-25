@@ -1,5 +1,6 @@
 package ch.teamorg.routes
 
+import ch.teamorg.domain.models.TeamAppearance
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.authenticateUser
@@ -18,7 +19,15 @@ import java.util.*
 data class CreateTeamRequest(val name: String, val description: String? = null)
 
 @Serializable
-data class UpdateTeamRequest(val name: String? = null, val description: String? = null)
+data class UpdateTeamRequest(
+    val name: String? = null,
+    val description: String? = null,
+    val appearance: TeamAppearance? = null
+)
+
+// M3 Expressive shape set offered by the team-appearance picker.
+private val ALLOWED_SHAPES = setOf("cookie", "clover", "sunny", "flower")
+private val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
 
 @Serializable
 data class UpdateRoleRequest(val role: String)
@@ -49,7 +58,19 @@ fun Route.teamRoutes() {
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@patch
 
                     val request = call.receive<UpdateTeamRequest>()
-                    val team = teamRepository.update(teamId, request.name, request.description)
+                    val appearance = request.appearance
+                    if (appearance != null) {
+                        if (appearance.shape !in ALLOWED_SHAPES || !HEX_COLOR.matches(appearance.color)) {
+                            return@patch call.respond(HttpStatusCode.BadRequest, "Invalid appearance")
+                        }
+                    }
+                    val team = teamRepository.update(
+                        teamId,
+                        request.name,
+                        request.description,
+                        appearance?.shape,
+                        appearance?.color
+                    )
                     call.respond(team)
                 }
 

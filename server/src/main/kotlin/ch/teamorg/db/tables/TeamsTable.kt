@@ -10,6 +10,8 @@ object TeamsTable : Table("teams") {
     val clubId = uuid("club_id").references(ClubsTable.id, onDelete = ReferenceOption.CASCADE)
     val name = text("name")
     val description = text("description").nullable()
+    val appearanceShape = text("appearance_shape").nullable()
+    val appearanceColor = text("appearance_color").nullable()
     val archivedAt = timestamp("archived_at").nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
