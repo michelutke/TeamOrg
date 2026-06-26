@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
-	import { House, CalendarDays, Users, Inbox, User, LogOut } from 'lucide-svelte';
+	import { House, CalendarDays, Users, Inbox, User, LogOut, Shield } from 'lucide-svelte';
 	import type { LayoutData } from './$types';
 
 	interface Props {
@@ -77,6 +77,15 @@
 				<p class="truncate text-[13px] font-semibold text-on-surface">{data.user.displayName}</p>
 				<p class="truncate text-[11px] text-on-surface-variant">{data.user.email}</p>
 			</div>
+			{#if data.user.managedClubIds.length > 0}
+				<a
+					href="/manage"
+					class="flex items-center gap-3 rounded-full px-4 py-2 text-[13px] font-medium text-on-surface-variant hover:bg-surface-container-high"
+				>
+					<Shield size={18} />
+					{data.m.nav.manageArea}
+				</a>
+			{/if}
 			{#if data.user.isSuperAdmin}
 				<a
 					href="/admin/dashboard"

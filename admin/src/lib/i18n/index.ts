@@ -19,6 +19,7 @@ export interface Dict {
 		inbox: string;
 		profil: string;
 		adminArea: string;
+		manageArea: string;
 		logout: string;
 	};
 	login: {
@@ -241,6 +242,7 @@ const de: Dict = {
 		inbox: 'Inbox',
 		profil: 'Profil',
 		adminArea: 'Admin-Bereich',
+		manageArea: 'Verein verwalten',
 		logout: 'Abmelden'
 	},
 	login: {
@@ -466,6 +468,7 @@ const en: Dict = {
 		inbox: 'Inbox',
 		profil: 'Profile',
 		adminArea: 'Admin area',
+		manageArea: 'Manage club',
 		logout: 'Sign out'
 	},
 	login: {
