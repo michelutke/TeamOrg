@@ -1,17 +1,21 @@
 # Deployment Status — Handoff
 
-_Last updated: 2026-06-17. Continue from "Next steps". Sensitive values are in
+_Last updated: 2026-06-26. Continue from "Next steps". Sensitive values are in
 `docs/deploy-secrets.local.md` (gitignored, on this machine only)._
+
+## Live URLs (verified 2026-06-26)
+- **Landing (marketing):** `https://teamorg.ch`
+- **Web app (manager/admin SvelteKit):** `https://app.teamorg.ch`  (`/login`, `/app`, `/i/{token}`)
+- **Server / API (Ktor):** `https://server.teamorg.ch`  (root 404 by design — API routes only)
+- The old `*.teamorg.michelutke.com` domains are RETIRED — do not use them.
 
 ## Where things stand
 
 ### ✅ Backend + Admin — LIVE on Coolify
 - Deployed via Coolify **native Git integration** (auto-deploy on push to the release branch). No GitHub Actions involved for Coolify.
 - Builds from `server/Dockerfile`, `admin/Dockerfile`, `docker-compose.yml`.
-- **Server:** canonical domain is now `https://server.teamorg.ch` (the Android app's `API_BASE_URL` secret points here). Ktor, container port 8080. Root path returns 404 by design — only API routes exist.
-  - ⚠️ TODO in Coolify: add `https://server.teamorg.ch:8080` as a domain on the server service (currently the `.ch` HTTPS request hangs after TLS — no proxy route). Old domain `https://server.teamorg.michelutke.com` still configured.
-  - ⚠️ As of 2026-06-19 the server returns 503 "no available server" (no healthy container) — check Coolify deploy/container logs; likely `DATABASE_URL` or a failed deploy.
-- **Admin:** `https://admin.teamorg.michelutke.com` (SvelteKit adapter-node, container port 3000). Login works.
+- **Server:** canonical domain `https://server.teamorg.ch` (the Android app's `API_BASE_URL` secret points here). Ktor, container port 8080. Root path returns 404 by design — only API routes exist. Verified live 2026-06-26.
+- **Web app:** `https://app.teamorg.ch` (SvelteKit adapter-node, container port 3000). Login verified working 2026-06-26.
 - **Postgres:** Coolify-managed, image `postgres:18-alpine`, name `postgres`, user `admin`, initial DB `postgres`.
 - **Super-admin account created:** `teamorg@michelutke.com` (registered via `/auth/register`, then `is_super_admin` flipped in the DB).
 
@@ -26,11 +30,11 @@ _Last updated: 2026-06-17. Continue from "Next steps". Sensitive values are in
 
 ### Coolify env vars currently set
 - server: `DATABASE_URL`, `JWT_SECRET`, `ONESIGNAL_APP_ID`, `ONESIGNAL_API_KEY`
-- admin: `API_URL` = `http://server:8080` (internal), `ORIGIN` = `https://admin.teamorg.michelutke.com`
+- admin: `API_URL` = `http://server:8080` (internal), `ORIGIN` = `https://app.teamorg.ch`
 
 ### Coolify Domains field
-- server → `https://server.teamorg.michelutke.com:8080`
-- admin → `https://admin.teamorg.michelutke.com:3000`
+- server → `https://server.teamorg.ch:8080`
+- admin (web app) → `https://app.teamorg.ch:3000`
 
 ## Git state
 - Branch **`ci/release-pipelines`**, PR **#16** open against `main` (not yet merged).
@@ -46,7 +50,7 @@ Set in GitHub → Settings → Secrets and variables → Actions:
 `ANDROID_KEY_PASSWORD`, `GOOGLE_SERVICES_JSON_BASE64`, `UPDRAFT_APP_KEY`, `UPDRAFT_API_KEY`
 (values in `docs/deploy-secrets.local.md`; Updraft keys still need to be fetched from Updraft).
 
-**Variables:** `API_BASE_URL` = `https://server.teamorg.michelutke.com`,
+**Variables:** `API_BASE_URL` = `https://server.teamorg.ch`,
 `ONESIGNAL_APP_ID` = `2281f6c6-e979-49e3-a16b-d7b7628b67ea`.
 
 Then either run the **"Deploy Android to Updraft"** workflow manually on branch

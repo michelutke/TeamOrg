@@ -103,16 +103,27 @@ export const actions: Actions = {
 		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const role = (data.get('role') as string) || 'player';
+		// Optional email → a personal, email-locked invite (only that address can join).
+		// Empty → a shareable link anyone can use.
+		const email = (data.get('email') as string)?.trim() || undefined;
 		try {
 			const invite = await apiPost<InviteResponse>(
 				`/teams/${params.teamId}/invites`,
 				locals.token!,
-				{ role }
+				email ? { role, email } : { role }
 			);
-			return { success: true, action: 'invite_created', inviteUrl: invite.inviteUrl, expiresAt: invite.expiresAt };
+			return {
+				success: true,
+				action: email ? 'invite_sent' : 'invite_created',
+				inviteUrl: invite.inviteUrl,
+				expiresAt: invite.expiresAt,
+				email
+			};
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 403)
 				return fail(403, { error: 'Not authorized to create invites' });
+			if (err instanceof ApiError && err.status === 400)
+				return fail(400, { error: 'Invalid email address' });
 			return fail(500, { error: 'Failed to create invite' });
 		}
 	}
