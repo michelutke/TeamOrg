@@ -66,6 +66,10 @@ export interface Dict {
 		where: string;
 		description: string;
 		allTeams: string;
+		cancelEvent: string;
+		uncancelEvent: string;
+		duplicate: string;
+		cancelledBadge: string;
 	};
 	eventTypes: {
 		training: string;
@@ -288,7 +292,11 @@ const de: Dict = {
 		when: 'Wann',
 		where: 'Wo',
 		description: 'Beschreibung',
-		allTeams: 'Alle Teams'
+		allTeams: 'Alle Teams',
+		cancelEvent: 'Absagen',
+		uncancelEvent: 'Absage aufheben',
+		duplicate: 'Duplizieren',
+		cancelledBadge: 'Abgesagt'
 	},
 	eventTypes: {
 		training: 'Training',
@@ -514,7 +522,11 @@ const en: Dict = {
 		when: 'When',
 		where: 'Where',
 		description: 'Description',
-		allTeams: 'All teams'
+		allTeams: 'All teams',
+		cancelEvent: 'Cancel',
+		uncancelEvent: 'Restore',
+		duplicate: 'Duplicate',
+		cancelledBadge: 'Cancelled'
 	},
 	eventTypes: {
 		training: 'Training',

@@ -118,7 +118,9 @@ fun Route.clubRoutes() {
                     }
 
                     val path = fileStorageService.save(fileBytes!!, FileType.CLUB_LOGO, extension!!)
-                    val club = clubRepository.update(clubId, null, null, path)
+                    // Store the publicly-servable URL (mirror avatar handling in AuthRoutes,
+                    // which persists "/uploads/$path"); files are served from static("/uploads").
+                    val club = clubRepository.update(clubId, null, null, "/uploads/$path")
                     call.respond(club)
                 }
 

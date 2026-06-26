@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { requireUser, canManageTeam, ApiError } from '$lib/server/guards';
 import { apiGet, apiPut, apiPost } from '$lib/server/api';
 import { getMessages, resolveLocale } from '$lib/i18n';
@@ -36,12 +36,22 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		);
 
 		const myResponse = responses.find((r) => r.userId === user.id) ?? null;
+
+		// Resolve each team's clubId so a pure club_manager (who holds no team role)
+		// is recognised as a manager. Without the clubId, canManageTeam can't map the
+		// team to a club and wrongly hides Edit/cancel/duplicate for club managers.
+		const teamClubIds = await Promise.all(
+			data.event.teamIds.map((tid) =>
+				apiGet<{ id: string; clubId: string }>(`/teams/${tid}`, token)
+					.then((t) => t.clubId)
+					.catch(() => null)
+			)
+		);
 		const canManage =
-			user.isSuperAdmin || data.event.teamIds.some((tid) => canManageTeam(user, tid));
-		// Match the backend guard (requireEventAccess coach|club_manager) so a club
-		// without a coach role assigned can still reconcile via a manager.
-		const canReconcile =
-			user.isSuperAdmin || data.event.teamIds.some((tid) => canManageTeam(user, tid));
+			user.isSuperAdmin ||
+			data.event.teamIds.some((tid, i) => canManageTeam(user, tid, teamClubIds[i] ?? undefined));
+		// Same guard as the backend (requireEventAccess coach|club_manager).
+		const canReconcile = canManage;
 
 		const named = responses.map((r) => ({
 			...r,
@@ -117,5 +127,45 @@ export const actions: Actions = {
 			if (e instanceof ApiError) return fail(e.status, { reconcileError: m.failed });
 			throw e;
 		}
+	},
+
+	cancel: async ({ locals, params }) => {
+		requireUser(locals);
+		try {
+			await apiPost(`/events/${params.id}/cancel`, locals.token!, { scope: 'this_only' });
+			return { cancelled: true };
+		} catch (e) {
+			if (e instanceof ApiError) return fail(e.status, { manageError: 'Fehler' });
+			throw e;
+		}
+	},
+
+	uncancel: async ({ locals, params }) => {
+		requireUser(locals);
+		try {
+			await apiPost(`/events/${params.id}/uncancel`, locals.token!, { scope: 'this_only' });
+			return { uncancelled: true };
+		} catch (e) {
+			if (e instanceof ApiError) return fail(e.status, { manageError: 'Fehler' });
+			throw e;
+		}
+	},
+
+	duplicate: async ({ locals, params }) => {
+		requireUser(locals);
+		let newId: string;
+		try {
+			const dup = await apiPost<{ id: string }>(
+				`/events/${params.id}/duplicate`,
+				locals.token!,
+				{}
+			);
+			newId = dup.id;
+		} catch (e) {
+			if (e instanceof ApiError) return fail(e.status, { manageError: 'Fehler' });
+			throw e;
+		}
+		// Land on the copy's edit form so the manager can adjust the date/time.
+		throw redirect(303, `/app/events/${newId}/edit`);
 	}
 };

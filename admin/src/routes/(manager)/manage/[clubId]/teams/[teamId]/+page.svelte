@@ -12,6 +12,9 @@
 	let showArchiveModal = $state(false);
 	let removeMemberTarget = $state<{ userId: string; name: string } | null>(null);
 	let showInviteForm = $state(false);
+	let showSubGroupForm = $state(false);
+	let renameTargetId = $state<string | null>(null);
+	let deleteSubGroupTarget = $state<{ id: string; name: string } | null>(null);
 
 	function roleChipClasses(role: string): string {
 		if (role === 'coach') return 'bg-tertiary-container text-on-tertiary-container';
@@ -48,6 +51,10 @@
 			<h1 class="font-display text-[24px] font-extrabold text-on-surface">{data.team.name}</h1>
 			{#if !showEditForm}
 				<div class="flex gap-2">
+					<a
+						href="/manage/{data.clubId}/teams/{data.team.id}/attendance"
+						class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-5 py-2.5 text-[14px] font-bold text-on-surface-variant no-underline hover:bg-surface-container-high"
+					>Attendance</a>
 					<button
 						type="button"
 						onclick={() => (showEditForm = true)}
@@ -154,6 +161,75 @@
 					onclick={() => (showInviteForm = false)}
 					class="{outlinedBtn} whitespace-nowrap"
 				>Cancel</button>
+			</form>
+		{/if}
+	</div>
+
+	<!-- Subgroups -->
+	<div class="rounded-3xl bg-surface-container-low p-6">
+		<h2 class="mb-1 font-display text-[20px] font-bold text-on-surface">Subgroups</h2>
+		<p class="mb-4 text-[13px] text-on-surface-variant">
+			Organise the roster into subgroups (e.g. starters, U18) to target events at part of the team.
+		</p>
+
+		{#if data.subGroups.length > 0}
+			<div class="mb-4 flex flex-col gap-2">
+				{#each data.subGroups as sg (sg.id)}
+					<div class="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3">
+						{#if renameTargetId === sg.id}
+							<form method="POST" action="?/renameSubGroup" class="flex flex-1 items-center gap-2">
+								<input type="hidden" name="subGroupId" value={sg.id} />
+								<input name="name" value={sg.name} class={inputClasses} />
+								<button type="submit" class="{filledBtn} whitespace-nowrap">Save</button>
+								<button
+									type="button"
+									onclick={() => (renameTargetId = null)}
+									class="{outlinedBtn} whitespace-nowrap">Cancel</button
+								>
+							</form>
+						{:else}
+							<div>
+								<span class="text-[14px] font-medium text-on-surface">{sg.name}</span>
+								<span class="ml-2 text-[12px] text-on-surface-variant">
+									{sg.memberCount} member{sg.memberCount === 1 ? '' : 's'}
+								</span>
+							</div>
+							<div class="flex shrink-0 gap-2">
+								<button
+									type="button"
+									onclick={() => (renameTargetId = sg.id)}
+									class="rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
+									>Rename</button
+								>
+								<button
+									type="button"
+									onclick={() => (deleteSubGroupTarget = { id: sg.id, name: sg.name })}
+									class="rounded-full border-none bg-transparent px-4 py-1.5 text-[12px] font-bold text-error hover:bg-error-container/50"
+									>Delete</button
+								>
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
+
+		{#if !showSubGroupForm}
+			<button type="button" onclick={() => (showSubGroupForm = true)} class={filledBtn}>
+				Add subgroup
+			</button>
+		{:else}
+			<form method="POST" action="?/createSubGroup" class="flex flex-wrap items-end gap-3">
+				<div class="min-w-[240px] flex-1">
+					<label for="sg-name" class={labelClasses}>Subgroup name</label>
+					<input id="sg-name" name="name" placeholder="e.g. Starters" class={inputClasses} />
+				</div>
+				<button type="submit" class="{filledBtn} whitespace-nowrap">Create</button>
+				<button
+					type="button"
+					onclick={() => (showSubGroupForm = false)}
+					class="{outlinedBtn} whitespace-nowrap">Cancel</button
+				>
 			</form>
 		{/if}
 	</div>
@@ -265,6 +341,35 @@
 					>Remove</button>
 				</form>
 				<button type="button" onclick={() => (removeMemberTarget = null)} class={outlinedBtn}>Cancel</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Delete subgroup confirmation modal -->
+{#if deleteSubGroupTarget}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="delete-subgroup-title"
+	>
+		<div class={modalCard}>
+			<h3 id="delete-subgroup-title" class="mb-3 font-display text-[22px] font-extrabold text-on-surface">
+				Delete subgroup
+			</h3>
+			<p class="mb-6 text-[14px] text-on-surface-variant">
+				Delete subgroup {deleteSubGroupTarget.name}? Members stay on the team; only the grouping is removed.
+			</p>
+			<div class="flex gap-3">
+				<form method="POST" action="?/deleteSubGroup">
+					<input type="hidden" name="subGroupId" value={deleteSubGroupTarget.id} />
+					<button
+						type="submit"
+						class="cursor-pointer rounded-full border-none bg-error px-6 py-3 text-[14px] font-bold text-on-error hover:opacity-90"
+					>Delete</button>
+				</form>
+				<button type="button" onclick={() => (deleteSubGroupTarget = null)} class={outlinedBtn}>Cancel</button>
 			</div>
 		</div>
 	</div>
