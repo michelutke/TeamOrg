@@ -11,6 +11,7 @@ import ch.teamorg.routes.eventRoutes
 import ch.teamorg.routes.impersonationRoutes
 import ch.teamorg.routes.integrationRoutes
 import ch.teamorg.routes.inviteRoutes
+import ch.teamorg.routes.ndsRoutes
 import ch.teamorg.routes.notificationRoutes
 import ch.teamorg.routes.subGroupRoutes
 import ch.teamorg.routes.teamRoutes
@@ -38,5 +39,6 @@ fun Application.configureRouting() {
         impersonationRoutes()
         contactRoutes()
         integrationRoutes()
+        ndsRoutes()
     }
 }

@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.flyway.databasePostgresql)
     implementation(libs.postgresql)
     implementation(libs.simple.javaMail)
+    implementation(libs.poi.ooxml)
     implementation("org.mindrot:jbcrypt:0.4")
     implementation(libs.ktor.clientCio)
     implementation(libs.ktor.clientContentNegotiation)

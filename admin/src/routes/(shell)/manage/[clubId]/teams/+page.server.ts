@@ -100,6 +100,33 @@ export const actions: Actions = {
 		}
 	},
 
+	importNds: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const payload = data.get('payload') as string;
+		if (!payload) return fail(400, { ndsError: 'noData' });
+		let body: unknown;
+		try {
+			body = JSON.parse(payload);
+		} catch {
+			return fail(400, { ndsError: 'noData' });
+		}
+		try {
+			const result = await apiPost<{ teamId: string; membersImported: number; eventsCreated: number }>(
+				`/clubs/${params.clubId}/nds/import`,
+				locals.token!,
+				body
+			);
+			return { ndsImported: result };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 409)
+				return fail(409, { ndsError: 'angebotLinked' });
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { ndsError: 'failed' });
+			return fail(500, { ndsError: 'failed' });
+		}
+	},
+
 	importSv: async ({ request, params, locals }) => {
 		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();

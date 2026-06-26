@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { ArrowLeft, CalendarClock } from 'lucide-svelte';
+	import { ArrowLeft, CalendarClock, Download, Mail } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import TeamBadge from '$lib/components/TeamBadge.svelte';
 	import MemberRow from '$lib/components/MemberRow.svelte';
-	import type { PageData } from './$types';
+	import type { PageData, ActionData } from './$types';
 
 	interface ImportableSeries {
 		seriesId: string;
@@ -24,9 +24,12 @@
 
 	interface Props {
 		data: PageData;
+		form: ActionData;
 	}
 
-	let { data }: Props = $props();
+	let { data, form }: Props = $props();
+
+	let inviteFor = $state<string | null>(null);
 
 	const roleLabel = (role: string) =>
 		data.m.roles[role as keyof typeof data.m.roles] ?? role;
@@ -147,6 +150,109 @@
 					</li>
 				{/each}
 			</ul>
+		{/if}
+	</section>
+{/if}
+
+{#if data.canManage && data.ndsMembers.length > 0}
+	<section class="mb-8 rounded-[28px] bg-surface-container-low p-5">
+		<div class="mb-4 flex items-center justify-between gap-3">
+			<h2 class="text-[16px] font-bold text-on-surface">NDS / J+S</h2>
+			{#if data.ndsPreflight?.ok}
+				<a
+					href="/app/teams/{data.team.id}/nds/export"
+					class="inline-flex items-center gap-2 rounded-full border-none bg-primary px-5 py-2.5 text-[14px] font-bold text-on-primary no-underline hover:opacity-90"
+				>
+					<Download size={16} /> NDS-Export (CSV)
+				</a>
+			{/if}
+		</div>
+
+		{#if data.ndsPreflight && !data.ndsPreflight.ok}
+			<div class="mb-4 rounded-2xl bg-error-container px-4 py-3 text-[13px] text-on-surface">
+				<p class="font-medium">Export noch nicht möglich:</p>
+				<ul class="mt-1 list-disc pl-5">
+					{#each data.ndsPreflight.issues.filter((i) => i.severity === 'error') as issue (issue.code)}
+						<li>{issue.message}</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+		{#if data.ndsPreflight?.issues.some((i) => i.severity === 'warning')}
+			<div class="mb-4 rounded-2xl bg-surface-container-high px-4 py-3 text-[13px] text-on-surface-variant">
+				{#each data.ndsPreflight.issues.filter((i) => i.severity === 'warning') as issue (issue.code)}
+					<p>⚠ {issue.message}</p>
+				{/each}
+			</div>
+		{/if}
+
+		{#if form?.ndsInvite}
+			<div class="mb-4 rounded-2xl bg-success-container px-4 py-3 text-[13px] text-on-surface">
+				<p class="font-medium">Einladungslink erstellt:</p>
+				<code class="break-all text-[12px]">{form.ndsInvite.inviteUrl}</code>
+			</div>
+		{/if}
+
+		<div class="flex flex-col gap-2">
+			{#each data.ndsMembers as m (m.id)}
+				<div class="rounded-2xl bg-surface-container-high px-4 py-3">
+					<div class="flex flex-wrap items-center justify-between gap-2">
+						<div class="flex items-center gap-2">
+							<span class="text-[14px] font-medium text-on-surface">{m.firstName} {m.lastName}</span>
+							<span class="rounded-full bg-surface-container px-2 py-0.5 text-[11px] text-on-surface-variant">
+								{m.funktion}
+							</span>
+							{#if m.claimed}
+								<span class="rounded-full bg-success-container px-2 py-0.5 text-[11px] text-on-surface">verknüpft</span>
+							{/if}
+						</div>
+						<div class="flex items-center gap-2">
+							<form method="POST" action="?/setNdsPersonNumber" class="flex items-center gap-2">
+								<input type="hidden" name="memberId" value={m.id} />
+								<input
+									name="personNumber"
+									value={m.personNumber ?? ''}
+									placeholder="Personennr."
+									class="w-32 rounded-lg bg-surface-container px-2 py-1 text-[13px] text-on-surface {m.personNumber ? '' : 'ring-1 ring-error'}"
+								/>
+								<button
+									type="submit"
+									class="cursor-pointer rounded-full border-none bg-secondary-container px-3 py-1 text-[12px] font-medium text-on-secondary-container hover:opacity-90"
+								>Speichern</button>
+							</form>
+							{#if !m.claimed}
+								<button
+									type="button"
+									onclick={() => (inviteFor = inviteFor === m.id ? null : m.id)}
+									class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-outline-variant bg-transparent px-3 py-1 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container"
+								>
+									<Mail size={13} /> Einladen
+								</button>
+							{/if}
+						</div>
+					</div>
+					{#if inviteFor === m.id}
+						<form method="POST" action="?/inviteNdsMember" class="mt-2 flex items-center gap-2">
+							<input type="hidden" name="memberId" value={m.id} />
+							<input
+								name="email"
+								type="email"
+								placeholder="E-Mail (optional – sonst nur Link)"
+								class="flex-1 rounded-lg bg-surface-container px-2 py-1 text-[13px] text-on-surface"
+							/>
+							<button
+								type="submit"
+								class="cursor-pointer rounded-full border-none bg-primary px-4 py-1 text-[12px] font-bold text-on-primary hover:opacity-90"
+							>Link erstellen</button>
+						</form>
+					{/if}
+				</div>
+			{/each}
+		</div>
+		{#if form?.ndsError}
+			<p class="mt-3 text-[12px] font-medium text-error">
+				{form.ndsError === 'badNumber' ? 'Ungültige Personennummer.' : 'Aktion fehlgeschlagen.'}
+			</p>
 		{/if}
 	</section>
 {/if}

@@ -2,6 +2,7 @@ package ch.teamorg.routes
 
 import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.InviteRepository
+import ch.teamorg.domain.repositories.NdsRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.mail.MailService
@@ -64,6 +65,7 @@ fun Route.inviteRoutes() {
     val teamRepository by inject<TeamRepository>()
     val clubRepository by inject<ClubRepository>()
     val userRepository by inject<UserRepository>()
+    val ndsRepository by inject<NdsRepository>()
     val mailService by inject<MailService>()
 
     val inviteBaseUrl = application.environment.config
@@ -274,6 +276,11 @@ fun Route.inviteRoutes() {
 
                     // 5 & 6. member-check + insert (handled in repo, returns outcome)
                     inviteRepository.redeem(invite, userId)
+
+                    // NDS roster claim: link the member to this account, migrating attendance off
+                    // the provisional placeholder. Runs after the role insert above.
+                    invite.ndsMemberId?.let { ndsRepository.claimMember(UUID.fromString(it), userId) }
+
                     call.respond(HttpStatusCode.OK, OkResponse())
                 }
             }

@@ -51,6 +51,9 @@ fun appModule(environment: ApplicationEnvironment) = module {
     single<NotificationRepository> { NotificationRepositoryImpl() }
     single { NotificationDispatcher(get(), get()) }
     single<IntegrationRepository> { IntegrationRepositoryImpl() }
+    single<NdsRepository> { NdsRepositoryImpl() }
+    single { ch.teamorg.infra.nds.NdsEventImporter() }
+    single { ch.teamorg.infra.nds.NdsExportService(get()) }
     single { SwissVolleySyncService(get(), get(), get(), get(), get(), get()) }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
     single<AdminRepository> { AdminRepositoryImpl() }

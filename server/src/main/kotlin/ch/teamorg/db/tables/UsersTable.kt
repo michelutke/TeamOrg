@@ -11,6 +11,7 @@ object UsersTable : Table("users") {
     val displayName = text("display_name")
     val avatarUrl = text("avatar_url").nullable()
     val isSuperAdmin = bool("is_super_admin").default(false)
+    val provisional = bool("provisional").default(false)
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
 

@@ -60,6 +60,33 @@ class InviteRepositoryImpl : InviteRepository {
             .single()
     }
 
+    override suspend fun createNdsMemberInvite(
+        teamId: UUID,
+        createdByUserId: UUID,
+        role: String,
+        email: String?,
+        ndsMemberId: UUID,
+        expiresInDays: Int?
+    ): InviteLink = transaction {
+        val days = expiresInDays ?: 30
+        val insertedId = InviteLinksTable.insert {
+            it[InviteLinksTable.token] = UUID.randomUUID().toString()
+            it[InviteLinksTable.teamId] = teamId
+            it[InviteLinksTable.clubId] = null
+            it[InviteLinksTable.invitedByUserId] = createdByUserId
+            it[InviteLinksTable.role] = role
+            it[InviteLinksTable.invitedEmail] = email
+            it[InviteLinksTable.reusable] = false
+            it[InviteLinksTable.active] = true
+            it[InviteLinksTable.ndsMemberId] = ndsMemberId
+            it[InviteLinksTable.expiresAt] = Instant.now().plusSeconds(days.toLong() * 24 * 60 * 60)
+        } get InviteLinksTable.id
+
+        InviteLinksTable.selectAll().where { InviteLinksTable.id eq insertedId }
+            .map(::rowToInviteLink)
+            .single()
+    }
+
     override suspend fun findByToken(token: String): InviteLink? = transaction {
         InviteLinksTable.selectAll().where { InviteLinksTable.token eq token }
             .map(::rowToInviteLink)
@@ -189,6 +216,7 @@ class InviteRepositoryImpl : InviteRepository {
         expiresAt = row[InviteLinksTable.expiresAt].toString(),
         redeemedAt = row[InviteLinksTable.redeemedAt]?.toString(),
         redeemedByUserId = row[InviteLinksTable.redeemedByUserId]?.toString(),
-        createdAt = row[InviteLinksTable.createdAt].toString()
+        createdAt = row[InviteLinksTable.createdAt].toString(),
+        ndsMemberId = row[InviteLinksTable.ndsMemberId]?.toString()
     )
 }

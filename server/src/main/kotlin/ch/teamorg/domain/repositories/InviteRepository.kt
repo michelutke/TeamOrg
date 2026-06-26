@@ -22,6 +22,16 @@ interface InviteRepository {
         expiresInDays: Int? = null
     ): InviteLink
 
+    /** Personal team invite bound to a roster member; redeeming it claims that member. */
+    suspend fun createNdsMemberInvite(
+        teamId: UUID,
+        createdByUserId: UUID,
+        role: String,
+        email: String?,
+        ndsMemberId: UUID,
+        expiresInDays: Int? = null
+    ): InviteLink
+
     suspend fun findByToken(token: String): InviteLink?
     suspend fun getInviteDetails(token: String): InviteDetails?
     suspend fun setActive(token: String, active: Boolean)
