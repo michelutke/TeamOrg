@@ -16,6 +16,7 @@ data class TeamRosterState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val inviteUrl: String? = null,
+    val inviteSentTo: String? = null,
     val isClubManager: Boolean = false,
     val showEditTeamSheet: Boolean = false,
     val teamName: String = "",
@@ -86,20 +87,6 @@ class TeamRosterViewModel(
         }
     }
 
-    fun createCoachInvite(teamId: String) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(error = null)
-            teamRepository.createInvite(teamId, "coach", null).fold(
-                onSuccess = { url ->
-                    _state.value = _state.value.copy(inviteUrl = url)
-                },
-                onFailure = { e ->
-                    _state.value = _state.value.copy(error = e.message ?: "Failed to create coach invite")
-                }
-            )
-        }
-    }
-
     fun editTeam(teamId: String, name: String, description: String?) {
         viewModelScope.launch {
             clubRepository.updateTeam(teamId, name, description).fold(
@@ -139,12 +126,18 @@ class TeamRosterViewModel(
         }
     }
 
-    fun createInvite(teamId: String, role: String) {
+    fun createInvite(teamId: String, role: String, email: String? = null) {
+        val invitedEmail = email?.trim()?.ifBlank { null }
         viewModelScope.launch {
             _state.value = _state.value.copy(error = null)
-            teamRepository.createInvite(teamId, role, null).fold(
+            teamRepository.createInvite(teamId, role, invitedEmail).fold(
                 onSuccess = { url ->
-                    _state.value = _state.value.copy(inviteUrl = url)
+                    // Email present → personal invite was emailed; otherwise show the shareable link.
+                    _state.value = if (invitedEmail != null) {
+                        _state.value.copy(inviteSentTo = invitedEmail)
+                    } else {
+                        _state.value.copy(inviteUrl = url)
+                    }
                 },
                 onFailure = { e ->
                     _state.value = _state.value.copy(error = e.message ?: "Failed to create invite")
@@ -154,7 +147,7 @@ class TeamRosterViewModel(
     }
 
     fun resetInvite() {
-        _state.value = _state.value.copy(inviteUrl = null)
+        _state.value = _state.value.copy(inviteUrl = null, inviteSentTo = null)
     }
 
     fun loadSubGroups(teamId: String) {

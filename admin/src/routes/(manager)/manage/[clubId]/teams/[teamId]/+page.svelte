@@ -88,11 +88,26 @@
 
 	<!-- Invite section -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
-		<h2 class="mb-4 font-display text-[20px] font-bold text-on-surface">Invite members</h2>
+		<h2 class="mb-1 font-display text-[20px] font-bold text-on-surface">Invite members</h2>
+		<p class="mb-4 text-[13px] text-on-surface-variant">
+			Add an email to invite one person privately — only that address can join (best for
+			coaches). Leave it empty for a shareable link anyone can use.
+		</p>
 
-		{#if form?.action === 'invite_created' && form.inviteUrl}
+		{#if form?.action === 'invite_sent' && form.expiresAt}
 			<div class="mb-4 rounded-2xl bg-white p-4">
-				<p class="mb-2 text-[12px] font-bold text-success">Invite link generated!</p>
+				<p class="mb-2 text-[12px] font-bold text-success">
+					Invite emailed to {form.email}
+				</p>
+				<p class="text-[12px] text-on-surface-variant">
+					Only {form.email} can use this invite. Expires: {new Date(
+						form.expiresAt
+					).toLocaleString('en-GB')}
+				</p>
+			</div>
+		{:else if form?.action === 'invite_created' && form.inviteUrl}
+			<div class="mb-4 rounded-2xl bg-white p-4">
+				<p class="mb-2 text-[12px] font-bold text-success">Shareable invite link generated!</p>
 				<input
 					type="text"
 					readonly
@@ -108,10 +123,10 @@
 
 		{#if !showInviteForm}
 			<button type="button" onclick={() => (showInviteForm = true)} class={filledBtn}>
-				Generate invite link
+				Invite a member
 			</button>
 		{:else}
-			<form method="POST" action="?/createInvite" class="flex items-end gap-3">
+			<form method="POST" action="?/createInvite" class="flex flex-wrap items-end gap-3">
 				<div>
 					<label for="invite-role" class={labelClasses}>Role</label>
 					<select
@@ -123,7 +138,17 @@
 						<option value="coach">Coach</option>
 					</select>
 				</div>
-				<button type="submit" class="{filledBtn} whitespace-nowrap">Generate</button>
+				<div class="min-w-[240px] flex-1">
+					<label for="invite-email" class={labelClasses}>Email (optional)</label>
+					<input
+						id="invite-email"
+						name="email"
+						type="email"
+						placeholder="person@example.com"
+						class={inputClasses}
+					/>
+				</div>
+				<button type="submit" class="{filledBtn} whitespace-nowrap">Create invite</button>
 				<button
 					type="button"
 					onclick={() => (showInviteForm = false)}

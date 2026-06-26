@@ -5,6 +5,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import ch.teamorg.domain.TeamMember
@@ -52,6 +54,7 @@ fun TeamRosterScreen(
     var memberToPromote by remember { mutableStateOf<TeamMember?>(null) }
     var memberAction by remember { mutableStateOf<TeamMember?>(null) }
     var showInviteDialog by remember { mutableStateOf(false) }
+    var inviteEmail by remember { mutableStateOf("") }
 
     LaunchedEffect(teamId) {
         viewModel.loadRoster(teamId)
@@ -293,10 +296,11 @@ fun TeamRosterScreen(
     // Invite role chooser sheet
     if (showInviteDialog) {
         ModalBottomSheet(
-            onDismissRequest = { showInviteDialog = false },
+            onDismissRequest = { showInviteDialog = false; inviteEmail = "" },
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
         ) {
+            val hasEmail = inviteEmail.isNotBlank()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -310,29 +314,85 @@ fun TeamRosterScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "What role would you like to invite?",
+                    text = "Enter an email to invite one person privately — only that address can join " +
+                        "(best for coaches). Leave it empty for a shareable link anyone can use.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                OutlinedTextField(
+                    value = inviteEmail,
+                    onValueChange = { inviteEmail = it },
+                    label = { Text("Email (optional)") },
+                    placeholder = { Text("person@example.com") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth().testTag("input_invite_email"),
+                    shape = RoundedCornerShape(18.dp)
+                )
                 Button(
                     onClick = {
-                        viewModel.createInvite(teamId, "player")
+                        viewModel.createInvite(teamId, "player", inviteEmail)
                         showInviteDialog = false
+                        inviteEmail = ""
                     },
                     modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_invite_as_player"),
                     shape = PillShape
                 ) {
-                    Text("Invite as Player", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (hasEmail) "Email invite as Player" else "Invite as Player",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 OutlinedButton(
                     onClick = {
-                        viewModel.createCoachInvite(teamId)
+                        viewModel.createInvite(teamId, "coach", inviteEmail)
                         showInviteDialog = false
+                        inviteEmail = ""
                     },
                     modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_invite_as_coach"),
                     shape = PillShape
                 ) {
-                    Text("Invite as Coach", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (hasEmail) "Email invite as Coach" else "Invite as Coach",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+
+    // Email-invite confirmation sheet
+    state.inviteSentTo?.let { email ->
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.resetInvite() },
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Invite Sent",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "We emailed an invite to $email. Only that address can use it to join.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(
+                    onClick = { viewModel.resetInvite() },
+                    modifier = Modifier.fillMaxWidth().height(52.dp).testTag("btn_invite_sent_done"),
+                    shape = PillShape
+                ) {
+                    Text("Done", fontWeight = FontWeight.Bold)
                 }
             }
         }
