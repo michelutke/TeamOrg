@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch, apiDelete } from '$lib/server/api';
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from '$lib/server/api';
 import { ApiError, assertClubAccess } from '$lib/server/guards';
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -28,6 +28,13 @@ interface InviteResponse {
 	expiresAt: string;
 }
 
+interface SubGroup {
+	id: string;
+	teamId: string;
+	name: string;
+	memberCount: number;
+}
+
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const team = await apiGet<Team>(`/teams/${params.teamId}`, locals.token!);
 
@@ -37,8 +44,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	const members = await apiGet<TeamMember[]>(`/teams/${params.teamId}/members`, locals.token!);
+	// Subgroups are non-critical; don't 500 the page if the call fails.
+	const subGroups = await apiGet<SubGroup[]>(`/teams/${params.teamId}/subgroups`, locals.token!).catch(
+		() => [] as SubGroup[]
+	);
 
-	return { team, members, clubId: params.clubId };
+	return { team, members, subGroups, clubId: params.clubId };
 };
 
 export const actions: Actions = {
@@ -125,6 +136,52 @@ export const actions: Actions = {
 			if (err instanceof ApiError && err.status === 400)
 				return fail(400, { error: 'Invalid email address' });
 			return fail(500, { error: 'Failed to create invite' });
+		}
+	},
+
+	createSubGroup: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const name = (data.get('name') as string)?.trim();
+		if (!name) return fail(400, { error: 'Subgroup name required' });
+		try {
+			await apiPost(`/teams/${params.teamId}/subgroups`, locals.token!, { name });
+			return { success: true, action: 'subgroup_created' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to manage subgroups' });
+			return fail(500, { error: 'Failed to create subgroup' });
+		}
+	},
+
+	renameSubGroup: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const subGroupId = data.get('subGroupId') as string;
+		const name = (data.get('name') as string)?.trim();
+		if (!subGroupId || !name) return fail(400, { error: 'Subgroup name required' });
+		try {
+			await apiPut(`/teams/${params.teamId}/subgroups/${subGroupId}`, locals.token!, { name });
+			return { success: true, action: 'subgroup_renamed' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to manage subgroups' });
+			return fail(500, { error: 'Failed to rename subgroup' });
+		}
+	},
+
+	deleteSubGroup: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const subGroupId = data.get('subGroupId') as string;
+		if (!subGroupId) return fail(400, { error: 'Subgroup required' });
+		try {
+			await apiDelete(`/teams/${params.teamId}/subgroups/${subGroupId}`, locals.token!);
+			return { success: true, action: 'subgroup_deleted' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to manage subgroups' });
+			return fail(500, { error: 'Failed to delete subgroup' });
 		}
 	}
 };

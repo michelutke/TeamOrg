@@ -1,4 +1,4 @@
-import { apiPatch, apiPost } from '$lib/server/api';
+import { apiPatch, apiPost, apiPostForm } from '$lib/server/api';
 import { ApiError, assertClubAccess } from '$lib/server/guards';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -27,6 +27,30 @@ export const actions: Actions = {
 			if (err instanceof ApiError && err.status === 403)
 				return fail(403, { error: 'Not authorized to edit this club' });
 			return fail(500, { error: 'Failed to save changes' });
+		}
+	},
+
+	uploadLogo: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const file = data.get('logo');
+		if (!(file instanceof File) || file.size === 0) {
+			return fail(400, { error: 'Please choose an image file' });
+		}
+		if (file.size > 2 * 1024 * 1024) {
+			return fail(400, { error: 'Logo must be smaller than 2MB' });
+		}
+		const forward = new FormData();
+		forward.append('logo', file, file.name);
+		try {
+			await apiPostForm(`/clubs/${params.clubId}/logo`, locals.token!, forward);
+			return { success: true, action: 'logo_uploaded' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to update this club' });
+			if (err instanceof ApiError && err.status === 400)
+				return fail(400, { error: 'Invalid image (use jpg, png or webp under 2MB)' });
+			return fail(500, { error: 'Failed to upload logo' });
 		}
 	},
 

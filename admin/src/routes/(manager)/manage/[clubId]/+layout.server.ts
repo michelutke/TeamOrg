@@ -7,6 +7,7 @@ interface Club {
 	name: string;
 	sportType: string;
 	location: string | null;
+	logoUrl: string | null;
 	status: string;
 }
 

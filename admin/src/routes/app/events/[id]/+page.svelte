@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { ArrowLeft, MapPin, Clock, Pencil, ClipboardCheck } from 'lucide-svelte';
+	import { ArrowLeft, MapPin, Clock, Pencil, ClipboardCheck, Copy, RotateCcw, Ban } from 'lucide-svelte';
 	import StatusChip from '$lib/components/StatusChip.svelte';
 	import type { PageData, ActionData } from './$types';
 
@@ -148,7 +148,14 @@
 						</span>
 					{/if}
 				</div>
-				<h1 class="font-display text-[26px] font-extrabold text-on-surface">{data.event.title}</h1>
+				<div class="flex items-center gap-3">
+					<h1 class="font-display text-[26px] font-extrabold text-on-surface">{data.event.title}</h1>
+					{#if data.event.status === 'cancelled'}
+						<span class="rounded-full bg-error-container px-3 py-1 text-[11px] font-bold text-error">
+							{data.m.events.cancelledBadge}
+						</span>
+					{/if}
+				</div>
 			</div>
 			{#if data.canManage}
 				<div class="flex shrink-0 gap-2">
@@ -166,6 +173,33 @@
 					>
 						<Pencil size={15} /> {data.m.common.edit}
 					</a>
+					<form method="POST" action="?/duplicate" use:enhance>
+						<button
+							type="submit"
+							class="flex items-center gap-1 rounded-full bg-surface-container-high px-4 py-2 text-[13px] font-medium text-on-surface hover:opacity-90"
+						>
+							<Copy size={15} /> {data.m.events.duplicate}
+						</button>
+					</form>
+					{#if data.event.status === 'cancelled'}
+						<form method="POST" action="?/uncancel" use:enhance>
+							<button
+								type="submit"
+								class="flex items-center gap-1 rounded-full bg-surface-container-high px-4 py-2 text-[13px] font-medium text-on-surface hover:opacity-90"
+							>
+								<RotateCcw size={15} /> {data.m.events.uncancelEvent}
+							</button>
+						</form>
+					{:else}
+						<form method="POST" action="?/cancel" use:enhance>
+							<button
+								type="submit"
+								class="flex items-center gap-1 rounded-full bg-error-container px-4 py-2 text-[13px] font-medium text-error hover:opacity-90"
+							>
+								<Ban size={15} /> {data.m.events.cancelEvent}
+							</button>
+						</form>
+					{/if}
 				</div>
 			{/if}
 		</div>

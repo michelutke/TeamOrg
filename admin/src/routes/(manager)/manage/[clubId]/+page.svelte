@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types';
+	import { fileUrl } from '$lib/urls';
 
 	interface Props {
 		data: PageData;
@@ -7,6 +8,7 @@
 	}
 
 	let { data, form }: Props = $props();
+	const logoSrc = $derived(fileUrl(data.club.logoUrl));
 
 	let showEditForm = $state(false);
 	let showInviteForm = $state(false);
@@ -36,8 +38,12 @@
 <div class="flex flex-col gap-6">
 	<!-- Hero -->
 	<div class="flex items-center gap-5 rounded-3xl bg-primary-container px-8 py-7">
-		<div class="flex size-16 shrink-0 items-center justify-center rounded-3xl bg-primary">
-			<span class="text-[20px] font-bold text-on-primary">{initials(data.club.name)}</span>
+		<div class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-primary">
+			{#if logoSrc}
+				<img src={logoSrc} alt="" class="size-full object-cover" />
+			{:else}
+				<span class="text-[20px] font-bold text-on-primary">{initials(data.club.name)}</span>
+			{/if}
 		</div>
 		<div class="flex flex-col gap-1">
 			<h1 class="font-display text-[28px] font-extrabold text-on-surface">{data.club.name}</h1>
@@ -75,6 +81,29 @@
 					<button type="button" onclick={() => (showEditForm = false)} class={outlinedBtn}>Cancel</button>
 				</div>
 			</form>
+
+			<div class="mt-6 border-t border-outline-variant pt-6">
+				<h3 class="mb-1 text-[15px] font-bold text-on-surface">Club logo</h3>
+				<p class="mb-3 text-[13px] text-on-surface-variant">JPG, PNG or WebP, up to 2MB.</p>
+				{#if form?.action === 'logo_uploaded'}
+					<p class="mb-3 text-[13px] font-medium text-success">Logo updated.</p>
+				{/if}
+				<form
+					method="POST"
+					action="?/uploadLogo"
+					enctype="multipart/form-data"
+					class="flex flex-wrap items-center gap-3"
+				>
+					<input
+						type="file"
+						name="logo"
+						accept="image/jpeg,image/png,image/webp"
+						required
+						class="text-[13px] text-on-surface-variant"
+					/>
+					<button type="submit" class={filledBtn}>Upload logo</button>
+				</form>
+			</div>
 		</div>
 	{/if}
 

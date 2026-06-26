@@ -1,5 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { requireUser, canManageTeam, ApiError } from '$lib/server/guards';
+import { requireUser, ApiError } from '$lib/server/guards';
 import { loadUserTeams } from '$lib/server/teams';
 import { apiGet, apiPatch } from '$lib/server/api';
 import type { EventWithTeams } from '$lib/server/events';
@@ -17,11 +17,14 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		throw e;
 	}
 
-	const canManage =
-		user.isSuperAdmin || data.event.teamIds.some((tid) => canManageTeam(user, tid));
-	if (!canManage) throw error(403, 'Kein Zugriff');
-
+	// Derive manageability from the user's manageable teams (covers club managers
+	// who hold no per-team role) rather than canManageTeam(user, tid) which can't
+	// resolve the team's club without the clubId.
 	const teams = (await loadUserTeams(user, token)).filter((t) => t.canManage);
+	const manageableTeamIds = new Set(teams.map((t) => t.id));
+	const canManage =
+		user.isSuperAdmin || data.event.teamIds.some((tid) => manageableTeamIds.has(tid));
+	if (!canManage) throw error(403, 'Kein Zugriff');
 
 	return {
 		teams: teams.map((t) => ({ id: t.id, name: t.name })),
