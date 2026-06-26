@@ -48,6 +48,13 @@ class IntegrationRepositoryImpl : IntegrationRepository {
             .singleOrNull()
     }
 
+    override suspend fun getValidApiKey(clubId: UUID): String? = transaction {
+        ClubIntegrationsTable.select(ClubIntegrationsTable.apiKey)
+            .where { (ClubIntegrationsTable.clubId eq clubId) and (ClubIntegrationsTable.keyValid eq true) }
+            .map { it[ClubIntegrationsTable.apiKey] }
+            .singleOrNull()
+    }
+
     override suspend fun setKeyValidity(clubId: UUID, valid: Boolean, validatedAt: java.time.Instant, pausedReason: String?): ClubIntegration = transaction {
         ClubIntegrationsTable.update({ ClubIntegrationsTable.clubId eq clubId }) {
             it[ClubIntegrationsTable.keyValid] = valid
@@ -193,20 +200,20 @@ class IntegrationRepositoryImpl : IntegrationRepository {
             .singleOrNull()
     }
 
-    override suspend fun upsertState(clubId: UUID, lastSyncedAt: java.time.Instant?, lastStatus: String?, lastError: String?): SvSyncState = transaction {
+    override suspend fun upsertSyncState(clubId: UUID, lastSyncedAt: java.time.Instant?, status: String?, error: String?): SvSyncState = transaction {
         val exists = !SvSyncStateTable.selectAll().where { SvSyncStateTable.clubId eq clubId }.empty()
         if (exists) {
             SvSyncStateTable.update({ SvSyncStateTable.clubId eq clubId }) {
                 it[SvSyncStateTable.lastSyncedAt] = lastSyncedAt
-                it[SvSyncStateTable.lastStatus] = lastStatus
-                it[SvSyncStateTable.lastError] = lastError
+                it[SvSyncStateTable.lastStatus] = status
+                it[SvSyncStateTable.lastError] = error
             }
         } else {
             SvSyncStateTable.insert {
                 it[SvSyncStateTable.clubId] = clubId
                 it[SvSyncStateTable.lastSyncedAt] = lastSyncedAt
-                it[SvSyncStateTable.lastStatus] = lastStatus
-                it[SvSyncStateTable.lastError] = lastError
+                it[SvSyncStateTable.lastStatus] = status
+                it[SvSyncStateTable.lastError] = error
             }
         }
 
@@ -214,9 +221,6 @@ class IntegrationRepositoryImpl : IntegrationRepository {
             .map(::rowToSyncState)
             .single()
     }
-
-    override suspend fun upsertSyncState(clubId: UUID, lastSyncedAt: java.time.Instant?, status: String?, error: String?): SvSyncState =
-        upsertState(clubId, lastSyncedAt, status, error)
 
     private fun rowToIntegration(row: ResultRow) = ClubIntegration(
         clubId = row[ClubIntegrationsTable.clubId].toString(),

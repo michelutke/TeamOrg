@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { requireUser, canManageTeam, isCoach, ApiError } from '$lib/server/guards';
+import { requireUser, canManageTeam, ApiError } from '$lib/server/guards';
 import { apiGet, apiPut, apiPost } from '$lib/server/api';
 import { getMessages, resolveLocale } from '$lib/i18n';
 import type { EventWithTeams, AttendanceResponse } from '$lib/server/events';
@@ -38,8 +38,10 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		const myResponse = responses.find((r) => r.userId === user.id) ?? null;
 		const canManage =
 			user.isSuperAdmin || data.event.teamIds.some((tid) => canManageTeam(user, tid));
+		// Match the backend guard (requireEventAccess coach|club_manager) so a club
+		// without a coach role assigned can still reconcile via a manager.
 		const canReconcile =
-			user.isSuperAdmin || data.event.teamIds.some((tid) => isCoach(user, tid));
+			user.isSuperAdmin || data.event.teamIds.some((tid) => canManageTeam(user, tid));
 
 		const named = responses.map((r) => ({
 			...r,

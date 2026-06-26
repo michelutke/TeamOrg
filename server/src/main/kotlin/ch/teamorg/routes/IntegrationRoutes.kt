@@ -64,11 +64,7 @@ fun Route.integrationRoutes() {
 
                 val request = call.receive<SwissVolleyImportRequest>()
 
-                val integration = integrationRepository.getIntegration(clubId)
-                if (integration == null || integration.keyValid != true) {
-                    return@post call.respond(HttpStatusCode.Conflict, "No valid SwissVolley API key stored")
-                }
-                val apiKey = integrationRepository.getApiKey(clubId)
+                val apiKey = integrationRepository.getValidApiKey(clubId)
                     ?: return@post call.respond(HttpStatusCode.Conflict, "No valid SwissVolley API key stored")
 
                 val teams: List<SVTeam> = try {
@@ -170,11 +166,7 @@ fun Route.integrationRoutes() {
                 val clubId = UUID.fromString(call.parameters["clubId"])
                 if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@get
 
-                val integration = integrationRepository.getIntegration(clubId)
-                if (integration == null || integration.keyValid != true) {
-                    return@get call.respond(HttpStatusCode.Conflict, "No valid SwissVolley API key stored")
-                }
-                val apiKey = integrationRepository.getApiKey(clubId)
+                val apiKey = integrationRepository.getValidApiKey(clubId)
                     ?: return@get call.respond(HttpStatusCode.Conflict, "No valid SwissVolley API key stored")
 
                 val teams: List<SVTeam> = try {

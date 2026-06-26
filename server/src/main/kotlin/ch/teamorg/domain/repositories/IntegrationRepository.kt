@@ -41,6 +41,9 @@ interface IntegrationRepository {
     suspend fun listClubIdsWithIntegration(): List<UUID>
     suspend fun getIntegration(clubId: UUID): ClubIntegration?
     suspend fun getApiKey(clubId: UUID): String?
+
+    /** The stored key only if it is currently valid — single query, no check-then-read race. */
+    suspend fun getValidApiKey(clubId: UUID): String?
     suspend fun setKeyValidity(clubId: UUID, valid: Boolean, validatedAt: java.time.Instant, pausedReason: String?): ClubIntegration
     suspend fun deleteIntegration(clubId: UUID)
 
@@ -68,7 +71,6 @@ interface IntegrationRepository {
     suspend fun listSyncEnabledLinks(clubId: UUID): List<SyncEnabledLink>
 
     suspend fun getState(clubId: UUID): SvSyncState?
-    suspend fun upsertState(clubId: UUID, lastSyncedAt: java.time.Instant?, lastStatus: String?, lastError: String?): SvSyncState
     suspend fun setKeyInvalid(clubId: UUID, reason: String?): ClubIntegration
     suspend fun upsertSyncState(clubId: UUID, lastSyncedAt: java.time.Instant?, status: String?, error: String?): SvSyncState
 }

@@ -242,18 +242,7 @@ class SwissVolleySyncService(
                 createdBy = SystemUsers.VOLLEY_MANAGER,
                 teamIds = linkedTeamIds
             )
-            for (teamId in linkedTeamIds) {
-                notificationDispatcher.notifyTeamCoaches(
-                    teamId = teamId,
-                    excludeUserId = null,
-                    type = "sv_game_new",
-                    title = "Neues Spiel",
-                    body = title,
-                    entityId = event.id,
-                    entityType = "event",
-                    idempotencyKeySuffix = hash
-                )
-            }
+            safeNotifyCoaches(linkedTeamIds, "sv_game_new", "Neues Spiel", title, event.id, hash)
             return
         }
 
@@ -275,18 +264,35 @@ class SwissVolleySyncService(
                 location = location,
                 newHash = hash
             )
-            for (teamId in linkedTeamIds) {
+            // Fold the new hash into the key so re-polling an unreconciled change won't re-notify.
+            safeNotifyCoaches(linkedTeamIds, "sv_game_changed", "Spiel geändert", title, existing.id, hash)
+        }
+    }
+
+    // Notification delivery must never fail an already-committed event upsert: a push/DB hiccup
+    // here is logged and swallowed so the sync pass keeps going.
+    private suspend fun safeNotifyCoaches(
+        teamIds: List<UUID>,
+        type: String,
+        title: String,
+        body: String,
+        eventId: UUID,
+        hash: String
+    ) {
+        for (teamId in teamIds) {
+            try {
                 notificationDispatcher.notifyTeamCoaches(
                     teamId = teamId,
                     excludeUserId = null,
-                    type = "sv_game_changed",
-                    title = "Spiel geändert",
-                    body = title,
-                    entityId = existing.id,
+                    type = type,
+                    title = title,
+                    body = body,
+                    entityId = eventId,
                     entityType = "event",
-                    // Fold the new hash in so re-polling an unreconciled change won't re-notify.
                     idempotencyKeySuffix = hash
                 )
+            } catch (e: Exception) {
+                logger.error("notify $type failed for team $teamId (event $eventId)", e)
             }
         }
     }

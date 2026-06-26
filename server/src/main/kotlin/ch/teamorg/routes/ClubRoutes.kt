@@ -178,7 +178,7 @@ fun Route.clubRoutes() {
                     val targetLive = target.archivedAt == null &&
                         integrationRepository.listLinksForTeam(targetTeamId).any { it.deprecatedAt == null }
                     if (!targetLive) {
-                        return@post call.respond(HttpStatusCode.Conflict, "Target team is not a live SwissVolley-linked team")
+                        return@post call.respond(HttpStatusCode.UnprocessableEntity, "Target team is not a live SwissVolley-linked team")
                     }
 
                     val movedMembers = teamRepository.migrateTeam(sourceTeamId, targetTeamId)

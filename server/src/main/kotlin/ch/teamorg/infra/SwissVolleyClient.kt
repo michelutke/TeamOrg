@@ -33,6 +33,10 @@ class SwissVolleyClientImpl(
             header("Authorization", apiKey)
         }
         val body = response.bodyAsText()
+        // The SwissVolley API signals an invalid key by returning the auth-error message in the
+        // body even with a 200 status (see SwissVolleyClientTest), so we must check the body on
+        // any status, not just 401. A successful payload is always a JSON array; the phrase
+        // appearing inside legitimate array data is not a realistic collision.
         if (response.status == HttpStatusCode.Unauthorized || body.contains("Valid API-Key required")) {
             throw InvalidApiKeyException()
         }

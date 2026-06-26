@@ -92,6 +92,8 @@ export const actions: Actions = {
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 409)
 				return fail(409, { migrateError: 'errSourceNotDeprecated' });
+			if (err instanceof ApiError && err.status === 422)
+				return fail(422, { migrateError: 'errTargetNotLive' });
 			if (err instanceof ApiError && err.status === 403)
 				return fail(403, { migrateError: 'errFailed' });
 			return fail(500, { migrateError: 'errFailed' });
