@@ -100,7 +100,11 @@ export const actions: Actions = {
 			minAttendees?: number | null;
 			resetAvailability: boolean;
 		} = { resetAvailability };
-		if (meetupLocal) body.meetupAt = new Date(meetupLocal).toISOString();
+		if (meetupLocal) {
+			const meetup = new Date(meetupLocal);
+			if (isNaN(meetup.getTime())) return fail(400, { reconcileError: m.failed });
+			body.meetupAt = meetup.toISOString();
+		}
 		body.notes = notes;
 		body.minAttendees = minAttendeesRaw ? Number(minAttendeesRaw) : null;
 

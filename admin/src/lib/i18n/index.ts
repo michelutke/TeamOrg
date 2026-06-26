@@ -193,6 +193,7 @@ export interface Dict {
 		cancel: string;
 		selectAtLeastOne: string;
 		importFailed: string;
+		importNoKey: string;
 		resultCreated: string;
 		resultSkipped: string;
 		resultNone: string;
@@ -416,6 +417,7 @@ const de: Dict = {
 		cancel: 'Abbrechen',
 		selectAtLeastOne: 'Mindestens ein Team wählen.',
 		importFailed: 'Import fehlgeschlagen. Bitte versuche es erneut.',
+		importNoKey: 'Kein gültiger SwissVolley-Schlüssel mehr hinterlegt.',
 		resultCreated: 'erstellt',
 		resultSkipped: 'übersprungen',
 		resultNone: 'Keine neuen Teams importiert.',
@@ -640,6 +642,7 @@ const en: Dict = {
 		cancel: 'Cancel',
 		selectAtLeastOne: 'Select at least one team.',
 		importFailed: 'Import failed. Please try again.',
+		importNoKey: 'No valid SwissVolley key is set anymore.',
 		resultCreated: 'created',
 		resultSkipped: 'skipped',
 		resultNone: 'No new teams imported.',

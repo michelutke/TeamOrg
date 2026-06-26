@@ -114,7 +114,7 @@ export const actions: Actions = {
 			return { imported: result };
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 409)
-				return fail(409, { importError: 'noKeyBody' });
+				return fail(409, { importError: 'importNoKey' });
 			return fail(500, { importError: 'importFailed' });
 		}
 	}

@@ -55,8 +55,10 @@ CREATE TABLE sv_sync_state (
 INSERT INTO users (id, email, password_hash, display_name, is_super_admin)
 VALUES ('00000000-0000-4000-a000-0000000000a1'::uuid,
         'volleymanager@system.teamorg.ch', '!', 'VolleyManager', FALSE)
-ON CONFLICT (email) DO NOTHING;
--- password_hash '!' is an unusable hash → this account can never log in.
+ON CONFLICT (id) DO NOTHING;
+-- Conflict target is `id`, not `email`: synced events set created_by to this exact UUID, so the
+-- row MUST exist under it. A pre-existing different row with the same email surfaces loudly here
+-- rather than as silent FK failures at sync time. password_hash '!' is unusable → never logs in.
 
 -- Coach-facing SV game notifications (per user/team). Manager alerts (sv_key_invalid,
 -- sv_team_available) are operational/club-level and stay always-on (no per-team toggle).

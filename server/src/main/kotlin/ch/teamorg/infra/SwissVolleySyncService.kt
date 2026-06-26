@@ -161,7 +161,13 @@ class SwissVolleySyncService(
             for (game in relevantGames) {
                 val gameId = game.gameId?.toLong() ?: continue
                 seenGameIds += gameId
-                upsertGame(game, gameId, teamsBySvId, syncedSvIds)
+                // Isolate each game: a single bad game (transient DB error, push failure)
+                // must not abort the remaining games or the postponed-detection pass below.
+                try {
+                    upsertGame(game, gameId, teamsBySvId, syncedSvIds)
+                } catch (e: Exception) {
+                    logger.error("syncClub $clubId: failed to upsert game $gameId", e)
+                }
             }
 
             // In DB for this scope but absent from the feed -> postponed (never cancel/delete).
