@@ -4,6 +4,7 @@ import ch.teamorg.infra.DatabaseFactory
 import ch.teamorg.infra.startAutoPresentJob
 import ch.teamorg.infra.startMaterialisationJob
 import ch.teamorg.infra.startReminderSchedulerJob
+import ch.teamorg.infra.startSwissVolleySyncJob
 import ch.teamorg.plugins.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -36,4 +37,5 @@ fun Application.module() {
     startMaterialisationJob()
     startAutoPresentJob()
     startReminderSchedulerJob()
+    startSwissVolleySyncJob()
 }

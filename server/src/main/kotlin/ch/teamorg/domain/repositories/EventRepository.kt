@@ -27,4 +27,31 @@ interface EventRepository {
     suspend fun uncancel(id: UUID): Event?
     suspend fun uncancelFutureInSeries(seriesId: UUID, fromSequence: Int): Int
     suspend fun updateFutureInSeries(seriesId: UUID, fromSequence: Int, request: EditEventRequest): Int
+
+    suspend fun findByExternalGameId(source: String, gameId: Long): SyncedEventRef?
+    suspend fun createSyncedMatch(
+        title: String,
+        startAt: Instant,
+        endAt: Instant,
+        location: String?,
+        externalSource: String,
+        externalGameId: Long,
+        externalHash: String,
+        createdBy: UUID,
+        teamIds: List<UUID>
+    ): Event
+    suspend fun updateSyncedFacts(
+        eventId: UUID,
+        title: String,
+        startAt: Instant,
+        endAt: Instant,
+        location: String?,
+        newHash: String
+    ): Event?
+    suspend fun markPostponed(eventId: UUID): Event?
+    suspend fun clearPostponedToSynced(eventId: UUID): Event?
+    suspend fun clearNeedsReview(eventId: UUID): Event?
+    suspend fun listImportableSeries(teamId: UUID): ImportableSeriesResult
+    suspend fun listSyncedExternalGameIds(clubId: UUID): List<Long>
+    suspend fun hasSyncedGameWithin(clubId: UUID, windowStart: Instant, windowEnd: Instant): Boolean
 }

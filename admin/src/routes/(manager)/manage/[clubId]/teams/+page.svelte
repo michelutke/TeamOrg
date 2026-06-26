@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { Plus } from 'lucide-svelte';
+	import { Plus, Download } from 'lucide-svelte';
+	import SwissVolleyImportDialog from '$lib/components/SwissVolleyImportDialog.svelte';
+	import MigrateTeamDialog from '$lib/components/MigrateTeamDialog.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	interface Props {
@@ -10,9 +12,12 @@
 	let { data, form }: Props = $props();
 
 	let showCreateForm = $state(false);
+	let showSwissVolleyImport = $state(false);
+	let migrateSource = $state<{ id: string; name: string } | null>(null);
 
-	const activeTeams = $derived(data.teams.filter((t) => !t.archivedAt));
-	const archivedTeams = $derived(data.teams.filter((t) => t.archivedAt));
+	const activeTeams = $derived(data.teams.filter((t) => !t.deprecated));
+	const deprecatedTeams = $derived(data.teams.filter((t) => t.deprecated));
+	const migrateTargets = $derived(activeTeams.map((t) => ({ id: t.id, name: t.name })));
 
 	const inputClasses =
 		'w-full rounded-2xl border-none bg-surface-container-high px-[18px] py-3 text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary';
@@ -30,15 +35,45 @@
 			<h1 class="font-display text-[30px] font-extrabold text-on-surface">Teams</h1>
 			<p class="text-[13px] text-on-surface-variant">{data.club.name}</p>
 		</div>
-		<button
-			type="button"
-			onclick={() => (showCreateForm = !showCreateForm)}
-			class="flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary py-[13px] pl-[22px] pr-6 text-[14px] font-bold text-on-primary hover:opacity-90"
-		>
-			<Plus size={16} />
-			New team
-		</button>
+		<div class="flex items-center gap-3">
+			{#if data.swissVolleyConnected}
+				<button
+					type="button"
+					onclick={() => (showSwissVolleyImport = true)}
+					class="flex cursor-pointer items-center gap-2 rounded-full border border-outline-variant bg-transparent py-[13px] pl-[22px] pr-6 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
+				>
+					<Download size={16} />
+					{data.m.swissvolley.importButton}
+				</button>
+			{/if}
+			<button
+				type="button"
+				onclick={() => (showCreateForm = !showCreateForm)}
+				class="flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary py-[13px] pl-[22px] pr-6 text-[14px] font-bold text-on-primary hover:opacity-90"
+			>
+				<Plus size={16} />
+				New team
+			</button>
+		</div>
 	</div>
+
+	{#if showSwissVolleyImport}
+		<SwissVolleyImportDialog
+			clubId={data.clubId}
+			m={data.m.swissvolley}
+			onClose={() => (showSwissVolleyImport = false)}
+		/>
+	{/if}
+
+	{#if migrateSource}
+		<MigrateTeamDialog
+			sourceTeamId={migrateSource.id}
+			sourceTeamName={migrateSource.name}
+			targets={migrateTargets}
+			m={data.m.teamMigrate}
+			onClose={() => (migrateSource = null)}
+		/>
+	{/if}
 
 	<!-- Create form -->
 	{#if showCreateForm}
@@ -76,24 +111,31 @@
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			{#each [...activeTeams, ...archivedTeams] as team}
-				<div class="flex flex-col gap-2 rounded-[28px] bg-surface-container-low px-6 py-6 {team.archivedAt ? 'opacity-80' : ''}">
+			{#each [...activeTeams, ...deprecatedTeams] as team}
+				<div class="flex flex-col gap-2 rounded-[28px] bg-surface-container-low px-6 py-6 {team.deprecated ? 'opacity-80' : ''}">
 					<div class="flex items-center gap-3">
 						<h2 class="text-[18px] font-bold text-on-surface">{team.name}</h2>
-						{#if team.archivedAt}
-							<span class="rounded-full bg-surface-container-high px-3 py-1 text-[11px] font-medium text-on-surface-variant">
-								Archived
+						{#if team.deprecated}
+							<span class="rounded-full bg-error-container px-3 py-1 text-[11px] font-medium text-error">
+								{data.m.teamMigrate.deprecatedBadge}
 							</span>
 						{/if}
 					</div>
 					<p class="text-[14px] text-on-surface-variant">
 						{team.memberCount} members{team.description ? ` · ${team.description}` : ''}
 					</p>
-					<div class="mt-1">
+					<div class="mt-1 flex items-center gap-4">
 						<a
 							href="/manage/{data.clubId}/teams/{team.id}"
 							class="text-[14px] font-bold text-primary no-underline hover:underline"
 						>View ›</a>
+						{#if team.deprecated}
+							<button
+								type="button"
+								onclick={() => (migrateSource = { id: team.id, name: team.name })}
+								class="cursor-pointer border-none bg-transparent p-0 text-[14px] font-bold text-primary hover:underline"
+							>{data.m.teamMigrate.action}</button>
+						{/if}
 					</div>
 				</div>
 			{/each}

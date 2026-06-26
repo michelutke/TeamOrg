@@ -20,4 +20,5 @@
 	heading={data.m.eventForm.newTitle}
 	submitLabel={data.m.common.create}
 	error={form?.error}
+	initial={data.initial ?? {}}
 />

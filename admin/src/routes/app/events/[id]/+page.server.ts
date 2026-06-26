@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import { requireUser, canManageTeam, ApiError } from '$lib/server/guards';
-import { apiGet, apiPut } from '$lib/server/api';
+import { apiGet, apiPut, apiPost } from '$lib/server/api';
 import { getMessages, resolveLocale } from '$lib/i18n';
 import type { EventWithTeams, AttendanceResponse } from '$lib/server/events';
 import type { Actions, PageServerLoad } from './$types';
@@ -38,6 +38,10 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		const myResponse = responses.find((r) => r.userId === user.id) ?? null;
 		const canManage =
 			user.isSuperAdmin || data.event.teamIds.some((tid) => canManageTeam(user, tid));
+		// Match the backend guard (requireEventAccess coach|club_manager) so a club
+		// without a coach role assigned can still reconcile via a manager.
+		const canReconcile =
+			user.isSuperAdmin || data.event.teamIds.some((tid) => canManageTeam(user, tid));
 
 		const named = responses.map((r) => ({
 			...r,
@@ -45,7 +49,14 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			avatarUrl: memberMap.get(r.userId)?.avatarUrl ?? null
 		}));
 
-		return { event: data.event, teams: data.matchedTeams, responses: named, myResponse, canManage };
+		return {
+			event: data.event,
+			teams: data.matchedTeams,
+			responses: named,
+			myResponse,
+			canManage,
+			canReconcile
+		};
 	} catch (e) {
 		if (e instanceof ApiError) throw error(e.status === 403 ? 403 : 404, 'Kein Zugriff');
 		throw e;
@@ -71,6 +82,39 @@ export const actions: Actions = {
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 409) return fail(409, { error: m.deadlinePassed });
 			if (e instanceof ApiError) return fail(e.status, { error: 'Fehler' });
+			throw e;
+		}
+	},
+
+	reconcile: async ({ request, locals, params, cookies }) => {
+		requireUser(locals);
+		const m = getMessages(resolveLocale(cookies.get('lang'))).reconcile;
+		const form = await request.formData();
+
+		const meetupLocal = (form.get('meetupAt') as string)?.trim();
+		const notes = (form.get('notes') as string)?.trim() || null;
+		const minAttendeesRaw = (form.get('minAttendees') as string)?.trim();
+		const resetAvailability = form.get('resetAvailability') === 'on';
+
+		const body: {
+			meetupAt?: string;
+			notes?: string | null;
+			minAttendees?: number | null;
+			resetAvailability: boolean;
+		} = { resetAvailability };
+		if (meetupLocal) {
+			const meetup = new Date(meetupLocal);
+			if (isNaN(meetup.getTime())) return fail(400, { reconcileError: m.failed });
+			body.meetupAt = meetup.toISOString();
+		}
+		body.notes = notes;
+		body.minAttendees = minAttendeesRaw ? Number(minAttendeesRaw) : null;
+
+		try {
+			await apiPost(`/events/${params.id}/reconcile`, locals.token!, body);
+			return { reconciled: true };
+		} catch (e) {
+			if (e instanceof ApiError) return fail(e.status, { reconcileError: m.failed });
 			throw e;
 		}
 	}

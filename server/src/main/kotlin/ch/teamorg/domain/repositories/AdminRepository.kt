@@ -159,8 +159,9 @@ class AdminRepositoryImpl : AdminRepository {
         val lowerQuery = "%${query.lowercase()}%"
         val matchingUsers = UsersTable.selectAll()
             .where {
-                (UsersTable.displayName.lowerCase() like lowerQuery) or
-                (UsersTable.email.lowerCase() like lowerQuery)
+                ((UsersTable.displayName.lowerCase() like lowerQuery) or
+                    (UsersTable.email.lowerCase() like lowerQuery)) and
+                    (UsersTable.id neq SystemUsers.VOLLEY_MANAGER)
             }
             .orderBy(UsersTable.createdAt, SortOrder.DESC)
             .toList()

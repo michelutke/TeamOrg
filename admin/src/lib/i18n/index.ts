@@ -98,6 +98,32 @@ export interface Dict {
 		fMinAttendees: string;
 		selectTeams: string;
 		required: string;
+		recurringSection: string;
+		recurringEnable: string;
+		fPattern: string;
+		patternWeekly: string;
+		patternDaily: string;
+		patternCustom: string;
+		fWeekdays: string;
+		fIntervalDays: string;
+		fSeriesEnd: string;
+		weekdayMon: string;
+		weekdayTue: string;
+		weekdayWed: string;
+		weekdayThu: string;
+		weekdayFri: string;
+		weekdaySat: string;
+		weekdaySun: string;
+	};
+	schedule: {
+		carryOverTitle: string;
+		carryOverBody: string;
+		carryOverAction: string;
+		pickSeries: string;
+		loading: string;
+		loadFailed: string;
+		empty: string;
+		takeOver: string;
 	};
 	checkin: {
 		title: string;
@@ -147,6 +173,63 @@ export interface Dict {
 		invalidBody: string;
 		emailTaken: string;
 		failed: string;
+	};
+	swissvolley: {
+		importButton: string;
+		title: string;
+		subtitle: string;
+		loading: string;
+		noTeams: string;
+		noKeyTitle: string;
+		noKeyBody: string;
+		loadFailed: string;
+		selectAll: string;
+		clearAll: string;
+		genderM: string;
+		genderF: string;
+		genderMixed: string;
+		import: string;
+		importing: string;
+		cancel: string;
+		selectAtLeastOne: string;
+		importFailed: string;
+		importNoKey: string;
+		resultCreated: string;
+		resultSkipped: string;
+		resultNone: string;
+		postponed: string;
+		sourceLabel: string;
+	};
+	reconcile: {
+		needsReviewTitle: string;
+		needsReviewBody: string;
+		meetupAt: string;
+		notes: string;
+		minAttendees: string;
+		availabilityTitle: string;
+		keepAvailability: string;
+		resetAvailability: string;
+		submit: string;
+		saving: string;
+		reconciled: string;
+		failed: string;
+	};
+	teamMigrate: {
+		deprecatedBadge: string;
+		action: string;
+		title: string;
+		subtitle: string;
+		targetLabel: string;
+		selectPlaceholder: string;
+		noTargets: string;
+		submit: string;
+		submitting: string;
+		cancel: string;
+		selectTarget: string;
+		resultMoved: string; // "{n} Mitglieder verschoben" — {n} replaced at call site
+		errSourceNotDeprecated: string;
+		errTargetNotLive: string;
+		errFailed: string;
 	};
 }
 
@@ -236,7 +319,34 @@ const de: Dict = {
 		fDescription: 'Beschreibung',
 		fMinAttendees: 'Mindestteilnehmer',
 		selectTeams: 'Mindestens ein Team wählen',
-		required: 'Pflichtfeld'
+		required: 'Pflichtfeld',
+		recurringSection: 'Wiederholung',
+		recurringEnable: 'Als Serie wiederholen',
+		fPattern: 'Muster',
+		patternWeekly: 'Wöchentlich',
+		patternDaily: 'Täglich',
+		patternCustom: 'Benutzerdefiniert',
+		fWeekdays: 'Wochentage',
+		fIntervalDays: 'Intervall (Tage)',
+		fSeriesEnd: 'Serienende',
+		weekdayMon: 'Mo',
+		weekdayTue: 'Di',
+		weekdayWed: 'Mi',
+		weekdayThu: 'Do',
+		weekdayFri: 'Fr',
+		weekdaySat: 'Sa',
+		weekdaySun: 'So'
+	},
+	schedule: {
+		carryOverTitle: 'Vorherigen Trainingsplan übernehmen',
+		carryOverBody:
+			'Das Vorgängerteam hatte einen wiederkehrenden Trainingsplan. Übernimm einzelne Serien und passe Daten und Felder für die neue Saison an.',
+		carryOverAction: 'Plan übernehmen',
+		pickSeries: 'Serie zum Übernehmen wählen',
+		loading: 'Wird geladen…',
+		loadFailed: 'Serien konnten nicht geladen werden.',
+		empty: 'Keine übernehmbaren Serien gefunden.',
+		takeOver: 'Übernehmen'
 	},
 	checkin: {
 		title: 'Check-in',
@@ -287,6 +397,64 @@ const de: Dict = {
 		invalidBody: 'Diese Einladung ist nicht mehr gültig. Bitte fordere beim Verein eine neue an.',
 		emailTaken: 'Für diese E-Mail existiert bereits ein Konto. Bitte melde dich an.',
 		failed: 'Beitritt fehlgeschlagen. Bitte versuche es erneut.'
+	},
+	swissvolley: {
+		importButton: 'Aus SwissVolley importieren',
+		title: 'Teams aus SwissVolley importieren',
+		subtitle: 'Wähle die Teams, die du als TeamOrg-Teams anlegen möchtest.',
+		loading: 'Teams werden geladen…',
+		noTeams: 'Keine Teams bei SwissVolley gefunden.',
+		noKeyTitle: 'Kein gültiger SwissVolley-Schlüssel',
+		noKeyBody: 'Hinterlege zuerst einen gültigen SwissVolley-API-Schlüssel in den Integrationseinstellungen.',
+		loadFailed: 'Teams konnten nicht geladen werden. Bitte versuche es erneut.',
+		selectAll: 'Alle auswählen',
+		clearAll: 'Auswahl aufheben',
+		genderM: 'Herren',
+		genderF: 'Damen',
+		genderMixed: 'Mixed',
+		import: 'Importieren',
+		importing: 'Wird importiert…',
+		cancel: 'Abbrechen',
+		selectAtLeastOne: 'Mindestens ein Team wählen.',
+		importFailed: 'Import fehlgeschlagen. Bitte versuche es erneut.',
+		importNoKey: 'Kein gültiger SwissVolley-Schlüssel mehr hinterlegt.',
+		resultCreated: 'erstellt',
+		resultSkipped: 'übersprungen',
+		resultNone: 'Keine neuen Teams importiert.',
+		postponed: 'Verschoben',
+		sourceLabel: 'SwissVolley'
+	},
+	reconcile: {
+		needsReviewTitle: 'Spiel wurde geändert',
+		needsReviewBody:
+			'SwissVolley hat die Spieldaten (Datum, Zeit oder Halle) aktualisiert. Bitte überprüfe die Angaben und entscheide, ob die bereits erfassten Rückmeldungen erhalten bleiben.',
+		meetupAt: 'Besammlung',
+		notes: 'Notizen',
+		minAttendees: 'Mindestteilnehmer',
+		availabilityTitle: 'Rückmeldungen',
+		keepAvailability: 'Rückmeldungen behalten',
+		resetAvailability: 'Rückmeldungen zurücksetzen und neu anfragen',
+		submit: 'Überprüfung abschliessen',
+		saving: 'Wird gespeichert…',
+		reconciled: 'Überprüfung abgeschlossen.',
+		failed: 'Speichern fehlgeschlagen. Bitte versuche es erneut.'
+	},
+	teamMigrate: {
+		deprecatedBadge: 'Veraltet',
+		action: 'Migrieren zu…',
+		title: 'Team migrieren',
+		subtitle: 'Verschiebe alle Mitglieder dieses Teams in ein aktives Nachfolge-Team.',
+		targetLabel: 'Zielteam',
+		selectPlaceholder: 'Zielteam wählen…',
+		noTargets: 'Kein aktives Zielteam verfügbar.',
+		submit: 'Mitglieder verschieben',
+		submitting: 'Wird migriert…',
+		cancel: 'Abbrechen',
+		selectTarget: 'Bitte wähle ein Zielteam.',
+		resultMoved: 'Mitglieder verschoben',
+		errSourceNotDeprecated: 'Dieses Team ist nicht veraltet und kann nicht migriert werden.',
+		errTargetNotLive: 'Das Zielteam ist kein aktives SwissVolley-Team.',
+		errFailed: 'Migration fehlgeschlagen. Bitte versuche es erneut.'
 	}
 };
 
@@ -376,7 +544,34 @@ const en: Dict = {
 		fDescription: 'Description',
 		fMinAttendees: 'Min. attendees',
 		selectTeams: 'Select at least one team',
-		required: 'Required'
+		required: 'Required',
+		recurringSection: 'Recurrence',
+		recurringEnable: 'Repeat as series',
+		fPattern: 'Pattern',
+		patternWeekly: 'Weekly',
+		patternDaily: 'Daily',
+		patternCustom: 'Custom',
+		fWeekdays: 'Weekdays',
+		fIntervalDays: 'Interval (days)',
+		fSeriesEnd: 'Series end',
+		weekdayMon: 'Mon',
+		weekdayTue: 'Tue',
+		weekdayWed: 'Wed',
+		weekdayThu: 'Thu',
+		weekdayFri: 'Fri',
+		weekdaySat: 'Sat',
+		weekdaySun: 'Sun'
+	},
+	schedule: {
+		carryOverTitle: 'Take over previous schedule',
+		carryOverBody:
+			'The predecessor team had a recurring schedule. Take over individual series and adjust dates and fields for the new season.',
+		carryOverAction: 'Take over schedule',
+		pickSeries: 'Select a series to take over',
+		loading: 'Loading…',
+		loadFailed: 'Could not load series.',
+		empty: 'No importable series found.',
+		takeOver: 'Take over'
 	},
 	checkin: {
 		title: 'Check-in',
@@ -427,6 +622,64 @@ const en: Dict = {
 		invalidBody: 'This invitation is no longer valid. Please ask the club for a new one.',
 		emailTaken: 'An account already exists for this email. Please sign in.',
 		failed: 'Could not join. Please try again.'
+	},
+	swissvolley: {
+		importButton: 'Import from SwissVolley',
+		title: 'Import teams from SwissVolley',
+		subtitle: 'Select the teams you want to create as TeamOrg teams.',
+		loading: 'Loading teams…',
+		noTeams: 'No teams found at SwissVolley.',
+		noKeyTitle: 'No valid SwissVolley key',
+		noKeyBody: 'Set a valid SwissVolley API key in the integration settings first.',
+		loadFailed: 'Could not load teams. Please try again.',
+		selectAll: 'Select all',
+		clearAll: 'Clear selection',
+		genderM: 'Men',
+		genderF: 'Women',
+		genderMixed: 'Mixed',
+		import: 'Import',
+		importing: 'Importing…',
+		cancel: 'Cancel',
+		selectAtLeastOne: 'Select at least one team.',
+		importFailed: 'Import failed. Please try again.',
+		importNoKey: 'No valid SwissVolley key is set anymore.',
+		resultCreated: 'created',
+		resultSkipped: 'skipped',
+		resultNone: 'No new teams imported.',
+		postponed: 'Postponed',
+		sourceLabel: 'SwissVolley'
+	},
+	reconcile: {
+		needsReviewTitle: 'Game was changed',
+		needsReviewBody:
+			'SwissVolley updated the game details (date, time or venue). Please review and decide whether the already-collected availability should be kept.',
+		meetupAt: 'Meetup time',
+		notes: 'Notes',
+		minAttendees: 'Min. attendees',
+		availabilityTitle: 'Availability',
+		keepAvailability: 'Keep availability',
+		resetAvailability: 'Reset availability and ask again',
+		submit: 'Finish review',
+		saving: 'Saving…',
+		reconciled: 'Review completed.',
+		failed: 'Could not save. Please try again.'
+	},
+	teamMigrate: {
+		deprecatedBadge: 'Deprecated',
+		action: 'Migrate to…',
+		title: 'Migrate team',
+		subtitle: 'Move all members of this team into an active successor team.',
+		targetLabel: 'Target team',
+		selectPlaceholder: 'Select target team…',
+		noTargets: 'No active target team available.',
+		submit: 'Move members',
+		submitting: 'Migrating…',
+		cancel: 'Cancel',
+		selectTarget: 'Please select a target team.',
+		resultMoved: 'members moved',
+		errSourceNotDeprecated: 'This team is not deprecated and cannot be migrated.',
+		errTargetNotLive: 'The target team is not an active SwissVolley team.',
+		errFailed: 'Migration failed. Please try again.'
 	}
 };
 

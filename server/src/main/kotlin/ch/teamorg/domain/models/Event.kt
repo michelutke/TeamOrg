@@ -26,13 +26,26 @@ data class Event(
     @Serializable(with = InstantSerializer::class) val createdAt: Instant,
     @Serializable(with = InstantSerializer::class) val updatedAt: Instant,
     val teamIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList(),
-    val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList()
+    val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList(),
+    val externalSource: String? = null,
+    val externalStatus: String? = null,
+    val needsReview: Boolean = false
 )
 
 @Serializable
 data class EventWithTeams(
     val event: Event,
     val matchedTeams: List<MatchedTeam>
+)
+
+@Serializable
+data class SyncedEventRef(
+    @Serializable(with = UUIDSerializer::class) val id: UUID,
+    val externalHash: String?,
+    val status: String,
+    val externalStatus: String?,
+    val finished: Boolean,
+    val live: Boolean
 )
 
 @Serializable
@@ -59,6 +72,31 @@ data class EventSeries(
     val templateMinAttendees: Int?,
     @Serializable(with = UUIDSerializer::class) val createdBy: UUID,
     @Serializable(with = InstantSerializer::class) val createdAt: Instant
+)
+
+@Serializable
+data class ImportableSeries(
+    @Serializable(with = UUIDSerializer::class) val seriesId: UUID,
+    val patternType: String,
+    val weekdays: List<Short>?,
+    val intervalDays: Int?,
+    @Serializable(with = LocalTimeSerializer::class) val templateStartTime: LocalTime,
+    @Serializable(with = LocalTimeSerializer::class) val templateEndTime: LocalTime,
+    @Serializable(with = LocalTimeSerializer::class) val templateMeetupTime: LocalTime?,
+    val templateTitle: String,
+    val templateType: String,
+    val templateLocation: String?,
+    val templateMinAttendees: Int?,
+    @Serializable(with = LocalDateSerializer::class) val seriesStartDate: LocalDate,
+    @Serializable(with = LocalDateSerializer::class) val seriesEndDate: LocalDate?,
+    val label: String
+)
+
+@Serializable
+data class ImportableSeriesResult(
+    val hasOwnSeries: Boolean,
+    val predecessorTeamId: String?,
+    val series: List<ImportableSeries>
 )
 
 @Serializable

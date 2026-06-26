@@ -17,6 +17,9 @@ export interface AppEvent {
 	cancelledAt: string | null;
 	teamIds: string[];
 	subgroupIds: string[];
+	externalSource: string | null;
+	externalStatus: string | null;
+	needsReview: boolean;
 }
 
 export interface EventWithTeams {

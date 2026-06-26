@@ -28,6 +28,7 @@ data class Team(
     val description: String?,
     val appearance: TeamAppearance?,
     val archivedAt: String?,
+    val deprecated: Boolean = false,
     val createdAt: String,
     val updatedAt: String
 )

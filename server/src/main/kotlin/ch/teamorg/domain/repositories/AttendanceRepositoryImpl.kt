@@ -218,6 +218,19 @@ class AttendanceRepositoryImpl : AttendanceRepository {
         }
     }
 
+    override suspend fun resetResponsesForEvent(eventId: UUID): Int = transaction {
+        AttendanceResponsesTable.update({
+            (AttendanceResponsesTable.eventId eq eventId) and
+            (AttendanceResponsesTable.status inList listOf("confirmed", "declined", "unsure"))
+        }) {
+            it[AttendanceResponsesTable.status] = "no-response"
+            it[AttendanceResponsesTable.reason] = null
+            it[AttendanceResponsesTable.manualOverride] = false
+            it[AttendanceResponsesTable.respondedAt] = null
+            it[AttendanceResponsesTable.updatedAt] = Instant.now()
+        }
+    }
+
     // --- Private helpers ---
 
     private fun buildRawQuery(

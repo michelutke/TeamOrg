@@ -1,6 +1,7 @@
 package ch.teamorg.routes
 
 import ch.teamorg.domain.repositories.ClubRepository
+import ch.teamorg.domain.repositories.IntegrationRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.authenticateUser
@@ -25,10 +26,17 @@ data class CreateClubRequest(val name: String, val sportType: String = "volleyba
 @Serializable
 data class UpdateClubRequest(val name: String? = null, val location: String? = null)
 
+@Serializable
+data class MigrateTeamRequest(val targetTeamId: String)
+
+@Serializable
+data class MigrateTeamResponse(val movedMembers: Int, val targetTeamId: String)
+
 fun Route.clubRoutes() {
     val clubRepository by inject<ClubRepository>()
     val userRepository by inject<UserRepository>()
     val teamRepository by inject<TeamRepository>()
+    val integrationRepository by inject<IntegrationRepository>()
     val fileStorageService by inject<FileStorageService>()
 
     authenticate("jwt") {
@@ -132,6 +140,52 @@ fun Route.clubRoutes() {
                     }
                     val team = teamRepository.create(clubId, request.name, request.description)
                     call.respond(HttpStatusCode.Created, team)
+                }
+
+                // Migrate a deprecated team into a live SV-linked successor (season rollover, §14).
+                post("/teams/{teamId}/migrate-to") {
+                    val clubId = UUID.fromString(call.parameters["clubId"])
+                    if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
+
+                    val sourceTeamId = UUID.fromString(call.parameters["teamId"])
+                    val request = call.receive<MigrateTeamRequest>()
+                    val targetTeamId = try {
+                        UUID.fromString(request.targetTeamId)
+                    } catch (e: IllegalArgumentException) {
+                        return@post call.respond(HttpStatusCode.BadRequest, "Invalid targetTeamId")
+                    }
+
+                    if (sourceTeamId == targetTeamId) {
+                        return@post call.respond(HttpStatusCode.BadRequest, "Source and target must differ")
+                    }
+
+                    val source = teamRepository.findById(sourceTeamId)
+                    val target = teamRepository.findById(targetTeamId)
+                    if (source == null || target == null) {
+                        return@post call.respond(HttpStatusCode.NotFound, "Team not found")
+                    }
+                    if (source.clubId != clubId.toString() || target.clubId != clubId.toString()) {
+                        return@post call.respond(HttpStatusCode.BadRequest, "Both teams must belong to the club")
+                    }
+
+                    val sourceLinks = integrationRepository.listLinksForTeam(sourceTeamId)
+                    val sourceDeprecated = source.archivedAt != null ||
+                        (sourceLinks.isNotEmpty() && sourceLinks.all { it.deprecatedAt != null })
+                    if (!sourceDeprecated) {
+                        return@post call.respond(HttpStatusCode.Conflict, "Source team is not deprecated")
+                    }
+
+                    val targetLive = target.archivedAt == null &&
+                        integrationRepository.listLinksForTeam(targetTeamId).any { it.deprecatedAt == null }
+                    if (!targetLive) {
+                        return@post call.respond(HttpStatusCode.UnprocessableEntity, "Target team is not a live SwissVolley-linked team")
+                    }
+
+                    val movedMembers = teamRepository.migrateTeam(sourceTeamId, targetTeamId)
+                    call.respond(
+                        HttpStatusCode.OK,
+                        MigrateTeamResponse(movedMembers, targetTeamId.toString())
+                    )
                 }
             }
         }

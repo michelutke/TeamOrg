@@ -89,4 +89,10 @@ interface AttendanceRepository {
     ): List<RawAttendanceRow>
     suspend fun getTeamAttendance(teamId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow>
     suspend fun bulkInsertAutoDeclines(ruleId: UUID, userId: UUID, eventUserPairs: List<Pair<UUID, UUID>>)
+    /**
+     * Resets player RSVPs for [eventId] back to 'no-response'. Only rows in
+     * 'confirmed'/'declined'/'unsure' are touched; 'declined-auto' (abwesenheit-rule) rows are left
+     * intact so auto-decline state is not clobbered. Returns the number of rows reset.
+     */
+    suspend fun resetResponsesForEvent(eventId: UUID): Int
 }
