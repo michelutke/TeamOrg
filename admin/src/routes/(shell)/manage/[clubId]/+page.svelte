@@ -87,6 +87,8 @@
 				<p class="mb-3 text-[13px] text-on-surface-variant">JPG, PNG or WebP, up to 2MB.</p>
 				{#if form?.action === 'logo_uploaded'}
 					<p class="mb-3 text-[13px] font-medium text-success">Logo updated.</p>
+				{:else if form?.logoError}
+					<p class="mb-3 text-[13px] font-medium text-error">{form.logoError}</p>
 				{/if}
 				<form
 					method="POST"

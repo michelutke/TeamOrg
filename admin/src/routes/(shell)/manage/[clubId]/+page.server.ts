@@ -35,10 +35,10 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const file = data.get('logo');
 		if (!(file instanceof File) || file.size === 0) {
-			return fail(400, { error: 'Please choose an image file' });
+			return fail(400, { logoError: 'Please choose an image file' });
 		}
 		if (file.size > 2 * 1024 * 1024) {
-			return fail(400, { error: 'Logo must be smaller than 2MB' });
+			return fail(400, { logoError: 'Logo must be smaller than 2MB' });
 		}
 		const forward = new FormData();
 		forward.append('logo', file, file.name);
@@ -47,10 +47,10 @@ export const actions: Actions = {
 			return { success: true, action: 'logo_uploaded' };
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 403)
-				return fail(403, { error: 'Not authorized to update this club' });
+				return fail(403, { logoError: 'Not authorized to update this club' });
 			if (err instanceof ApiError && err.status === 400)
-				return fail(400, { error: 'Invalid image (use jpg, png or webp under 2MB)' });
-			return fail(500, { error: 'Failed to upload logo' });
+				return fail(400, { logoError: 'Invalid image (use jpg, png or webp under 2MB)' });
+			return fail(500, { logoError: 'Failed to upload logo' });
 		}
 	},
 

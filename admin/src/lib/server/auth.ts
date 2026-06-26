@@ -164,8 +164,12 @@ export function logout(cookies: Cookies): void {
 	cookies.delete(LEGACY_SESSION_COOKIE, { path: '/' });
 }
 
-/** Highest-privilege landing path for a freshly authenticated user. */
+/** Role-based landing path for a freshly authenticated user.
+ * Players/coaches (and dual-role users) land on the member dashboard; a pure
+ * club manager lands on their club; super-admins on the admin dashboard. */
 export function landingPathFor(user: UserInfo): string {
 	if (user.isSuperAdmin) return '/admin/dashboard';
+	if (user.teamRoles.length > 0) return '/app';
+	if (user.managedClubIds.length > 0) return `/manage/${user.managedClubIds[0]}`;
 	return '/app';
 }
