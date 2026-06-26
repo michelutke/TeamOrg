@@ -28,6 +28,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.dsl.module
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -128,7 +129,9 @@ class ReconcileTest : IntegrationTestBase() {
             it[name] = "RecTeam-$suffix"
         } get TeamsTable.id
 
-        val start = Instant.now().plus(Duration.ofDays(7))
+        // Truncate to micros (Postgres timestamptz precision) so DB round-trips compare equal
+        // on every platform — CI's Linux JVM clock yields nanos that Postgres would truncate.
+        val start = Instant.now().truncatedTo(ChronoUnit.MICROS).plus(Duration.ofDays(7))
         val end = start.plus(Duration.ofHours(2))
         val eventId = EventsTable.insert {
             it[title] = "SV Match $suffix"

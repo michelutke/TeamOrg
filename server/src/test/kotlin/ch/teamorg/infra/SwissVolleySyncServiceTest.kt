@@ -23,6 +23,7 @@ import org.koin.dsl.module
 import org.koin.ktor.ext.get
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -67,8 +68,10 @@ class SwissVolleySyncServiceTest : IntegrationTestBase() {
     // --- DB seeding helpers (sync engine reads the DB directly, so seed it directly) ----
 
     /** Future start so synced games are neither finished nor live (facts stay mutable). */
+    // Truncate to micros: Postgres timestamptz has microsecond precision, so a higher-precision
+    // clock (e.g. CI's Linux JVM gives nanos) would make the stored value != the parsed expectation.
     private fun futureUtc(daysFromNow: Long): String =
-        Instant.now().plus(Duration.ofDays(daysFromNow)).toString()
+        Instant.now().truncatedTo(ChronoUnit.MICROS).plus(Duration.ofDays(daysFromNow)).toString()
 
     private data class Fixture(
         val clubId: UUID,
