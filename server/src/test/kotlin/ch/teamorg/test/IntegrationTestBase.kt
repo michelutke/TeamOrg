@@ -46,7 +46,10 @@ abstract class IntegrationTestBase {
             "database.url" to postgres.jdbcUrl,
             "database.driver" to "org.postgresql.Driver",
             "database.username" to postgres.username,
-            "database.password" to postgres.password
+            "database.password" to postgres.password,
+            // Never run the background SwissVolley poller in tests: it would hit the real API
+            // and race the shared test DB. Tests drive SwissVolleySyncService directly instead.
+            "swissvolley.sync-enabled" to "false"
         )
 
         environment { config = testConfig }

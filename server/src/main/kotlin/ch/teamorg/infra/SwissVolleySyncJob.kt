@@ -21,6 +21,12 @@ private val HOT_INTERVAL = Duration.ofHours(12)
 private val COLD_INTERVAL = Duration.ofHours(48)
 
 fun Application.startSwissVolleySyncJob() {
+    // Off by default in tests (no real SwissVolley API / shared DB). Defaults to enabled in prod.
+    if (environment.config.propertyOrNull("swissvolley.sync-enabled")?.getString()?.toBoolean() == false) {
+        logger.info("SwissVolley sync job disabled via config")
+        return
+    }
+
     val syncService by inject<SwissVolleySyncService>()
     val integrationRepository by inject<IntegrationRepository>()
     val eventRepository by inject<ch.teamorg.domain.repositories.EventRepository>()
