@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { requireUser, canManageTeam, ApiError } from '$lib/server/guards';
+import { requireUser, ApiError } from '$lib/server/guards';
+import { loadUserTeams } from '$lib/server/teams';
 import { apiGet, apiPut, apiPost } from '$lib/server/api';
 import { getMessages, resolveLocale } from '$lib/i18n';
 import type { EventWithTeams, AttendanceResponse } from '$lib/server/events';
@@ -37,19 +38,13 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 		const myResponse = responses.find((r) => r.userId === user.id) ?? null;
 
-		// Resolve each team's clubId so a pure club_manager (who holds no team role)
-		// is recognised as a manager. Without the clubId, canManageTeam can't map the
-		// team to a club and wrongly hides Edit/cancel/duplicate for club managers.
-		const teamClubIds = await Promise.all(
-			data.event.teamIds.map((tid) =>
-				apiGet<{ id: string; clubId: string }>(`/teams/${tid}`, token)
-					.then((t) => t.clubId)
-					.catch(() => null)
-			)
+		// Manageability from the user's manageable teams (covers club managers who
+		// hold no per-team role). Same derivation as the edit page — one source of truth.
+		const manageableTeamIds = new Set(
+			(await loadUserTeams(user, token)).filter((t) => t.canManage).map((t) => t.id)
 		);
 		const canManage =
-			user.isSuperAdmin ||
-			data.event.teamIds.some((tid, i) => canManageTeam(user, tid, teamClubIds[i] ?? undefined));
+			user.isSuperAdmin || data.event.teamIds.some((tid) => manageableTeamIds.has(tid));
 		// Same guard as the backend (requireEventAccess coach|club_manager).
 		const canReconcile = canManage;
 
@@ -135,7 +130,7 @@ export const actions: Actions = {
 			await apiPost(`/events/${params.id}/cancel`, locals.token!, { scope: 'this_only' });
 			return { cancelled: true };
 		} catch (e) {
-			if (e instanceof ApiError) return fail(e.status, { manageError: 'Fehler' });
+			if (e instanceof ApiError) return fail(e.status, { manageError: manageErr(e) });
 			throw e;
 		}
 	},
@@ -146,7 +141,7 @@ export const actions: Actions = {
 			await apiPost(`/events/${params.id}/uncancel`, locals.token!, { scope: 'this_only' });
 			return { uncancelled: true };
 		} catch (e) {
-			if (e instanceof ApiError) return fail(e.status, { manageError: 'Fehler' });
+			if (e instanceof ApiError) return fail(e.status, { manageError: manageErr(e) });
 			throw e;
 		}
 	},
@@ -162,10 +157,15 @@ export const actions: Actions = {
 			);
 			newId = dup.id;
 		} catch (e) {
-			if (e instanceof ApiError) return fail(e.status, { manageError: 'Fehler' });
+			if (e instanceof ApiError) return fail(e.status, { manageError: manageErr(e) });
 			throw e;
 		}
 		// Land on the copy's edit form so the manager can adjust the date/time.
 		throw redirect(303, `/app/events/${newId}/edit`);
 	}
 };
+
+/** A clear message for manage-action failures — 403 means the user isn't a coach/manager. */
+function manageErr(e: ApiError): string {
+	return e.status === 403 ? 'Keine Berechtigung für diese Aktion' : 'Aktion fehlgeschlagen';
+}

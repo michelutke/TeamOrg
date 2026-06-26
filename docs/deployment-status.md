@@ -31,6 +31,10 @@ _Last updated: 2026-06-26. Continue from "Next steps". Sensitive values are in
 ### Coolify env vars currently set
 - server: `DATABASE_URL`, `JWT_SECRET`, `ONESIGNAL_APP_ID`, `ONESIGNAL_API_KEY`
 - admin: `API_URL` = `http://server:8080` (internal), `ORIGIN` = `https://app.teamorg.ch`
+  - `PUBLIC_SERVER_URL` = `https://server.teamorg.ch` (browser-facing base for uploaded
+    images — club logos/avatars served from the server's `/uploads`). The web app falls
+    back to this default if unset, but set it explicitly so non-prod deploys point at the
+    right server. Used by `admin/src/lib/urls.ts` `fileUrl()`.
 
 ### Coolify Domains field
 - server → `https://server.teamorg.ch:8080`
