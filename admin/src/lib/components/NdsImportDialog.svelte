@@ -28,6 +28,13 @@
 		membersImported: number;
 		eventsCreated: number;
 	}
+	interface PersonInput {
+		lastName: string;
+		firstName: string;
+		birthDate: string | null;
+		personNumber: string | null;
+		funktion: string;
+	}
 
 	interface Props {
 		clubId: string;
@@ -37,11 +44,14 @@
 
 	type Step = 'upload' | 'preview' | 'done';
 	let step = $state<Step>('upload');
-	let file = $state<File | null>(null);
+	let teilnehmendeFile = $state<File | null>(null);
+	let leiterFile = $state<File | null>(null);
+	let listeFile = $state<File | null>(null);
 	let busy = $state(false);
 	let errorMsg = $state<string | null>(null);
 
 	let parsed = $state<Parsed | null>(null);
+	let persons = $state<PersonInput[]>([]);
 	let teamName = $state('');
 	let nutzergruppe = $state('');
 	let importEvents = $state(true);
@@ -50,6 +60,7 @@
 
 	const leaders = $derived(parsed?.members.filter((m) => m.funktion === 'Leiter/in') ?? []);
 	const players = $derived(parsed?.members.filter((m) => m.funktion !== 'Leiter/in') ?? []);
+	const withPn = $derived(persons.filter((p) => p.personNumber).length);
 
 	const payload = $derived(
 		parsed
@@ -57,20 +68,33 @@
 					createTeamName: teamName.trim() || parsed.kursName || `NDS ${parsed.angebotId}`,
 					nutzergruppe: nutzergruppe || null,
 					parsed,
+					persons,
 					importEvents,
 					attendanceMode
 				})
 			: ''
 	);
 
+	async function parseRoster(f: File): Promise<PersonInput[]> {
+		const form = new FormData();
+		form.append('file', f);
+		const res = await fetch(`/manage/${clubId}/nds/parse-roster`, { method: 'POST', body: form });
+		if (!res.ok) throw new Error('roster');
+		return (await res.json()) as PersonInput[];
+	}
+
 	async function upload(e: SubmitEvent) {
 		e.preventDefault();
-		if (!file) return;
+		if (!listeFile) return;
 		busy = true;
 		errorMsg = null;
 		try {
+			const collected: PersonInput[] = [];
+			if (teilnehmendeFile) collected.push(...(await parseRoster(teilnehmendeFile)));
+			if (leiterFile) collected.push(...(await parseRoster(leiterFile)));
+
 			const form = new FormData();
-			form.append('file', file);
+			form.append('file', listeFile);
 			const res = await fetch(`/manage/${clubId}/nds/parse`, { method: 'POST', body: form });
 			if (res.status === 422) {
 				errorMsg = 'Die Datei ist keine gültige NDS-Anwesenheitsliste.';
@@ -81,10 +105,11 @@
 				return;
 			}
 			parsed = (await res.json()) as Parsed;
+			persons = collected;
 			teamName = parsed.kursName ?? '';
 			step = 'preview';
 		} catch {
-			errorMsg = 'Upload fehlgeschlagen.';
+			errorMsg = 'Eine der Dateien konnte nicht gelesen werden.';
 		} finally {
 			busy = false;
 		}
@@ -123,13 +148,38 @@
 
 		{#if step === 'upload'}
 			<form onsubmit={upload} class="flex flex-col gap-4">
-				<input
-					type="file"
-					accept=".xlsx"
-					required
-					onchange={(e) => (file = (e.currentTarget as HTMLInputElement).files?.[0] ?? null)}
-					class="rounded-2xl bg-surface-container-high px-4 py-3 text-[14px] text-on-surface"
-				/>
+				<p class="text-[13px] text-on-surface-variant">
+					Reihenfolge: zuerst Teilnehmende, dann Leiter/innen (beide bringen die
+					Personennummern), zuletzt die Anwesenheitsliste (Termine & Anwesenheiten).
+				</p>
+				<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
+					1. Teilnehmende (.csv) <span class="text-on-surface-variant/70">– optional</span>
+					<input
+						type="file"
+						accept=".csv"
+						onchange={(e) => (teilnehmendeFile = (e.currentTarget as HTMLInputElement).files?.[0] ?? null)}
+						class="rounded-2xl bg-surface-container-high px-4 py-3 text-[14px] text-on-surface"
+					/>
+				</label>
+				<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
+					2. Leiterinnen/Leiter (.xlsx) <span class="text-on-surface-variant/70">– optional</span>
+					<input
+						type="file"
+						accept=".xlsx"
+						onchange={(e) => (leiterFile = (e.currentTarget as HTMLInputElement).files?.[0] ?? null)}
+						class="rounded-2xl bg-surface-container-high px-4 py-3 text-[14px] text-on-surface"
+					/>
+				</label>
+				<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
+					3. Anwesenheitsliste (.xlsx) <span class="text-error">– erforderlich</span>
+					<input
+						type="file"
+						accept=".xlsx"
+						required
+						onchange={(e) => (listeFile = (e.currentTarget as HTMLInputElement).files?.[0] ?? null)}
+						class="rounded-2xl bg-surface-container-high px-4 py-3 text-[14px] text-on-surface"
+					/>
+				</label>
 				{#if errorMsg}
 					<p class="text-[12px] font-medium text-error">{errorMsg}</p>
 				{/if}
@@ -143,10 +193,10 @@
 					</button>
 					<button
 						type="submit"
-						disabled={busy || !file}
+						disabled={busy || !listeFile}
 						class="cursor-pointer rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						{busy ? 'Wird gelesen…' : 'Datei lesen'}
+						{busy ? 'Wird gelesen…' : 'Dateien lesen'}
 					</button>
 				</div>
 			</form>
@@ -159,6 +209,13 @@
 					<p class="mt-1 font-medium">
 						{parsed.activities.length} Aktivitäten · {leaders.length} Leiter · {players.length} Teilnehmer
 					</p>
+					{#if persons.length > 0}
+						<p class="mt-1 text-on-surface-variant">{withPn} Personennummern aus Personen-Dateien</p>
+					{:else}
+						<p class="mt-1 text-error">
+							Keine Personen-Dateien – Personennummern müssen später manuell erfasst werden.
+						</p>
+					{/if}
 				</div>
 
 				<div class="mt-4 flex flex-col gap-3">

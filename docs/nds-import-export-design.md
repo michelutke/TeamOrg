@@ -2,6 +2,26 @@
 
 Status: **implemented** (V14, 2026-06-26) · Scope: backend (Ktor) + admin web
 
+## Person-file imports (added 2026-06-27 — resolves the PERSONENNUMMER gap)
+
+Two further NDS exports **do** carry the J+S PERSONENNUMMER, so it no longer has to be entered
+by hand:
+- **Teilnehmende** — comma-delimited `.csv`, header `PERSONENNUMMER,NAME,VORNAME,GEBURTSDATUM,…`
+  (only the first three columns are used; GEBURTSDATUM is typically blank). funktion = Teilnehmer/in.
+- **Leiterinnen/Leiter** — `.xlsx`, header `Personennummer,Name,Vorname,Geburtsdatum,PLZ,Ort,Funktion`
+  (Geburtsdatum present as `d.M.yyyy`). funktion = Leiter/in.
+
+**Import order (one wizard):** Teilnehmende → Leiter → Anwesenheitsliste. The two person files are
+parsed to `NdsMemberInput` (with PERSONENNUMMER) and applied **before** the Anwesenheitsliste roster.
+Members are matched/merged **by name** (`upsertOne`): the person files set the PERSONENNUMMER, the
+Anwesenheitsliste fills the birthdate + drives events/attendances — no duplicate rows. Attendance
+matching in the importer is name-based too (the three exports disagree on birthdate availability).
+
+Parser: `infra/nds/RosterFileParser.kt` (`parseTeilnehmendeCsv`, `parseLeiterXlsx`). Endpoint
+`POST /clubs/{id}/nds/parse-roster` (parser chosen by extension). The import request gained an
+optional `persons: List<NdsMemberInput>`. UI: the import dialog now takes all three files in order.
+With person numbers present from the start, export pre-flight passes without manual entry.
+
 ## Implementation notes (as shipped)
 - Migration `V14__nds_import_export.sql`; Exposed table `NdsMembersTable` + columns on
   teams/users/events/invite_links. `users.provisional` flag added (Option A).

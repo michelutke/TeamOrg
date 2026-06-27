@@ -38,6 +38,19 @@ data class ParsedAnwesenheitsliste(
     val members: List<ParsedMember> = emptyList()
 )
 
+/**
+ * A person parsed from a dedicated NDS person export (Teilnehmende CSV / Leiterinnen xlsx).
+ * Carries the PERSONENNUMMER the Anwesenheitsliste lacks. Birthdate may be absent.
+ */
+@Serializable
+data class NdsMemberInput(
+    val lastName: String,
+    val firstName: String,
+    @Serializable(with = LocalDateSerializer::class) val birthDate: LocalDate? = null,
+    val personNumber: String? = null,
+    val funktion: String // 'Teilnehmer/in' | 'Leiter/in'
+)
+
 /** A roster member as stored, exposed to the web (claim status + NDS data). */
 @Serializable
 data class NdsMember(

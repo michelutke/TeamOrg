@@ -1,6 +1,7 @@
 package ch.teamorg.routes
 
 import ch.teamorg.domain.models.NdsMember
+import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
 import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.InviteRepository
@@ -11,6 +12,7 @@ import ch.teamorg.infra.nds.AnwesenheitslisteParser
 import ch.teamorg.infra.nds.NdsEventImporter
 import ch.teamorg.infra.nds.NdsExportService
 import ch.teamorg.infra.nds.NdsParseException
+import ch.teamorg.infra.nds.RosterFileParser
 import ch.teamorg.mail.MailService
 import ch.teamorg.mail.buildInviteEmail
 import ch.teamorg.middleware.requireClubRole
@@ -35,6 +37,9 @@ data class NdsImportRequest(
     val createTeamName: String? = null,
     val nutzergruppe: String? = null,
     val parsed: ParsedAnwesenheitsliste,
+    // Persons from the dedicated NDS exports (Teilnehmende CSV / Leiter xlsx); carry PERSONENNUMMER.
+    // Applied BEFORE the Anwesenheitsliste roster so names merge and person numbers are preserved.
+    val persons: List<NdsMemberInput> = emptyList(),
     val importEvents: Boolean = false,
     val attendanceMode: String = "discard" // 'keep' | 'discard'
 )
@@ -100,6 +105,36 @@ fun Route.ndsRoutes() {
             }
         }
 
+        // Parse a dedicated person export (Teilnehmende .csv / Leiter .xlsx) → person list (no writes).
+        // The parser is chosen by file extension.
+        post("/clubs/{clubId}/nds/parse-roster") {
+            val clubId = UUID.fromString(call.parameters["clubId"])
+            if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
+
+            var persons: List<NdsMemberInput>? = null
+            var parseError: String? = null
+            call.receiveMultipart().forEachPart { part ->
+                if (part is PartData.FileItem && persons == null && parseError == null) {
+                    val name = part.originalFileName?.lowercase() ?: ""
+                    try {
+                        part.provider().toInputStream().use { stream ->
+                            persons = if (name.endsWith(".csv")) RosterFileParser.parseTeilnehmendeCsv(stream)
+                            else RosterFileParser.parseLeiterXlsx(stream)
+                        }
+                    } catch (ex: NdsParseException) {
+                        parseError = ex.message ?: "Datei konnte nicht gelesen werden"
+                    }
+                }
+                part.dispose()
+            }
+
+            when {
+                parseError != null -> call.respond(HttpStatusCode.UnprocessableEntity, parseError)
+                persons == null -> call.respond(HttpStatusCode.BadRequest, "Keine Datei hochgeladen")
+                else -> call.respond(persons)
+            }
+        }
+
         // Commit a (possibly edited) parsed list: create/link team + import roster (+ events).
         post("/clubs/{clubId}/nds/import") {
             val clubId = UUID.fromString(call.parameters["clubId"])
@@ -142,7 +177,9 @@ fun Route.ndsRoutes() {
                 nutzergruppe = request.nutzergruppe
             )
 
-            val members = ndsRepository.importRoster(teamId, parsed.members)
+            // Persons first (PERSONENNUMMER), then the Anwesenheitsliste roster merges by name.
+            if (request.persons.isNotEmpty()) ndsRepository.upsertMembers(teamId, request.persons)
+            ndsRepository.importRoster(teamId, parsed.members)
 
             val eventsCreated = if (request.importEvents) {
                 ndsEventImporter.import(teamId, parsed, request.attendanceMode, callerId)
@@ -152,7 +189,7 @@ fun Route.ndsRoutes() {
                 HttpStatusCode.OK,
                 NdsImportResponse(
                     teamId = teamId.toString(),
-                    membersImported = members.size,
+                    membersImported = ndsRepository.listMembers(teamId).size,
                     eventsCreated = eventsCreated
                 )
             )

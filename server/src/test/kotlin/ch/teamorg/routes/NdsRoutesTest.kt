@@ -6,6 +6,7 @@ import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.NdsMember
+import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
 import ch.teamorg.infra.nds.NdsPreflightReport
 import ch.teamorg.nds.NdsTestFixtures
@@ -64,6 +65,21 @@ class NdsRoutesTest : IntegrationTestBase() {
         }
         return out
     }
+
+    private suspend fun ApplicationTestBuilder.parseRoster(
+        token: String,
+        clubId: String,
+        bytes: ByteArray,
+        filename: String
+    ): List<NdsMemberInput> =
+        createJsonClient().post("/clubs/$clubId/nds/parse-roster") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            setBody(MultiPartFormDataContent(formData {
+                append("file", bytes, Headers.build {
+                    append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
+                })
+            }))
+        }.body()
 
     private suspend fun ApplicationTestBuilder.importAll(
         token: String,
@@ -275,4 +291,64 @@ class NdsRoutesTest : IntegrationTestBase() {
         assertEquals(3, movedToReal)
         assertEquals(0, leftOnProvisional)
     }
+
+    @Test
+    fun `person files supply person numbers and merge by name with the Anwesenheitsliste`() =
+        withTeamorgTestApplication {
+            val mgr = register("nds_persons@example.com"); promoteToSuperAdmin(mgr.userId)
+            val clubId = createClub(mgr.token, "PersonsClub")
+
+            // Step 1+2: parse the dedicated person exports (carry PERSONENNUMMER).
+            val players = parseRoster(mgr.token, clubId, NdsTestFixtures.teilnehmendeCsvBytes(), "teilnehmende.csv")
+            val coaches = parseRoster(mgr.token, clubId, NdsTestFixtures.leiterXlsxBytes(), "leiter.xlsx")
+            assertEquals(2, players.size)
+            assertEquals(1, coaches.size)
+
+            // Step 3: Anwesenheitsliste + the persons in one import.
+            val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("persons-1"))
+                .body<ParsedAnwesenheitsliste>()
+            val res = createJsonClient().post("/clubs/$clubId/nds/import") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+                contentType(ContentType.Application.Json)
+                setBody(NdsImportRequest(
+                    createTeamName = "Persons Team",
+                    nutzergruppe = "NG2",
+                    parsed = parsed,
+                    persons = players + coaches,
+                    importEvents = true,
+                    attendanceMode = "keep"
+                ))
+            }.body<NdsImportResponse>()
+            val teamId = UUID.fromString(res.teamId)
+
+            // No duplicate members: 3 total (1 coach + 2 players), each with a person number.
+            val members = createJsonClient().get("/teams/$teamId/nds/members") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            }.body<List<NdsMember>>()
+            assertEquals(3, members.size)
+            assertTrue(members.all { !it.personNumber.isNullOrBlank() }, "all members carry a PERSONENNUMMER")
+            // Player merged: PN from CSV, birthdate from Anwesenheitsliste.
+            val lara = members.single { it.lastName == "Müller" }
+            assertEquals("111111111", lara.personNumber)
+            assertEquals(java.time.LocalDate.of(2008, 5, 20), lara.birthDate)
+
+            // Coach attendance still imported (matched by name despite birthdate difference).
+            val presentCount = transaction {
+                val ids = EventTeamsTable.select(EventTeamsTable.eventId)
+                    .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
+                AttendanceRecordsTable.selectAll().where { AttendanceRecordsTable.eventId inList ids }.count()
+            }
+            assertEquals(6, presentCount)
+
+            // With person numbers present from the start, export only needs locations.
+            transaction {
+                val ids = EventTeamsTable.select(EventTeamsTable.eventId)
+                    .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
+                EventsTable.update({ EventsTable.id inList ids }) { it[location] = "Halle" }
+            }
+            val report = createJsonClient().get("/teams/$teamId/nds/export/preflight") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            }.body<NdsPreflightReport>()
+            assertTrue(report.ok, "no manual person-number entry needed; issues=${report.issues}")
+        }
 }

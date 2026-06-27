@@ -86,16 +86,17 @@ class NdsEventImporter {
                 .where { (EventTeamsTable.teamId eq teamId) and (EventsTable.externalSource eq "nds") }
                 .associate { dateKey(it[EventsTable.startAt]) to it[EventsTable.id] }
 
-            val memberUserByIdentity = NdsMembersTable
-                .select(NdsMembersTable.lastName, NdsMembersTable.firstName, NdsMembersTable.birthDate, NdsMembersTable.userId)
+            // Match by name (birthdate is unreliable across the NDS exports — see upsertOne).
+            val memberUserByName = NdsMembersTable
+                .select(NdsMembersTable.lastName, NdsMembersTable.firstName, NdsMembersTable.userId)
                 .where { NdsMembersTable.teamId eq teamId }
                 .associate {
-                    Triple(it[NdsMembersTable.lastName], it[NdsMembersTable.firstName], it[NdsMembersTable.birthDate]) to
+                    (it[NdsMembersTable.lastName].lowercase() to it[NdsMembersTable.firstName].lowercase()) to
                         it[NdsMembersTable.userId]
                 }
 
             for (m in parsed.members) {
-                val userId = memberUserByIdentity[Triple(m.lastName, m.firstName, m.birthDate)] ?: continue
+                val userId = memberUserByName[m.lastName.lowercase() to m.firstName.lowercase()] ?: continue
                 for (date in m.attendedDates) {
                     val eventId = allNds[date] ?: dateToEvent[date] ?: continue
                     AttendanceRecordsTable.insertIgnore {

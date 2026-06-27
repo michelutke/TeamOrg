@@ -102,4 +102,36 @@ object NdsTestFixtures {
             return out.toByteArray()
         }
     }
+
+    /** Teilnehmende CSV (comma-delimited, PERSONENNUMMER/NAME/VORNAME, no birthdate) for the two players. */
+    fun teilnehmendeCsvBytes(): ByteArray {
+        val header = "PERSONENNUMMER,NAME,VORNAME,GEBURTSDATUM,GESCHLECHT,AHVN_NR,PEID,NATIONALITÄT," +
+            "MUTTERSPRACHE,STRASSE,HAUSNUMMER,PLZ,ORT,LAND"
+        val rows = listOf(
+            "111111111,Müller,Lara,,,,,,,,,,,",
+            "222222222,Meier,Tim,,,,,,,,,,,"
+        )
+        return (listOf(header) + rows).joinToString("\r\n").toByteArray(Charsets.UTF_8)
+    }
+
+    /** Leiterinnen/Leiter xlsx (Personennummer/Name/Vorname/Geburtsdatum/…) for the one coach. */
+    fun leiterXlsxBytes(): ByteArray {
+        XSSFWorkbook().use { wb ->
+            val sheet = wb.createSheet("Leiter")
+            val header = sheet.createRow(0)
+            listOf("Personennummer", "Name", "Vorname", "Geburtsdatum", "PLZ", "Ort (rechtl. Sitz)", "Funktion")
+                .forEachIndexed { i, h -> header.createCell(i).setCellValue(h) }
+            val r = sheet.createRow(1)
+            r.createCell(0).setCellValue("100383194")
+            r.createCell(1).setCellValue("Trainer")
+            r.createCell(2).setCellValue("Anna")
+            r.createCell(3).setCellValue("13.5.2007")
+            r.createCell(4).setCellValue("3604")
+            r.createCell(5).setCellValue("Thun")
+            r.createCell(6).setCellValue("J+S-Leiter/-in")
+            val out = ByteArrayOutputStream()
+            wb.write(out)
+            return out.toByteArray()
+        }
+    }
 }

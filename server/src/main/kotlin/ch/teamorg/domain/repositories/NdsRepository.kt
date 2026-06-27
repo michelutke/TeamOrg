@@ -11,6 +11,7 @@ import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.NdsMember
+import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.ParsedMember
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -49,6 +50,8 @@ interface NdsRepository {
     suspend fun getTeamNds(teamId: UUID): TeamNdsInfo?
     /** Upsert all parsed members for a team, creating a provisional user + team role for new ones. */
     suspend fun importRoster(teamId: UUID, members: List<ParsedMember>): List<NdsMember>
+    /** Upsert members from a dedicated person export (carries PERSONENNUMMER); merges by name. */
+    suspend fun upsertMembers(teamId: UUID, members: List<NdsMemberInput>): List<NdsMember>
     suspend fun listMembers(teamId: UUID): List<NdsMember>
     suspend fun getMember(memberId: UUID): NdsMember?
     suspend fun updateMember(
@@ -106,41 +109,63 @@ class NdsRepositoryImpl : NdsRepository {
             .singleOrNull()
     }
 
-    override suspend fun importRoster(teamId: UUID, members: List<ParsedMember>): List<NdsMember> = transaction {
+    override suspend fun importRoster(teamId: UUID, members: List<ParsedMember>): List<NdsMember> =
+        upsertMembers(
+            teamId,
+            members.map { NdsMemberInput(it.lastName, it.firstName, it.birthDate, null, it.funktion) }
+        )
+
+    override suspend fun upsertMembers(teamId: UUID, members: List<NdsMemberInput>): List<NdsMember> = transaction {
         members.map { m ->
-            val existing = NdsMembersTable.selectAll().where {
-                (NdsMembersTable.teamId eq teamId) and
-                    (NdsMembersTable.lastName eq m.lastName) and
-                    (NdsMembersTable.firstName eq m.firstName) and
-                    (NdsMembersTable.birthDate eqNullable m.birthDate)
-            }.singleOrNull()
-
-            val memberId: UUID
-            if (existing == null) {
-                memberId = UUID.randomUUID()
-                NdsMembersTable.insert {
-                    it[id] = memberId
-                    it[NdsMembersTable.teamId] = teamId
-                    it[lastName] = m.lastName
-                    it[firstName] = m.firstName
-                    it[birthDate] = m.birthDate
-                    it[funktion] = m.funktion
-                    it[sourceKind] = "nds_import"
-                }
-            } else {
-                memberId = existing[NdsMembersTable.id]
-                // Re-import: refresh funktion only; never clobber person_number or user link.
-                NdsMembersTable.update({ NdsMembersTable.id eq memberId }) {
-                    it[funktion] = m.funktion
-                    it[updatedAt] = Instant.now()
-                }
-            }
-
-            // Ensure a backing (provisional) user + team role so the member can hold attendance.
+            val memberId = upsertOne(teamId, m)
             ensureUserAndRole(memberId, teamId, m.funktion, m.firstName, m.lastName)
-
             NdsMembersTable.selectAll().where { NdsMembersTable.id eq memberId }.single().toNdsMember()
         }
+    }
+
+    /**
+     * Match an incoming person to an existing roster row by NAME (birthdate is unreliable across the
+     * three NDS exports — the Teilnehmende CSV omits it). Merge rule: fill birthdate/person_number
+     * only from non-null incoming values, never clobber an existing person_number with null.
+     * Returns the member id.
+     */
+    private fun upsertOne(teamId: UUID, m: NdsMemberInput): UUID {
+        val nameMatches = NdsMembersTable.selectAll().where {
+            (NdsMembersTable.teamId eq teamId) and
+                (NdsMembersTable.lastName eq m.lastName) and
+                (NdsMembersTable.firstName eq m.firstName)
+        }.toList()
+
+        val target = when {
+            m.birthDate != null ->
+                nameMatches.firstOrNull { it[NdsMembersTable.birthDate] == m.birthDate }
+                    ?: nameMatches.firstOrNull { it[NdsMembersTable.birthDate] == null }
+            else -> nameMatches.firstOrNull()
+        }
+
+        if (target == null) {
+            val newId = UUID.randomUUID()
+            NdsMembersTable.insert {
+                it[id] = newId
+                it[NdsMembersTable.teamId] = teamId
+                it[lastName] = m.lastName
+                it[firstName] = m.firstName
+                it[birthDate] = m.birthDate
+                it[personNumber] = m.personNumber
+                it[funktion] = m.funktion
+                it[sourceKind] = "nds_import"
+            }
+            return newId
+        }
+
+        val memberId = target[NdsMembersTable.id]
+        NdsMembersTable.update({ NdsMembersTable.id eq memberId }) {
+            if (m.birthDate != null) it[birthDate] = m.birthDate
+            if (m.personNumber != null) it[personNumber] = m.personNumber
+            it[funktion] = m.funktion
+            it[updatedAt] = Instant.now()
+        }
+        return memberId
     }
 
     /** Inside a transaction: if the member has no user yet, create a provisional one + team role. */
@@ -312,8 +337,3 @@ class NdsRepositoryImpl : NdsRepository {
             .singleOrNull() == true
     }
 }
-
-/** Nullable equality helper: `col eq null` doesn't match SQL NULL; use IS NULL instead. */
-private infix fun <T : Comparable<T>> Column<T?>.eqNullable(value: T?): Op<Boolean> =
-    if (value == null) Op.build { this@eqNullable.isNull() }
-    else Op.build { this@eqNullable eq value }
