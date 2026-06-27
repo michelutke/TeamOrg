@@ -15,6 +15,10 @@ object TeamsTable : Table("teams") {
     val archivedAt = timestamp("archived_at").nullable()
     val gamesSyncEnabled = bool("games_sync_enabled").default(false)
     val predecessorTeamId = uuid("predecessor_team_id").references(id).nullable()
+    val ndsAngebotId = text("nds_angebot_id").nullable()
+    val ndsKursName = text("nds_kurs_name").nullable()
+    val ndsHauptsportart = text("nds_hauptsportart").nullable()
+    val ndsNutzergruppe = text("nds_nutzergruppe").nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
 

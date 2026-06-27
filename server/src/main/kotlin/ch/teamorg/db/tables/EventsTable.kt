@@ -55,6 +55,7 @@ object EventsTable : Table("events") {
     val externalSyncedAt = timestamp("external_synced_at").nullable()
     val externalStatus = text("external_status").nullable()
     val needsReview = bool("needs_review").default(false)
+    val ndsSymbol = text("nds_symbol").nullable()
     val createdBy = uuid("created_by").references(UsersTable.id)
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Plus, Download } from 'lucide-svelte';
 	import SwissVolleyImportDialog from '$lib/components/SwissVolleyImportDialog.svelte';
+	import NdsImportDialog from '$lib/components/NdsImportDialog.svelte';
 	import MigrateTeamDialog from '$lib/components/MigrateTeamDialog.svelte';
 	import type { PageData, ActionData } from './$types';
 
@@ -13,6 +14,7 @@
 
 	let showCreateForm = $state(false);
 	let showSwissVolleyImport = $state(false);
+	let showNdsImport = $state(false);
 	let migrateSource = $state<{ id: string; name: string } | null>(null);
 
 	const activeTeams = $derived(data.teams.filter((t) => !t.deprecated));
@@ -48,6 +50,14 @@
 			{/if}
 			<button
 				type="button"
+				onclick={() => (showNdsImport = true)}
+				class="flex cursor-pointer items-center gap-2 rounded-full border border-outline-variant bg-transparent py-[13px] pl-[22px] pr-6 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
+			>
+				<Download size={16} />
+				NDS-Import
+			</button>
+			<button
+				type="button"
 				onclick={() => (showCreateForm = !showCreateForm)}
 				class="flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary py-[13px] pl-[22px] pr-6 text-[14px] font-bold text-on-primary hover:opacity-90"
 			>
@@ -63,6 +73,10 @@
 			m={data.m.swissvolley}
 			onClose={() => (showSwissVolleyImport = false)}
 		/>
+	{/if}
+
+	{#if showNdsImport}
+		<NdsImportDialog clubId={data.clubId} onClose={() => (showNdsImport = false)} />
 	{/if}
 
 	{#if migrateSource}
