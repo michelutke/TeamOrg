@@ -8,6 +8,50 @@
 
 	let { data }: Props = $props();
 
+	type Att = { confirmed: number; maybe: number; declined: number; mine: string | null };
+	let att = $state<Record<string, Att>>(data.attendance);
+	// Resync when the page data changes (e.g. team filter navigation).
+	$effect(() => {
+		att = data.attendance;
+	});
+
+	function applyOptimistic(c: Att, status: string): Att {
+		const n: Att = { confirmed: c.confirmed, maybe: c.maybe, declined: c.declined, mine: status };
+		const bump = (s: string | null, d: number) => {
+			if (s === 'confirmed') n.confirmed = Math.max(0, n.confirmed + d);
+			else if (s === 'unsure') n.maybe = Math.max(0, n.maybe + d);
+			else if (s === 'declined' || s === 'declined-auto') n.declined = Math.max(0, n.declined + d);
+		};
+		if (c.mine !== status) {
+			bump(c.mine, -1);
+			bump(status, +1);
+		}
+		return n;
+	}
+
+	async function respond(eventId: string, status: string, e: Event) {
+		e.preventDefault();
+		e.stopPropagation();
+		let reason: string | null = null;
+		if (status === 'unsure') {
+			reason = prompt('Kurzer Grund für „Unsicher"');
+			if (reason === null) return; // cancelled
+			if (!reason.trim()) reason = '—';
+		}
+		const prev: Att = att[eventId] ?? { confirmed: 0, maybe: 0, declined: 0, mine: null };
+		att = { ...att, [eventId]: applyOptimistic(prev, status) };
+		try {
+			const res = await fetch('/app/events/rsvp', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ eventId, status, reason })
+			});
+			if (!res.ok) att = { ...att, [eventId]: prev };
+		} catch {
+			att = { ...att, [eventId]: prev };
+		}
+	}
+
 	const typeLabel = (t: string) =>
 		data.m.eventTypes[t as keyof typeof data.m.eventTypes] ?? t;
 
@@ -68,9 +112,10 @@
 {:else}
 	<div class="flex flex-col gap-2">
 		{#each data.events as { event, matchedTeams } (event.id)}
+			<div class="rounded-2xl bg-surface px-4 py-3 transition-shadow hover:shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
 			<a
 				href="/app/events/{event.id}"
-				class="flex items-center gap-4 rounded-2xl bg-surface px-4 py-3 transition-shadow hover:shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]"
+				class="flex items-center gap-4"
 			>
 				<div
 					class="flex size-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-primary-container text-on-primary-container"
@@ -112,6 +157,42 @@
 					<CalendarDays size={16} class="text-on-surface-variant" />
 				{/if}
 			</a>
+			{#if event.status !== 'cancelled'}
+				{@const a = att[event.id] ?? { confirmed: 0, maybe: 0, declined: 0, mine: null }}
+				<div class="mt-3 flex gap-2">
+					<button
+						type="button"
+						onclick={(e) => respond(event.id, 'confirmed', e)}
+						class="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors hover:opacity-80 {a.mine ===
+						'confirmed'
+							? 'bg-emerald-600 text-white'
+							: 'bg-surface-container-high text-on-surface-variant'}"
+					>
+						✓ {a.confirmed}
+					</button>
+					<button
+						type="button"
+						onclick={(e) => respond(event.id, 'declined', e)}
+						class="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors hover:opacity-80 {a.mine ===
+							'declined' || a.mine === 'declined-auto'
+							? 'bg-red-100 text-red-700'
+							: 'bg-surface-container-high text-on-surface-variant'}"
+					>
+						✗ {a.declined}
+					</button>
+					<button
+						type="button"
+						onclick={(e) => respond(event.id, 'unsure', e)}
+						class="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors hover:opacity-80 {a.mine ===
+						'unsure'
+							? 'bg-amber-100 text-amber-800'
+							: 'bg-surface-container-high text-on-surface-variant'}"
+					>
+						? {a.maybe}
+					</button>
+				</div>
+			{/if}
+			</div>
 		{/each}
 	</div>
 {/if}
