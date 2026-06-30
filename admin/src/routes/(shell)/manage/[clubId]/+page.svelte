@@ -174,4 +174,16 @@
 			View Teams ›
 		</a>
 	</div>
+
+	<!-- Quick link to members -->
+	<div class="rounded-3xl bg-surface-container-low p-6">
+		<h2 class="mb-3 font-display text-[20px] font-bold text-on-surface">Mitglieder</h2>
+		<p class="mb-4 text-[14px] text-on-surface-variant">Alle Club-Mitglieder anzeigen, zu Teams hinzufügen oder entfernen.</p>
+		<a
+			href="/manage/{data.clubId}/members"
+			class="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary no-underline hover:opacity-90"
+		>
+			Mitglieder verwalten ›
+		</a>
+	</div>
 </div>

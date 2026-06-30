@@ -8,6 +8,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
+import ch.teamorg.ui.club.ClubMembersScreen
+import ch.teamorg.ui.club.ClubMembersViewModel
 import ch.teamorg.ui.club.ClubSetupScreen
 import ch.teamorg.ui.club.ClubSetupViewModel
 import ch.teamorg.ui.emptystate.EmptyStateScreen
@@ -215,7 +217,8 @@ fun AppNavigation(
                 LaunchedEffect(backStack.size) { viewModel.loadTeams() }
                 TeamsListScreen(
                     viewModel = viewModel,
-                    onTeamClick = { teamId -> backStack.add(Screen.TeamRoster(teamId)) }
+                    onTeamClick = { teamId -> backStack.add(Screen.TeamRoster(teamId)) },
+                    onMembersClick = { clubId -> backStack.add(Screen.ClubMembers(clubId)) }
                 )
             }
             Screen.Inbox -> {
@@ -271,6 +274,14 @@ fun AppNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeAt(backStack.lastIndex) },
                     onLeftTeam = { backStack.removeAt(backStack.lastIndex) }
+                )
+            }
+            is Screen.ClubMembers -> {
+                val viewModel: ClubMembersViewModel = viewModel { KoinPlatform.getKoin().get() }
+                ClubMembersScreen(
+                    clubId = screen.clubId,
+                    viewModel = viewModel,
+                    onBack = { backStack.removeAt(backStack.lastIndex) }
                 )
             }
         }

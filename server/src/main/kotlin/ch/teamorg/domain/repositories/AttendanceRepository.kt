@@ -95,4 +95,9 @@ interface AttendanceRepository {
      * intact so auto-decline state is not clobbered. Returns the number of rows reset.
      */
     suspend fun resetResponsesForEvent(eventId: UUID): Int
+    /**
+     * Returns a map from event id to the count of [ch.teamorg.db.tables.RecordStatus.present]
+     * records for each event in [eventIds]. Events with no present rows are absent from the map.
+     */
+    suspend fun presentCounts(eventIds: List<UUID>): Map<UUID, Int>
 }

@@ -24,7 +24,8 @@ import ch.teamorg.ui.theme.PillShape
 @Composable
 fun TeamsListScreen(
     viewModel: TeamsListViewModel,
-    onTeamClick: (teamId: String) -> Unit
+    onTeamClick: (teamId: String) -> Unit,
+    onMembersClick: ((clubId: String) -> Unit)? = null
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -78,6 +79,12 @@ fun TeamsListScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 if (state.isClubManager) {
+                                    val clubId = state.clubId
+                                    if (clubId != null && onMembersClick != null) {
+                                        TextButton(onClick = { onMembersClick(clubId) }) {
+                                            Text("Members")
+                                        }
+                                    }
                                     IconButton(onClick = { viewModel.showEditClubSheet() }) {
                                         Icon(
                                             Icons.Default.Edit,

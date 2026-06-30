@@ -1,6 +1,7 @@
 package ch.teamorg.fake
 
 import ch.teamorg.domain.Club
+import ch.teamorg.domain.ClubUser
 import ch.teamorg.domain.Team
 import ch.teamorg.repository.ClubRepository
 
@@ -33,6 +34,7 @@ class FakeClubRepository : ClubRepository {
         lastCreatedLocation = null
         lastUploadedClubId = null
         lastUploadedExtension = null
+        listClubUsersCallCount = 0
     }
 
     override suspend fun createClub(name: String, sportType: String, location: String?): Result<Club> {
@@ -70,4 +72,12 @@ class FakeClubRepository : ClubRepository {
     override suspend fun updateTeam(teamId: String, name: String?, description: String?): Result<Team> = updateTeamResult
 
     override suspend fun updateClub(clubId: String, name: String?, location: String?): Result<Club> = updateClubResult
+
+    var listClubUsersResult: Result<List<ClubUser>> = Result.success(emptyList())
+    var listClubUsersCallCount: Int = 0
+
+    override suspend fun listClubUsers(clubId: String, limit: Int, offset: Int): Result<List<ClubUser>> {
+        listClubUsersCallCount++
+        return listClubUsersResult
+    }
 }

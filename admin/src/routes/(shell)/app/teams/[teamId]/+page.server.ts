@@ -24,6 +24,13 @@ interface NdsMember {
 	claimed: boolean;
 }
 
+interface ClubUser {
+	userId: string;
+	displayName: string;
+	email: string;
+	teamRoles: Record<string, string>;
+}
+
 interface NdsPreflightIssue {
 	severity: string;
 	code: string;
@@ -50,6 +57,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		// NDS roster + export pre-flight (only relevant to managers; tolerate absence).
 		let ndsMembers: NdsMember[] = [];
 		let ndsPreflight: NdsPreflightReport | null = null;
+		let clubUsers: ClubUser[] = [];
 		if (canManage) {
 			try {
 				ndsMembers = await apiGet<NdsMember[]>(`/teams/${teamId}/nds/members`, token);
@@ -62,9 +70,14 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			} catch {
 				ndsMembers = [];
 			}
+			try {
+				clubUsers = await apiGet<ClubUser[]>(`/clubs/${team.clubId}/users`, token);
+			} catch {
+				clubUsers = [];
+			}
 		}
 
-		return { team, members, canManage, ndsMembers, ndsPreflight };
+		return { team, members, canManage, ndsMembers, ndsPreflight, clubUsers };
 	} catch (e) {
 		if (e instanceof ApiError) throw error(e.status === 403 ? 403 : e.status, 'Kein Zugriff');
 		throw e;
@@ -100,6 +113,21 @@ export const actions: Actions = {
 				{ email }
 			);
 			return { ndsInvite: res };
+		} catch {
+			return fail(500, { ndsError: 'failed' });
+		}
+	},
+
+	linkNdsMember: async ({ request, params, locals }) => {
+		const data = await request.formData();
+		const memberId = data.get('memberId') as string;
+		const userId = data.get('userId') as string;
+		if (!memberId || !userId) return fail(400, { ndsError: 'invalid' });
+		try {
+			await apiPost(`/teams/${params.teamId}/nds/members/${memberId}/link`, locals.token!, {
+				userId
+			});
+			return { ndsLinked: true };
 		} catch {
 			return fail(500, { ndsError: 'failed' });
 		}

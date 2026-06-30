@@ -408,22 +408,36 @@ private fun HeroCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Type chip
-        Box(
-            modifier = Modifier
-                .clip(PillShape)
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(horizontal = 14.dp, vertical = 5.dp)
-        ) {
-            Text(
-                when (event.type) {
-                    "training" -> "Training"
-                    "match" -> "Match"
-                    else -> "Other"
-                },
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
+        // Type chip row
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .clip(PillShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .padding(horizontal = 14.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    when (event.type) {
+                        "training" -> "Training"
+                        "match" -> "Match"
+                        else -> "Other"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+            if (event.externalSource == "nds" && event.presentCount > 0) {
+                val ext = MaterialTheme.extendedColors
+                Text(
+                    text = "${event.presentCount} anwesend",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ext.going,
+                    modifier = Modifier
+                        .clip(PillShape)
+                        .background(ext.goingContainer)
+                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                )
+            }
         }
 
         Text(

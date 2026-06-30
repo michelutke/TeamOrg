@@ -10,6 +10,7 @@ import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.infra.nds.AnwesenheitslisteParser
 import ch.teamorg.infra.nds.NdsEventImporter
+import ch.teamorg.infra.nds.NdsImportCounts
 import ch.teamorg.infra.nds.NdsExportService
 import ch.teamorg.infra.nds.NdsParseException
 import ch.teamorg.infra.nds.RosterFileParser
@@ -48,7 +49,8 @@ data class NdsImportRequest(
 data class NdsImportResponse(
     val teamId: String,
     val membersImported: Int,
-    val eventsCreated: Int
+    val eventsCreated: Int,
+    val attendanceImported: Int = 0
 )
 
 @Serializable
@@ -61,6 +63,9 @@ data class NdsMemberUpdateRequest(
 
 @Serializable
 data class NdsMemberInviteRequest(val email: String? = null)
+
+@Serializable
+data class NdsMemberLinkRequest(val userId: String)
 
 fun Route.ndsRoutes() {
     val clubRepository by inject<ClubRepository>()
@@ -181,16 +186,17 @@ fun Route.ndsRoutes() {
             if (request.persons.isNotEmpty()) ndsRepository.upsertMembers(teamId, request.persons)
             ndsRepository.importRoster(teamId, parsed.members)
 
-            val eventsCreated = if (request.importEvents) {
+            val counts = if (request.importEvents)
                 ndsEventImporter.import(teamId, parsed, request.attendanceMode, callerId)
-            } else 0
+            else NdsImportCounts(0, 0)
 
             call.respond(
                 HttpStatusCode.OK,
                 NdsImportResponse(
                     teamId = teamId.toString(),
                     membersImported = ndsRepository.listMembers(teamId).size,
-                    eventsCreated = eventsCreated
+                    eventsCreated = counts.eventsCreated,
+                    attendanceImported = counts.attendanceImported
                 )
             )
         }
@@ -298,6 +304,26 @@ fun Route.ndsRoutes() {
                 HttpStatusCode.Created,
                 InviteResponse(invite.token, inviteUrlFor(invite.token), invite.expiresAt)
             )
+        }
+
+        // Link an existing account directly to an imported roster member (no invite flow needed).
+        post("/teams/{teamId}/nds/members/{id}/link") {
+            val teamId = UUID.fromString(call.parameters["teamId"])
+            val memberId = UUID.fromString(call.parameters["id"])
+            if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
+            val member = ndsRepository.getMember(memberId)
+            if (member == null || member.teamId != teamId)
+                return@post call.respond(HttpStatusCode.NotFound, "Mitglied nicht gefunden")
+            val userId = runCatching { UUID.fromString(call.receive<NdsMemberLinkRequest>().userId) }.getOrNull()
+                ?: return@post call.respond(HttpStatusCode.BadRequest, "Ungültige userId")
+            if (userRepository.findById(userId) == null)
+                return@post call.respond(HttpStatusCode.NotFound, "Konto nicht gefunden")
+            val role = if (member.funktion == "Leiter/in") "coach" else "player"
+            teamRepository.addMember(teamId, userId, role)
+            ndsRepository.claimMember(memberId, userId)
+            val updated = ndsRepository.getMember(memberId)
+                ?: return@post call.respond(HttpStatusCode.NotFound, "Mitglied nicht gefunden")
+            call.respond(HttpStatusCode.OK, updated)
         }
 
         // Validation report before an export (lists blocking errors + warnings).

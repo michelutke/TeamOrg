@@ -27,6 +27,7 @@
 		teamId: string;
 		membersImported: number;
 		eventsCreated: number;
+		attendanceImported: number;
 	}
 	interface PersonInput {
 		lastName: string;
@@ -57,6 +58,7 @@
 	let importEvents = $state(true);
 	let attendanceMode = $state<'keep' | 'discard'>('keep');
 	let result = $state<ImportResult | null>(null);
+	let showNgHelp = $state(false);
 
 	const leaders = $derived(parsed?.members.filter((m) => m.funktion === 'Leiter/in') ?? []);
 	const players = $derived(parsed?.members.filter((m) => m.funktion !== 'Leiter/in') ?? []);
@@ -229,6 +231,12 @@
 					</label>
 					<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
 						Nutzergruppe (für Dauer-Prüfung beim Export)
+						<button type="button" onclick={() => (showNgHelp = !showNgHelp)} class="text-[12px] text-primary underline">Was ist das?</button>
+						{#if showNgHelp}
+							<p class="text-[12px] text-on-surface-variant">
+								Die J+S-Nutzergruppe deines Angebots bestimmt die erlaubten Trainingsdauern. Beim NDS-Export wird die Dauer dagegen geprüft und bei Bedarf auf den nächsten erlaubten Wert gerundet. Im Zweifel die in der NDS registrierte Nutzergruppe wählen.
+							</p>
+						{/if}
 						<select
 							bind:value={nutzergruppe}
 							class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
@@ -253,8 +261,9 @@
 									(attendanceMode = (e.currentTarget as HTMLInputElement).checked ? 'keep' : 'discard')}
 								class="h-4 w-4 accent-primary"
 							/>
-							Bereits erfasste Anwesenheiten übernehmen
+							Im NDS-Sheet mit «J» markierte Anwesenheiten als dokumentierte Präsenz importieren
 						</label>
+						<p class="text-[12px] text-on-surface-variant">Erscheint danach in der Anwesenheitskontrolle und als «anwesend»-Hinweis am Termin.</p>
 					{/if}
 				</div>
 			</div>
@@ -309,6 +318,7 @@
 				<ul class="mt-2 list-disc pl-5 text-on-surface-variant">
 					<li>{result.membersImported} Mitglieder</li>
 					<li>{result.eventsCreated} Termine</li>
+					<li>{result.attendanceImported} Anwesenheiten übernommen</li>
 				</ul>
 			</div>
 			<div class="mt-5 flex justify-end">

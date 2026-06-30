@@ -58,4 +58,7 @@ sealed class Screen(val route: String) {
 
     @Serializable
     data object NotificationSettings : Screen("notification_settings")
+
+    @Serializable
+    data class ClubMembers(val clubId: String) : Screen("club_members/{clubId}")
 }

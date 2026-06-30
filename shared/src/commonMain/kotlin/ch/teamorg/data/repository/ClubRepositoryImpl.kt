@@ -1,6 +1,7 @@
 package ch.teamorg.data.repository
 
 import ch.teamorg.domain.Club
+import ch.teamorg.domain.ClubUser
 import ch.teamorg.domain.Team
 import ch.teamorg.repository.ClubRepository
 import io.ktor.client.HttpClient
@@ -11,9 +12,11 @@ import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -142,6 +145,19 @@ class ClubRepositoryImpl(private val client: HttpClient) : ClubRepository {
                 Result.success(response.body())
             } else {
                 Result.failure(Exception("Failed to update team: ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun listClubUsers(clubId: String, limit: Int, offset: Int): Result<List<ClubUser>> {
+        return try {
+            val response = client.get("/clubs/$clubId/users?limit=$limit&offset=$offset")
+            if (response.status == HttpStatusCode.OK) {
+                Result.success(response.body())
+            } else {
+                Result.failure(Exception("listClubUsers: ${response.status}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

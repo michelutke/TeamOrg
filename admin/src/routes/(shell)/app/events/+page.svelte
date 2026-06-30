@@ -1,6 +1,15 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { CalendarDays, MapPin, Plus } from 'lucide-svelte';
 	import type { PageData } from './$types';
+
+	export const snapshot = {
+		capture: () => window.scrollY,
+		restore: async (y: number) => {
+			await tick();
+			requestAnimationFrame(() => window.scrollTo(0, y));
+		}
+	};
 
 	interface Props {
 		data: PageData;
@@ -141,6 +150,11 @@
 								class="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant"
 							>
 								{data.m.swissvolley.sourceLabel}
+							</span>
+						{/if}
+						{#if event.externalSource === 'nds' && event.presentCount > 0}
+							<span class="rounded-full bg-success-container px-2 py-0.5 text-[10px] font-semibold text-success">
+								{event.presentCount} anwesend
 							</span>
 						{/if}
 					</div>

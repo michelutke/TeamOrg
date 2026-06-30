@@ -99,8 +99,9 @@ class EventRepositoryImpl : EventRepository {
             .where { EventTeamsTable.eventId eq id }
             .map { MatchedTeam(id = it[TeamsTable.id], name = it[TeamsTable.name]) }
 
+        val n = presentCountFor(listOf(id))[id] ?: 0
         EventWithTeams(
-            event = event.copy(teamIds = teamIds, subgroupIds = subgroupIds),
+            event = event.copy(teamIds = teamIds, subgroupIds = subgroupIds, presentCount = n),
             matchedTeams = matchedTeams
         )
     }
@@ -168,6 +169,7 @@ class EventRepositoryImpl : EventRepository {
         }
 
         // Build EventWithTeams for each unique event
+        val counts = presentCountFor(filteredEventIds)
         filteredEventIds.mapNotNull { eid ->
             val event = eventRows.firstOrNull { it.id == eid } ?: return@mapNotNull null
             val teamIds = EventTeamsTable.select(EventTeamsTable.teamId)
@@ -184,7 +186,7 @@ class EventRepositoryImpl : EventRepository {
                 }
                 .map { MatchedTeam(id = it[TeamsTable.id], name = it[TeamsTable.name]) }
             EventWithTeams(
-                event = event.copy(teamIds = teamIds, subgroupIds = subgroupIds),
+                event = event.copy(teamIds = teamIds, subgroupIds = subgroupIds, presentCount = counts[eid] ?: 0),
                 matchedTeams = matchedTeams
             )
         }
@@ -729,6 +731,17 @@ class EventRepositoryImpl : EventRepository {
             .where { EventSubgroupsTable.eventId eq id }
             .map { it[EventSubgroupsTable.subgroupId] }
         return event.copy(teamIds = teamIds, subgroupIds = subgroupIds)
+    }
+
+    /** Counts `present` attendance records grouped by event. Events with zero are absent from the map. */
+    private fun presentCountFor(eventIds: List<UUID>): Map<UUID, Int> {
+        if (eventIds.isEmpty()) return emptyMap()
+        val cnt = AttendanceRecordsTable.eventId.count()
+        return AttendanceRecordsTable
+            .select(AttendanceRecordsTable.eventId, cnt)
+            .where { (AttendanceRecordsTable.eventId inList eventIds) and (AttendanceRecordsTable.status eq RecordStatus.present) }
+            .groupBy(AttendanceRecordsTable.eventId)
+            .associate { it[AttendanceRecordsTable.eventId] to it[cnt].toInt() }
     }
 
     private fun rowToEvent(row: ResultRow) = Event(
