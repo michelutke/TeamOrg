@@ -318,6 +318,8 @@ fun Route.ndsRoutes() {
                 ?: return@post call.respond(HttpStatusCode.BadRequest, "Ungültige userId")
             if (userRepository.findById(userId) == null)
                 return@post call.respond(HttpStatusCode.NotFound, "Konto nicht gefunden")
+            val role = if (member.funktion == "Leiter/in") "coach" else "player"
+            teamRepository.addMember(teamId, userId, role)
             ndsRepository.claimMember(memberId, userId)
             val updated = ndsRepository.getMember(memberId)
                 ?: return@post call.respond(HttpStatusCode.NotFound, "Mitglied nicht gefunden")

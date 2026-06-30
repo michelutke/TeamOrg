@@ -346,6 +346,14 @@ class NdsRoutesTest : IntegrationTestBase() {
         }
         assertEquals(3, movedToReal)
         assertEquals(0, leftOnProvisional)
+
+        // Linked real user holds the team role after linking.
+        val role = transaction {
+            ch.teamorg.db.tables.TeamRolesTable.selectAll()
+                .where { (ch.teamorg.db.tables.TeamRolesTable.userId eq UUID.fromString(realUser.userId)) and (ch.teamorg.db.tables.TeamRolesTable.teamId eq teamId) }
+                .map { it[ch.teamorg.db.tables.TeamRolesTable.role] }.singleOrNull()
+        }
+        assertEquals("player", role)
     }
 
     @Test
