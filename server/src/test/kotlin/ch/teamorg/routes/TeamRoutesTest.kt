@@ -414,7 +414,7 @@ class TeamRoutesTest : IntegrationTestBase() {
 
         val mgr = client.post("/auth/register") {
             contentType(ContentType.Application.Json)
-            setBody(RegisterRequest("cm2@example.com", "password123", "Manager"))
+            setBody(RegisterRequest("teamadd_mgr@example.com", "password123", "Manager"))
         }.body<AuthResponse>()
         promoteToSuperAdmin(mgr.userId)
 
