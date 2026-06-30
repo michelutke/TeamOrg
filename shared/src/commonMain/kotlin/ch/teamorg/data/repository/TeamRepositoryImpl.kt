@@ -43,9 +43,6 @@ private data class AddSubGroupMemberRequest(val userId: String)
 private data class AddMemberRequest(val userId: String, val role: String)
 
 @Serializable
-private data class UpdateRoleBodyRequest(val role: String)
-
-@Serializable
 private data class LinkNdsMemberRequest(val userId: String)
 
 class TeamRepositoryImpl(private val client: HttpClient) : TeamRepository {
@@ -256,15 +253,6 @@ class TeamRepositoryImpl(private val client: HttpClient) : TeamRepository {
         }
         if (r.status == HttpStatusCode.OK || r.status == HttpStatusCode.Created) Result.success(Unit)
         else Result.failure(Exception("addMember: ${r.status}"))
-    } catch (e: Exception) { Result.failure(e) }
-
-    override suspend fun updateRole(teamId: String, userId: String, role: String): Result<Unit> = try {
-        val r = client.patch("/teams/$teamId/members/$userId/role") {
-            contentType(ContentType.Application.Json)
-            setBody(UpdateRoleBodyRequest(role))
-        }
-        if (r.status == HttpStatusCode.OK) Result.success(Unit)
-        else Result.failure(Exception("updateRole: ${r.status}"))
     } catch (e: Exception) { Result.failure(e) }
 
     override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): Result<Unit> = try {
