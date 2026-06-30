@@ -5,9 +5,12 @@ import ch.teamorg.db.tables.ClubsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamSvLinksTable
 import ch.teamorg.db.tables.TeamsTable
+import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.Club
+import ch.teamorg.domain.models.ClubUser
 import ch.teamorg.domain.models.Team
 import ch.teamorg.domain.models.TeamAppearance
+import ch.teamorg.domain.models.TeamRoleRef
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
@@ -80,6 +83,31 @@ class ClubRepositoryImpl : ClubRepository {
                 rowToTeam(row, memberCounts[teamId] ?: 0, deprecated)
             }
             .filter { it.archivedAt == null }
+    }
+
+    override suspend fun listUsers(clubId: UUID, limit: Int, offset: Int): List<ClubUser> = transaction {
+        val rows = (TeamsTable innerJoin TeamRolesTable innerJoin UsersTable)
+            .select(
+                UsersTable.id, UsersTable.displayName, UsersTable.email, UsersTable.avatarUrl,
+                TeamsTable.id, TeamsTable.name, TeamRolesTable.role
+            )
+            .where { (TeamsTable.clubId eq clubId) and (UsersTable.provisional eq false) }
+            .toList()
+        rows.groupBy { it[UsersTable.id] }
+            .map { (uid, rs) ->
+                val first = rs.first()
+                ClubUser(
+                    userId = uid.toString(),
+                    displayName = first[UsersTable.displayName],
+                    email = first[UsersTable.email],
+                    avatarUrl = first[UsersTable.avatarUrl],
+                    teamRoles = rs.map {
+                        TeamRoleRef(it[TeamsTable.id].toString(), it[TeamsTable.name], it[TeamRolesTable.role])
+                    }
+                )
+            }
+            .sortedBy { it.displayName.lowercase() }
+            .drop(offset).take(limit)
     }
 
     override suspend fun hasRole(userId: UUID, clubId: UUID, role: String): Boolean = transaction {

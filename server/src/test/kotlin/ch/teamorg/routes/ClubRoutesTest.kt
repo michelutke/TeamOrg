@@ -1,6 +1,8 @@
 package ch.teamorg.routes
 
+import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.domain.models.Club
+import ch.teamorg.domain.models.ClubUser
 import ch.teamorg.domain.models.Team
 import ch.teamorg.test.IntegrationTestBase
 import io.ktor.client.call.*
@@ -9,9 +11,13 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ClubRoutesTest : IntegrationTestBase() {
 
@@ -248,6 +254,91 @@ class ClubRoutesTest : IntegrationTestBase() {
             header(HttpHeaders.Authorization, "Bearer ${otherAuth.token}")
             contentType(ContentType.Application.Json)
             setBody(CreateTeamRequest("Unauthorized Team"))
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `club users lists members with their team roles sorted`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val mgr = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("cm2@example.com", "password123", "Club Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(mgr.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Roles Club", "volleyball", "Zurich"))
+        }.body<Club>().id
+
+        val teamAId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Team A"))
+        }.body<Team>().id
+
+        // Seed two users in reverse alphabetical order to validate the sort is meaningful
+        val zarah = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("zarah@example.com", "password123", "Zarah Zünd"))
+        }.body<AuthResponse>()
+
+        val aaron = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("aaron@example.com", "password123", "Aaron Abt"))
+        }.body<AuthResponse>()
+
+        transaction {
+            TeamRolesTable.insert {
+                it[TeamRolesTable.userId] = UUID.fromString(zarah.userId)
+                it[TeamRolesTable.teamId] = UUID.fromString(teamAId)
+                it[TeamRolesTable.role] = "player"
+            }
+            TeamRolesTable.insert {
+                it[TeamRolesTable.userId] = UUID.fromString(aaron.userId)
+                it[TeamRolesTable.teamId] = UUID.fromString(teamAId)
+                it[TeamRolesTable.role] = "coach"
+            }
+        }
+
+        val users = client.get("/clubs/$clubId/users?limit=50&offset=0") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<ClubUser>>()
+
+        assertTrue(users.isNotEmpty())
+        assertTrue(users.all { it.teamRoles.isNotEmpty() })
+        assertTrue(users.none { it.email.endsWith("@import.teamorg.local") })
+        // Aaron inserted second but must appear first — verifies sort is real
+        assertEquals(listOf("Aaron Abt", "Zarah Zünd"), users.map { it.displayName })
+    }
+
+    @Test
+    fun `club users as non-manager returns 403`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val managerAuth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("mgr403users@example.com", "password123", "Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(managerAuth.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Protected Club Users"))
+        }.body<Club>().id
+
+        val otherAuth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("nonmgr403users@example.com", "password123", "Non Manager"))
+        }.body<AuthResponse>()
+
+        val response = client.get("/clubs/$clubId/users?limit=50&offset=0") {
+            header(HttpHeaders.Authorization, "Bearer ${otherAuth.token}")
         }
 
         assertEquals(HttpStatusCode.Forbidden, response.status)

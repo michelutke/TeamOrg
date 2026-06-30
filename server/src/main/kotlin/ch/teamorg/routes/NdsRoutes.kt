@@ -64,6 +64,9 @@ data class NdsMemberUpdateRequest(
 @Serializable
 data class NdsMemberInviteRequest(val email: String? = null)
 
+@Serializable
+data class NdsMemberLinkRequest(val userId: String)
+
 fun Route.ndsRoutes() {
     val clubRepository by inject<ClubRepository>()
     val teamRepository by inject<TeamRepository>()
@@ -301,6 +304,24 @@ fun Route.ndsRoutes() {
                 HttpStatusCode.Created,
                 InviteResponse(invite.token, inviteUrlFor(invite.token), invite.expiresAt)
             )
+        }
+
+        // Link an existing account directly to an imported roster member (no invite flow needed).
+        post("/teams/{teamId}/nds/members/{id}/link") {
+            val teamId = UUID.fromString(call.parameters["teamId"])
+            val memberId = UUID.fromString(call.parameters["id"])
+            if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
+            val member = ndsRepository.getMember(memberId)
+            if (member == null || member.teamId != teamId)
+                return@post call.respond(HttpStatusCode.NotFound, "Mitglied nicht gefunden")
+            val userId = runCatching { UUID.fromString(call.receive<NdsMemberLinkRequest>().userId) }.getOrNull()
+                ?: return@post call.respond(HttpStatusCode.BadRequest, "Ungültige userId")
+            if (userRepository.findById(userId) == null)
+                return@post call.respond(HttpStatusCode.NotFound, "Konto nicht gefunden")
+            ndsRepository.claimMember(memberId, userId)
+            val updated = ndsRepository.getMember(memberId)
+                ?: return@post call.respond(HttpStatusCode.NotFound, "Mitglied nicht gefunden")
+            call.respond(HttpStatusCode.OK, updated)
         }
 
         // Validation report before an export (lists blocking errors + warnings).

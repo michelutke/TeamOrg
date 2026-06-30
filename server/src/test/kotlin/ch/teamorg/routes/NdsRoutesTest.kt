@@ -318,6 +318,71 @@ class NdsRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `club manager links an existing account to an imported player`() = withTeamorgTestApplication {
+        val mgr = register("cm3@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "Link")
+        val res = importAll(mgr.token, clubId)          // existing helper → team + roster + attendance
+        val teamId = UUID.fromString(res.teamId)
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+        val realUser = register("lara.real@example.com")
+        val linked = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = realUser.userId))
+        }
+        assertEquals(HttpStatusCode.OK, linked.status)
+        val updated = linked.body<NdsMember>()
+        assertEquals(realUser.userId, updated.userId.toString())
+        assertTrue(updated.claimed)
+        val provisionalUserId = lara.userId!!
+        val (movedToReal, leftOnProvisional) = transaction {
+            val real = AttendanceRecordsTable.selectAll()
+                .where { AttendanceRecordsTable.userId eq UUID.fromString(realUser.userId) }.count()
+            val prov = AttendanceRecordsTable.selectAll()
+                .where { AttendanceRecordsTable.userId eq provisionalUserId }.count()
+            real to prov
+        }
+        assertEquals(3, movedToReal)
+        assertEquals(0, leftOnProvisional)
+    }
+
+    @Test
+    fun `link with malformed userId returns 400`() = withTeamorgTestApplication {
+        val mgr = register("cm3_bad@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "LinkBad")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+        val resp = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = "not-a-uuid"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, resp.status)
+    }
+
+    @Test
+    fun `link with non-existent userId returns 404`() = withTeamorgTestApplication {
+        val mgr = register("cm3_ghost@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "LinkGhost")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+        val resp = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = UUID.randomUUID().toString()))
+        }
+        assertEquals(HttpStatusCode.NotFound, resp.status)
+    }
+
+    @Test
     fun `person files supply person numbers and merge by name with the Anwesenheitsliste`() =
         withTeamorgTestApplication {
             val mgr = register("nds_persons@example.com"); promoteToSuperAdmin(mgr.userId)

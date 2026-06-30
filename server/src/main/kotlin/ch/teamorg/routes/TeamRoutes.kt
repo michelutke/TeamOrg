@@ -36,6 +36,9 @@ private val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
 data class UpdateRoleRequest(val role: String)
 
 @Serializable
+data class AddMemberRequest(val userId: String, val role: String)
+
+@Serializable
 data class UpdateProfileRequest(val jerseyNumber: Int? = null, val position: String? = null)
 
 @Serializable
@@ -128,6 +131,19 @@ fun Route.teamRoutes() {
                     if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
                     val members = teamRepository.listMembers(teamId)
                     call.respond(members)
+                }
+
+                post("/members") {
+                    val teamId = UUID.fromString(call.parameters["teamId"])
+                    if (!call.requireTeamRole(teamId, "club_manager", teamRepository = teamRepository)) return@post
+                    val body = call.receive<AddMemberRequest>()
+                    if (body.role !in listOf("player", "coach"))
+                        return@post call.respond(HttpStatusCode.BadRequest, "Invalid role")
+                    val userId = runCatching { UUID.fromString(body.userId) }.getOrNull()
+                        ?: return@post call.respond(HttpStatusCode.BadRequest, "Invalid userId")
+                    if (userRepository.findById(userId) == null)
+                        return@post call.respond(HttpStatusCode.NotFound, "User not found")
+                    call.respond(teamRepository.addMember(teamId, userId, body.role))
                 }
 
                 patch("/members/{userId}/role") {

@@ -1,6 +1,7 @@
 package ch.teamorg.repository
 
 import ch.teamorg.domain.Club
+import ch.teamorg.domain.ClubUser
 import ch.teamorg.domain.Team
 
 interface ClubRepository {
@@ -11,4 +12,5 @@ interface ClubRepository {
     suspend fun createTeam(clubId: String, name: String, description: String?): Result<Team>
     suspend fun updateTeam(teamId: String, name: String?, description: String?): Result<Team>
     suspend fun updateClub(clubId: String, name: String?, location: String?): Result<Club>
+    suspend fun listClubUsers(clubId: String, limit: Int, offset: Int): Result<List<ClubUser>>
 }
