@@ -112,4 +112,56 @@ class EventPresentCountTest : IntegrationTestBase() {
 
         assertEquals(0, result.event.presentCount)
     }
+
+    @Test
+    fun `users me events list carries presentCount`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val managerAuth = registerAndLogin("epc_list_mgr@example.com", displayName = "Manager EPC List")
+        promoteToSuperAdmin(managerAuth.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("EPC List Club"))
+        }.body<ch.teamorg.domain.models.Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("EPC List Team"))
+        }.body<ch.teamorg.domain.models.Team>().id
+
+        val event = client.post("/events") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateEventPayloadEPC(
+                title = "EPC List Event",
+                type = "training",
+                startAt = "2026-11-01T10:00:00Z",
+                endAt = "2026-11-01T12:00:00Z",
+                teamIds = listOf(teamId)
+            ))
+        }.body<Event>()
+
+        val managerId = UUID.fromString(managerAuth.userId)
+        val now = Instant.now()
+
+        transaction {
+            AttendanceRecordsTable.insert { row ->
+                row[AttendanceRecordsTable.eventId] = event.id
+                row[AttendanceRecordsTable.userId] = managerId
+                row[AttendanceRecordsTable.status] = RecordStatus.present
+                row[AttendanceRecordsTable.setBy] = managerId
+                row[AttendanceRecordsTable.setAt] = now
+            }
+        }
+
+        val events = client.get("/users/me/events") {
+            header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")
+        }.body<List<EventWithTeams>>()
+
+        val target = events.first { it.event.id == event.id }
+        assertEquals(1, target.event.presentCount)
+    }
 }
