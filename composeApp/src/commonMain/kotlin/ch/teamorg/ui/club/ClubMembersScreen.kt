@@ -3,6 +3,7 @@ package ch.teamorg.ui.club
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -366,12 +367,12 @@ private fun MemberActionSheet(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // Team selector
-                Row(
+                // Team selector — scrollable so all teams are reachable
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    teams.take(4).forEach { team ->
+                    items(teams) { team ->
                         FilterChip(
                             selected = selectedTeamId == team.id,
                             onClick = { selectedTeamId = team.id },
@@ -525,8 +526,9 @@ private fun InviteByEmailSheet(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    teams.take(4).forEach { team ->
+                // Scrollable so all teams are reachable regardless of count
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(teams) { team ->
                         FilterChip(
                             selected = selectedTeamId == team.id,
                             onClick = { selectedTeamId = team.id },

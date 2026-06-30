@@ -94,12 +94,13 @@ class ClubMembersViewModelTest {
     fun loadMore_whenEndReached_doesNotCallRepo() = runTest {
         fakeClubRepo.listClubUsersResult = Result.success(List(5) { makeUser("u$it") })
         viewModel.init("club1")
-        // endReached = true now
+        // endReached = true now; capture call count after init
+        val callsAfterInit = fakeClubRepo.listClubUsersCallCount
 
-        fakeClubRepo.listClubUsersResult = Result.failure(Exception("Should not be called"))
         viewModel.loadMore()
 
-        // No error means repo was not called again
+        // Repo must not have been invoked again
+        fakeClubRepo.listClubUsersCallCount shouldBe callsAfterInit
         viewModel.state.value.error shouldBe null
     }
 
