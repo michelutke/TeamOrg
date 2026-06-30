@@ -294,6 +294,22 @@ class NdsRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `large realistic import writes the expected present record total`() = withTeamorgTestApplication {
+        val mgr = register("nds_large@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "LargeClub")
+        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.largeAnwesenheitslisteBytes("large-1"))
+            .body<ParsedAnwesenheitsliste>()
+        val expected = parsed.members.sumOf { it.attendedDates.size }
+        assertTrue(expected > 20, "fixture should have many marks; got $expected")
+        val res = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(createTeamName = "Large", nutzergruppe = "NG2", parsed = parsed, importEvents = true, attendanceMode = "keep"))
+        }.body<NdsImportResponse>()
+        assertEquals(expected, res.attendanceImported)
+    }
+
+    @Test
     fun `person files supply person numbers and merge by name with the Anwesenheitsliste`() =
         withTeamorgTestApplication {
             val mgr = register("nds_persons@example.com"); promoteToSuperAdmin(mgr.userId)
