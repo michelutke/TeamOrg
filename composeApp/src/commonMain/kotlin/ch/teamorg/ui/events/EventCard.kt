@@ -197,6 +197,18 @@ fun EventCard(
                     if (myResponse != null) {
                         MyStatusChip(myResponse)
                     }
+                    if (event.externalSource == "nds" && event.presentCount > 0) {
+                        val ext = MaterialTheme.extendedColors
+                        Text(
+                            text = "${event.presentCount} anwesend",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ext.going,
+                            modifier = Modifier
+                                .clip(PillShape)
+                                .background(ext.goingContainer)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
 

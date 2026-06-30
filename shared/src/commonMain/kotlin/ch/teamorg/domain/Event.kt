@@ -23,7 +23,9 @@ data class Event(
     val createdAt: Instant,
     val updatedAt: Instant,
     val teamIds: List<String> = emptyList(),
-    val subgroupIds: List<String> = emptyList()
+    val subgroupIds: List<String> = emptyList(),
+    val externalSource: String? = null,
+    val presentCount: Int = 0,
 )
 
 @Serializable
