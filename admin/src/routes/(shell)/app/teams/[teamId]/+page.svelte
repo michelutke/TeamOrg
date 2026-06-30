@@ -30,6 +30,7 @@
 	let { data, form }: Props = $props();
 
 	let inviteFor = $state<string | null>(null);
+	let linkFor = $state<string | null>(null);
 
 	const roleLabel = (role: string) =>
 		data.m.roles[role as keyof typeof data.m.roles] ?? role;
@@ -192,6 +193,11 @@
 				<code class="break-all text-[12px]">{form.ndsInvite.inviteUrl}</code>
 			</div>
 		{/if}
+		{#if form?.ndsLinked}
+			<div class="mb-4 rounded-2xl bg-success-container px-4 py-3 text-[13px] text-on-surface">
+				<p class="font-medium">Konto erfolgreich verknüpft.</p>
+			</div>
+		{/if}
 
 		<div class="flex flex-col gap-2">
 			{#each data.ndsMembers as m (m.id)}
@@ -228,6 +234,15 @@
 								>
 									<Mail size={13} /> Einladen
 								</button>
+								{#if data.clubUsers.length > 0}
+									<button
+										type="button"
+										onclick={() => (linkFor = linkFor === m.id ? null : m.id)}
+										class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-outline-variant bg-transparent px-3 py-1 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container"
+									>
+										Konto verknüpfen
+									</button>
+								{/if}
 							{/if}
 						</div>
 					</div>
@@ -244,6 +259,25 @@
 								type="submit"
 								class="cursor-pointer rounded-full border-none bg-primary px-4 py-1 text-[12px] font-bold text-on-primary hover:opacity-90"
 							>Link erstellen</button>
+						</form>
+					{/if}
+					{#if linkFor === m.id}
+						<form method="POST" action="?/linkNdsMember" class="mt-2 flex items-center gap-2">
+							<input type="hidden" name="memberId" value={m.id} />
+							<select
+								name="userId"
+								required
+								class="flex-1 rounded-lg bg-surface-container px-2 py-1 text-[13px] text-on-surface"
+							>
+								<option value="">Konto wählen…</option>
+								{#each data.clubUsers as u (u.userId)}
+									<option value={u.userId}>{u.displayName} ({u.email})</option>
+								{/each}
+							</select>
+							<button
+								type="submit"
+								class="cursor-pointer rounded-full border-none bg-primary px-4 py-1 text-[12px] font-bold text-on-primary hover:opacity-90"
+							>Verknüpfen</button>
 						</form>
 					{/if}
 				</div>
