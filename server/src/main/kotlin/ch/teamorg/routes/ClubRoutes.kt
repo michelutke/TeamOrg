@@ -124,6 +124,14 @@ fun Route.clubRoutes() {
                     call.respond(club)
                 }
 
+                get("/users") {
+                    val clubId = UUID.fromString(call.parameters["clubId"])
+                    if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@get
+                    val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 50).coerceIn(1, 200)
+                    val offset = (call.request.queryParameters["offset"]?.toIntOrNull() ?: 0).coerceAtLeast(0)
+                    call.respond(clubRepository.listUsers(clubId, limit, offset))
+                }
+
                 get("/teams") {
                     val clubId = UUID.fromString(call.parameters["clubId"])
                     if (!call.requireClubMember(clubId, clubRepository)) return@get

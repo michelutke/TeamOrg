@@ -1,6 +1,8 @@
 package ch.teamorg.routes
 
+import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.domain.models.Club
+import ch.teamorg.domain.models.ClubUser
 import ch.teamorg.domain.models.Team
 import ch.teamorg.test.IntegrationTestBase
 import io.ktor.client.call.*
@@ -9,9 +11,13 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ClubRoutesTest : IntegrationTestBase() {
 
@@ -251,6 +257,53 @@ class ClubRoutesTest : IntegrationTestBase() {
         }
 
         assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `club users lists members with their team roles sorted`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val mgr = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("cm@example.com", "password123", "Club Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(mgr.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Roles Club", "volleyball", "Zurich"))
+        }.body<Club>().id
+
+        // create a team in the club
+        val teamAId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Team A"))
+        }.body<Team>().id
+
+        // register a coach and seed a team role directly (no HTTP add-member endpoint)
+        val coach = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("coach@example.com", "password123", "Alice Coach"))
+        }.body<AuthResponse>()
+
+        transaction {
+            TeamRolesTable.insert {
+                it[TeamRolesTable.userId] = UUID.fromString(coach.userId)
+                it[TeamRolesTable.teamId] = UUID.fromString(teamAId)
+                it[TeamRolesTable.role] = "coach"
+            }
+        }
+
+        val users = client.get("/clubs/$clubId/users?limit=50&offset=0") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<ClubUser>>()
+
+        assertTrue(users.isNotEmpty())
+        assertTrue(users.all { it.teamRoles.isNotEmpty() })
+        assertTrue(users.none { it.email.endsWith("@import.teamorg.local") })
+        assertEquals(users.map { it.displayName }, users.map { it.displayName }.sorted())
     }
 
     @Test
