@@ -10,6 +10,7 @@ import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.infra.nds.AnwesenheitslisteParser
 import ch.teamorg.infra.nds.NdsEventImporter
+import ch.teamorg.infra.nds.NdsImportCounts
 import ch.teamorg.infra.nds.NdsExportService
 import ch.teamorg.infra.nds.NdsParseException
 import ch.teamorg.infra.nds.RosterFileParser
@@ -48,7 +49,8 @@ data class NdsImportRequest(
 data class NdsImportResponse(
     val teamId: String,
     val membersImported: Int,
-    val eventsCreated: Int
+    val eventsCreated: Int,
+    val attendanceImported: Int = 0
 )
 
 @Serializable
@@ -181,16 +183,17 @@ fun Route.ndsRoutes() {
             if (request.persons.isNotEmpty()) ndsRepository.upsertMembers(teamId, request.persons)
             ndsRepository.importRoster(teamId, parsed.members)
 
-            val eventsCreated = if (request.importEvents) {
+            val counts = if (request.importEvents)
                 ndsEventImporter.import(teamId, parsed, request.attendanceMode, callerId)
-            } else 0
+            else NdsImportCounts(0, 0)
 
             call.respond(
                 HttpStatusCode.OK,
                 NdsImportResponse(
                     teamId = teamId.toString(),
                     membersImported = ndsRepository.listMembers(teamId).size,
-                    eventsCreated = eventsCreated
+                    eventsCreated = counts.eventsCreated,
+                    attendanceImported = counts.attendanceImported
                 )
             )
         }

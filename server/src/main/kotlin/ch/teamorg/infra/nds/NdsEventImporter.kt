@@ -22,6 +22,8 @@ import java.time.LocalTime
 import java.time.ZoneOffset
 import java.util.UUID
 
+data class NdsImportCounts(val eventsCreated: Int, val attendanceImported: Int)
+
 /**
  * Imports the activity columns of a parsed Anwesenheitsliste into TeamOrg events, detecting
  * recurring (weekly) patterns into event_series, and optionally writing the documented
@@ -37,7 +39,7 @@ class NdsEventImporter {
     private val PLACEHOLDER_START: LocalTime = LocalTime.of(18, 0)
     private val MIN_OCCURRENCES_FOR_SERIES = 3
 
-    fun import(teamId: UUID, parsed: ParsedAnwesenheitsliste, attendanceMode: String, createdBy: UUID): Int = transaction {
+    fun import(teamId: UUID, parsed: ParsedAnwesenheitsliste, attendanceMode: String, createdBy: UUID): NdsImportCounts = transaction {
         // Existing NDS event dates (per symbol) for idempotent re-import.
         val existingKeys = (EventsTable innerJoin EventTeamsTable)
             .select(EventsTable.startAt, EventsTable.ndsSymbol)
@@ -79,6 +81,7 @@ class NdsEventImporter {
             created++
         }
 
+        var attendance = 0
         if (attendanceMode == "keep") {
             // Build (date -> eventId) including pre-existing events so re-imports still attach.
             val allNds = (EventsTable innerJoin EventTeamsTable)
@@ -99,17 +102,18 @@ class NdsEventImporter {
                 val userId = memberUserByName[m.lastName.lowercase() to m.firstName.lowercase()] ?: continue
                 for (date in m.attendedDates) {
                     val eventId = allNds[date] ?: dateToEvent[date] ?: continue
-                    AttendanceRecordsTable.insertIgnore {
+                    val inserted = AttendanceRecordsTable.insertIgnore {
                         it[AttendanceRecordsTable.eventId] = eventId
                         it[AttendanceRecordsTable.userId] = userId
                         it[AttendanceRecordsTable.status] = RecordStatus.present
                         it[AttendanceRecordsTable.setBy] = createdBy
-                    }
+                    }.insertedCount
+                    attendance += inserted
                 }
             }
         }
 
-        created
+        NdsImportCounts(eventsCreated = created, attendanceImported = attendance)
     }
 
     private fun insertEvent(

@@ -143,6 +143,7 @@ class NdsRoutesTest : IntegrationTestBase() {
             AttendanceRecordsTable.selectAll().where { AttendanceRecordsTable.eventId inList ids }.count()
         }
         assertEquals(6, presentCount)
+        assertEquals(6, res.attendanceImported)
 
         // Members list exposed via API; all unclaimed (provisional) initially.
         val members = createJsonClient().get("/teams/$teamId/nds/members") {
