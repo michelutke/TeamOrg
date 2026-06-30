@@ -1,6 +1,15 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { CalendarDays, MapPin, Plus } from 'lucide-svelte';
 	import type { PageData } from './$types';
+
+	export const snapshot = {
+		capture: () => window.scrollY,
+		restore: async (y: number) => {
+			await tick();
+			requestAnimationFrame(() => window.scrollTo(0, y));
+		}
+	};
 
 	interface Props {
 		data: PageData;
