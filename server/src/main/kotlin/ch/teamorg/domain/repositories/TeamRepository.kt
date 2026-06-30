@@ -27,6 +27,7 @@ interface TeamRepository {
     suspend fun hasRole(userId: UUID, teamId: UUID, vararg roles: String): Boolean
     suspend fun getClubId(teamId: UUID): UUID?
     suspend fun setGamesSyncEnabled(teamId: UUID, enabled: Boolean)
+    suspend fun addMember(teamId: UUID, userId: UUID, role: String): TeamMember
     suspend fun updateMemberRole(teamId: UUID, userId: UUID, newRole: String): TeamMember
     suspend fun removeMember(teamId: UUID, userId: UUID)
     suspend fun getUserClubRoles(userId: UUID): List<Pair<UUID, String>>

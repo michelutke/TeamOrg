@@ -180,6 +180,22 @@ class TeamRepositoryImpl : TeamRepository {
         }
     }
 
+    override suspend fun addMember(teamId: UUID, userId: UUID, role: String): TeamMember = transaction {
+        // Delete any existing role for this user on this team, then insert fresh.
+        // The unique index is on (userId, teamId, role), so we can't upsert on (userId, teamId) alone.
+        TeamRolesTable.deleteWhere {
+            Op.build {
+                (TeamRolesTable.teamId eq teamId) and (TeamRolesTable.userId eq userId)
+            }
+        }
+        TeamRolesTable.insert {
+            it[TeamRolesTable.teamId] = teamId
+            it[TeamRolesTable.userId] = userId
+            it[TeamRolesTable.role] = role
+        }
+        memberRow(teamId, userId)
+    }
+
     override suspend fun updateMemberRole(teamId: UUID, userId: UUID, newRole: String): TeamMember {
         require(newRole in listOf("coach", "player")) { "Invalid role: $newRole" }
         return transaction {
@@ -242,6 +258,21 @@ class TeamRepositoryImpl : TeamRepository {
             }
             .single()
     }
+
+    /** Fetch a single member row inside an existing transaction (called after an insert/update). */
+    private fun memberRow(teamId: UUID, userId: UUID): TeamMember =
+        (TeamRolesTable innerJoin UsersTable).selectAll().where {
+            (TeamRolesTable.teamId eq teamId) and (TeamRolesTable.userId eq userId)
+        }.map { row ->
+            TeamMember(
+                userId = row[UsersTable.id].toString(),
+                displayName = row[UsersTable.displayName],
+                avatarUrl = row[UsersTable.avatarUrl],
+                role = row[TeamRolesTable.role],
+                jerseyNumber = row[TeamRolesTable.jerseyNumber],
+                position = row[TeamRolesTable.position]
+            )
+        }.single()
 
     /** Count team members inside an existing transaction. */
     private fun countMembers(teamId: UUID): Int =
