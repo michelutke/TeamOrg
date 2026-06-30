@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.util.UUID
+import org.jetbrains.exposed.sql.count
 
 class AttendanceRepositoryImpl : AttendanceRepository {
 
@@ -229,6 +230,16 @@ class AttendanceRepositoryImpl : AttendanceRepository {
             it[AttendanceResponsesTable.respondedAt] = null
             it[AttendanceResponsesTable.updatedAt] = Instant.now()
         }
+    }
+
+    override suspend fun presentCounts(eventIds: List<UUID>): Map<UUID, Int> = transaction {
+        if (eventIds.isEmpty()) return@transaction emptyMap()
+        val cnt = AttendanceRecordsTable.eventId.count()
+        AttendanceRecordsTable
+            .select(AttendanceRecordsTable.eventId, cnt)
+            .where { (AttendanceRecordsTable.eventId inList eventIds) and (AttendanceRecordsTable.status eq RecordStatus.present) }
+            .groupBy(AttendanceRecordsTable.eventId)
+            .associate { it[AttendanceRecordsTable.eventId] to it[cnt].toInt() }
     }
 
     // --- Private helpers ---
