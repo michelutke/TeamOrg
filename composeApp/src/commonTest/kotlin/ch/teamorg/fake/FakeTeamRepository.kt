@@ -79,4 +79,14 @@ class FakeTeamRepository : TeamRepository {
     override suspend fun removeSubGroupMember(teamId: String, subGroupId: String, userId: String): Result<Unit> = removeSubGroupMemberResult
 
     override suspend fun uploadAvatar(imageBytes: ByteArray, extension: String): Result<Unit> = uploadAvatarResult
+
+    var addMemberResult: Result<Unit> = Result.success(Unit)
+    var updateRoleResult: Result<Unit> = Result.success(Unit)
+    var linkNdsMemberResult: Result<Unit> = Result.success(Unit)
+
+    override suspend fun addMember(teamId: String, userId: String, role: String): Result<Unit> = addMemberResult
+
+    override suspend fun updateRole(teamId: String, userId: String, role: String): Result<Unit> = updateRoleResult
+
+    override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): Result<Unit> = linkNdsMemberResult
 }
