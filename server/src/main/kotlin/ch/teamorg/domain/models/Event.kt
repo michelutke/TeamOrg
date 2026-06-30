@@ -29,7 +29,8 @@ data class Event(
     val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList(),
     val externalSource: String? = null,
     val externalStatus: String? = null,
-    val needsReview: Boolean = false
+    val needsReview: Boolean = false,
+    val presentCount: Int = 0
 )
 
 @Serializable
