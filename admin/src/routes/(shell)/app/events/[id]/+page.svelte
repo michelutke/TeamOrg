@@ -215,6 +215,11 @@
 					{data.event.location}
 				</p>
 			{/if}
+			{#if data.event.externalSource === 'nds' && data.event.presentCount > 0}
+				<p class="flex items-center gap-2 text-on-surface-variant">
+					<ClipboardCheck size={16} /> {data.event.presentCount} dokumentierte Anwesenheiten
+				</p>
+			{/if}
 		</div>
 
 		{#if data.event.description}

@@ -20,6 +20,7 @@ export interface AppEvent {
 	externalSource: string | null;
 	externalStatus: string | null;
 	needsReview: boolean;
+	presentCount: number;
 }
 
 export interface EventWithTeams {

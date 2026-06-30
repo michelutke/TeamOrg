@@ -143,6 +143,11 @@
 								{data.m.swissvolley.sourceLabel}
 							</span>
 						{/if}
+						{#if event.externalSource === 'nds' && event.presentCount > 0}
+							<span class="rounded-full bg-success-container px-2 py-0.5 text-[10px] font-semibold text-success">
+								{event.presentCount} anwesend
+							</span>
+						{/if}
 					</div>
 					<p class="truncate text-[12px] text-on-surface-variant">
 						{fmtTime(event.startAt)} · {typeLabel(event.type)}
