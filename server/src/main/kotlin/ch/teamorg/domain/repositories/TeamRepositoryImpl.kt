@@ -181,17 +181,25 @@ class TeamRepositoryImpl : TeamRepository {
     }
 
     override suspend fun addMember(teamId: UUID, userId: UUID, role: String): TeamMember = transaction {
-        // Delete any existing role for this user on this team, then insert fresh.
-        // The unique index is on (userId, teamId, role), so we can't upsert on (userId, teamId) alone.
-        TeamRolesTable.deleteWhere {
-            Op.build {
-                (TeamRolesTable.teamId eq teamId) and (TeamRolesTable.userId eq userId)
+        // The unique index is on (userId, teamId, role) — a user may theoretically hold multiple
+        // roles on one team. Strategy: if exactly one row exists, UPDATE its role (preserving
+        // jerseyNumber/position); if none, INSERT. If multiple rows already exist for this
+        // user/team, update the first and leave the others (edge case, no delete).
+        val existing = TeamRolesTable.selectAll().where {
+            (TeamRolesTable.teamId eq teamId) and (TeamRolesTable.userId eq userId)
+        }.toList()
+
+        if (existing.isNotEmpty()) {
+            val firstId = existing.first()[TeamRolesTable.id]
+            TeamRolesTable.update({ TeamRolesTable.id eq firstId }) {
+                it[TeamRolesTable.role] = role
             }
-        }
-        TeamRolesTable.insert {
-            it[TeamRolesTable.teamId] = teamId
-            it[TeamRolesTable.userId] = userId
-            it[TeamRolesTable.role] = role
+        } else {
+            TeamRolesTable.insert {
+                it[TeamRolesTable.teamId] = teamId
+                it[TeamRolesTable.userId] = userId
+                it[TeamRolesTable.role] = role
+            }
         }
         memberRow(teamId, userId)
     }

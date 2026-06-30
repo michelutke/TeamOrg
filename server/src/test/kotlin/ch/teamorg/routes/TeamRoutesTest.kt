@@ -464,6 +464,129 @@ class TeamRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `addMember rejects invalid role`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val mgr = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("amrole@example.com", "password123", "Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(mgr.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Role Club"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Role Team"))
+        }.body<Team>().id
+
+        val user = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("amroleuser@example.com", "password123", "User"))
+        }.body<AuthResponse>()
+
+        val resp = client.post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = user.userId, role = "manager"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, resp.status)
+    }
+
+    @Test
+    fun `addMember rejects unknown userId`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val mgr = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("amuid@example.com", "password123", "Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(mgr.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("UID Club"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("UID Team"))
+        }.body<Team>().id
+
+        val resp = client.post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = "00000000-0000-0000-0000-000000000000", role = "player"))
+        }
+        assertEquals(HttpStatusCode.NotFound, resp.status)
+    }
+
+    @Test
+    fun `addMember preserves jersey number when changing role`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val mgr = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("amprofile@example.com", "password123", "Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(mgr.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Profile Club"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Profile Team"))
+        }.body<Team>().id
+
+        val bob = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("amprofilebob@example.com", "password123", "Bob"))
+        }.body<AuthResponse>()
+
+        // Add bob as player first
+        client.post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = bob.userId, role = "player"))
+        }
+
+        // Set jersey number via profile PATCH
+        client.patch("/teams/$teamId/members/${bob.userId}/profile") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(UpdateProfileRequest(jerseyNumber = 42))
+        }
+
+        // Re-add bob with a different role
+        val resp = client.post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = bob.userId, role = "coach"))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+
+        // Role changed, jersey number preserved
+        val members = client.get("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<TeamMember>>()
+        val bobMember = members.single { it.userId == bob.userId }
+        assertEquals("coach", bobMember.role)
+        assertEquals(42, bobMember.jerseyNumber)
+    }
+
+    @Test
     fun `get team as non-member returns 403`() = withTeamorgTestApplication {
         val client = createJsonClient()
 
