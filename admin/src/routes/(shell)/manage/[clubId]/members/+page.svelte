@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import type { ClubUser } from './+page.server';
 
 	interface Props { data: PageData }
 	let { data }: Props = $props();
 
-	const clubId = $derived($page.params.clubId);
+	// page.params is reactive in rune context — no $derived wrapper needed
+	const clubId = page.params.clubId;
 
 	let users = $state<ClubUser[]>(data.users);
 	let offset = $state(data.users.length);
@@ -37,6 +38,22 @@
 		}
 	}
 
+	// Refetch page 1 after any mutation so the list reflects the change
+	async function refreshList() {
+		const res = await fetch(`/manage/${clubId}/users?limit=${data.pageSize}&offset=0`);
+		const fresh = (await res.json()) as ClubUser[];
+		users = fresh;
+		offset = fresh.length;
+		done = fresh.length < data.pageSize;
+	}
+
+	const mutationEnhance = () =>
+		({ result }: { result: { type: string } }) => {
+			if (result.type === 'success' || result.type === 'redirect') {
+				return refreshList();
+			}
+		};
+
 	const inputClasses =
 		'w-full rounded-2xl border-none bg-surface-container-high px-[18px] py-3 text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary';
 	const labelClasses = 'mb-1 block text-[12px] font-medium text-on-surface-variant';
@@ -46,6 +63,7 @@
 		'cursor-pointer rounded-full border border-outline-variant bg-transparent px-6 py-3 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high';
 
 	const ROLES = ['player', 'coach'];
+	const hasTeams = $derived(data.teams.length > 0);
 </script>
 
 <svelte:head>
@@ -64,36 +82,42 @@
 	<!-- Invite by email card -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
 		<h2 class="mb-3 font-display text-[18px] font-bold text-on-surface">Per E-Mail einladen</h2>
-		<form method="POST" action="?/inviteByEmail" use:enhance class="flex flex-wrap items-end gap-3">
-			<div class="min-w-[180px] flex-1">
-				<label for="invite-email" class={labelClasses}>E-Mail</label>
-				<input
-					id="invite-email"
-					name="email"
-					type="email"
-					required
-					placeholder="person@example.com"
-					class={inputClasses}
-				/>
-			</div>
-			<div class="min-w-[140px]">
-				<label for="invite-team" class={labelClasses}>Team</label>
-				<select id="invite-team" name="teamId" required class={inputClasses}>
-					{#each data.teams as t}
-						<option value={t.id}>{t.name}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="min-w-[120px]">
-				<label for="invite-role" class={labelClasses}>Rolle</label>
-				<select id="invite-role" name="role" class={inputClasses}>
-					{#each ROLES as r}
-						<option value={r}>{r}</option>
-					{/each}
-				</select>
-			</div>
-			<button type="submit" class={filledBtn}>Einladen</button>
-		</form>
+		{#if hasTeams}
+			<form method="POST" action="?/inviteByEmail" use:enhance={mutationEnhance} class="flex flex-wrap items-end gap-3">
+				<div class="min-w-[180px] flex-1">
+					<label for="invite-email" class={labelClasses}>E-Mail</label>
+					<input
+						id="invite-email"
+						name="email"
+						type="email"
+						required
+						placeholder="person@example.com"
+						class={inputClasses}
+					/>
+				</div>
+				<div class="min-w-[140px]">
+					<label for="invite-team" class={labelClasses}>Team</label>
+					<select id="invite-team" name="teamId" required class={inputClasses}>
+						{#each data.teams as t}
+							<option value={t.id}>{t.name}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="min-w-[120px]">
+					<label for="invite-role" class={labelClasses}>Rolle</label>
+					<select id="invite-role" name="role" class={inputClasses}>
+						{#each ROLES as r}
+							<option value={r}>{r}</option>
+						{/each}
+					</select>
+				</div>
+				<button type="submit" class={filledBtn}>Einladen</button>
+			</form>
+		{:else}
+			<p class="text-[14px] text-on-surface-variant">
+				Erst ein Team anlegen, bevor Mitglieder eingeladen werden können.
+			</p>
+		{/if}
 	</div>
 
 	<!-- Filter -->
@@ -140,7 +164,7 @@
 								>{tr.teamName}</span
 							>
 							<!-- Change role -->
-							<form method="POST" action="?/changeRole" use:enhance class="flex items-center gap-2">
+							<form method="POST" action="?/changeRole" use:enhance={mutationEnhance} class="flex items-center gap-2">
 								<input type="hidden" name="teamId" value={tr.teamId} />
 								<input type="hidden" name="userId" value={u.userId} />
 								<select name="role" class="rounded-xl border-none bg-surface-container px-3 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
@@ -154,7 +178,7 @@
 								>Speichern</button>
 							</form>
 							<!-- Remove -->
-							<form method="POST" action="?/removeMember" use:enhance class="ml-auto">
+							<form method="POST" action="?/removeMember" use:enhance={mutationEnhance} class="ml-auto">
 								<input type="hidden" name="teamId" value={tr.teamId} />
 								<input type="hidden" name="userId" value={u.userId} />
 								<button
@@ -166,26 +190,28 @@
 					{/each}
 
 					<!-- Add to team -->
-					<form method="POST" action="?/addMember" use:enhance class="mt-3 flex flex-wrap items-end gap-2">
-						<input type="hidden" name="userId" value={u.userId} />
-						<div class="min-w-[140px]">
-							<select name="teamId" aria-label="Team" class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
-								{#each data.teams as t}
-									<option value={t.id}>{t.name}</option>
-								{/each}
-							</select>
-						</div>
-						<div class="min-w-[110px]">
-							<select name="role" aria-label="Rolle" class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
-								{#each ROLES as r}
-									<option value={r}>{r}</option>
-								{/each}
-							</select>
-						</div>
-						<button type="submit" class="cursor-pointer rounded-full border-none bg-primary px-4 py-2 text-[13px] font-bold text-on-primary hover:opacity-90">
-							+ Team hinzufügen
-						</button>
-					</form>
+					{#if hasTeams}
+						<form method="POST" action="?/addMember" use:enhance={mutationEnhance} class="mt-3 flex flex-wrap items-end gap-2">
+							<input type="hidden" name="userId" value={u.userId} />
+							<div class="min-w-[140px]">
+								<select name="teamId" aria-label="Team" class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
+									{#each data.teams as t}
+										<option value={t.id}>{t.name}</option>
+									{/each}
+								</select>
+							</div>
+							<div class="min-w-[110px]">
+								<select name="role" aria-label="Rolle" class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
+									{#each ROLES as r}
+										<option value={r}>{r}</option>
+									{/each}
+								</select>
+							</div>
+							<button type="submit" class="cursor-pointer rounded-full border-none bg-primary px-4 py-2 text-[13px] font-bold text-on-primary hover:opacity-90">
+								+ Team hinzufügen
+							</button>
+						</form>
+					{/if}
 				</div>
 			{/each}
 		</div>
