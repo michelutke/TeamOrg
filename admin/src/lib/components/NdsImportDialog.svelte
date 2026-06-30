@@ -58,6 +58,7 @@
 	let importEvents = $state(true);
 	let attendanceMode = $state<'keep' | 'discard'>('keep');
 	let result = $state<ImportResult | null>(null);
+	let showNgHelp = $state(false);
 
 	const leaders = $derived(parsed?.members.filter((m) => m.funktion === 'Leiter/in') ?? []);
 	const players = $derived(parsed?.members.filter((m) => m.funktion !== 'Leiter/in') ?? []);
@@ -230,6 +231,12 @@
 					</label>
 					<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
 						Nutzergruppe (für Dauer-Prüfung beim Export)
+						<button type="button" onclick={() => (showNgHelp = !showNgHelp)} class="text-[12px] text-primary underline">Was ist das?</button>
+						{#if showNgHelp}
+							<p class="text-[12px] text-on-surface-variant">
+								Die J+S-Nutzergruppe deines Angebots bestimmt die erlaubten Trainingsdauern. Beim NDS-Export wird die Dauer dagegen geprüft und bei Bedarf auf den nächsten erlaubten Wert gerundet. Im Zweifel die in der NDS registrierte Nutzergruppe wählen.
+							</p>
+						{/if}
 						<select
 							bind:value={nutzergruppe}
 							class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
