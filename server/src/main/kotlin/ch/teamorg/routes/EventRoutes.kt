@@ -77,6 +77,12 @@ fun Route.eventRoutes() {
             call.respond(events)
         }
 
+        get("/users/me/events/awaiting-checkin") {
+            val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+            val events = eventRepository.listAwaitingCheckInForUser(userId)
+            call.respond(events)
+        }
+
         get("/teams/{teamId}/events") {
             val teamId = UUID.fromString(call.parameters["teamId"])
             if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get

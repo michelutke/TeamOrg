@@ -6,7 +6,9 @@ import ch.teamorg.domain.models.deriveCheckInStatus
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.time.LocalDate
@@ -705,6 +707,64 @@ class EventRepositoryImpl : EventRepository {
             }
             .limit(1)
             .any()
+    }
+
+    override suspend fun listAwaitingCheckInForUser(userId: UUID): List<EventWithTeams> = transaction {
+        val now = Instant.now()
+
+        // Resolve teams the user coaches directly
+        val coachedTeamIds = TeamRolesTable.select(TeamRolesTable.teamId)
+            .where { (TeamRolesTable.userId eq userId) and (TeamRolesTable.role eq "coach") }
+            .map { it[TeamRolesTable.teamId] }
+
+        // Resolve teams from clubs where user is club_manager
+        val managedClubIds = ClubRolesTable.select(ClubRolesTable.clubId)
+            .where { (ClubRolesTable.userId eq userId) and (ClubRolesTable.role eq "club_manager") }
+            .map { it[ClubRolesTable.clubId] }
+        val clubManagedTeamIds = if (managedClubIds.isNotEmpty()) {
+            TeamsTable.select(TeamsTable.id)
+                .where { (TeamsTable.clubId inList managedClubIds) and TeamsTable.archivedAt.isNull() }
+                .map { it[TeamsTable.id] }
+        } else emptyList()
+
+        val relevantTeamIds = (coachedTeamIds + clubManagedTeamIds).distinct()
+        if (relevantTeamIds.isEmpty()) return@transaction emptyList()
+
+        // Events: end_at < now, check_in_completed_at IS NULL, not cancelled, on a relevant team
+        val eventRows = (EventsTable innerJoin EventTeamsTable)
+            .selectAll()
+            .where {
+                (EventTeamsTable.teamId inList relevantTeamIds) and
+                (EventsTable.endAt less now) and
+                EventsTable.checkInCompletedAt.isNull() and
+                (EventsTable.status neq EventStatus.cancelled)
+            }
+            .map(::rowToEvent)
+
+        val uniqueEventIds = eventRows.map { it.id }.distinct()
+        if (uniqueEventIds.isEmpty()) return@transaction emptyList()
+
+        val counts = presentCountFor(uniqueEventIds)
+        uniqueEventIds.mapNotNull { eid ->
+            val event = eventRows.firstOrNull { it.id == eid } ?: return@mapNotNull null
+            val teamIds = EventTeamsTable.select(EventTeamsTable.teamId)
+                .where { EventTeamsTable.eventId eq eid }
+                .map { it[EventTeamsTable.teamId] }
+            val subgroupIds = EventSubgroupsTable.select(EventSubgroupsTable.subgroupId)
+                .where { EventSubgroupsTable.eventId eq eid }
+                .map { it[EventSubgroupsTable.subgroupId] }
+            val matchedTeams = (EventTeamsTable innerJoin TeamsTable)
+                .select(TeamsTable.id, TeamsTable.name)
+                .where {
+                    (EventTeamsTable.eventId eq eid) and
+                    (EventTeamsTable.teamId inList relevantTeamIds)
+                }
+                .map { MatchedTeam(id = it[TeamsTable.id], name = it[TeamsTable.name]) }
+            EventWithTeams(
+                event = event.copy(teamIds = teamIds, subgroupIds = subgroupIds, presentCount = counts[eid] ?: 0),
+                matchedTeams = matchedTeams
+            )
+        }
     }
 
     private fun rowToSyncedEventRef(row: ResultRow): SyncedEventRef {
