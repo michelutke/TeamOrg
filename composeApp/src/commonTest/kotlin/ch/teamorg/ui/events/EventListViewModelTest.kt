@@ -8,6 +8,7 @@ import ch.teamorg.domain.TeamRoleEntry
 import ch.teamorg.domain.UserRoles
 import ch.teamorg.fake.FakeAttendanceRepository
 import ch.teamorg.preferences.UserPreferences
+import com.russhwolf.settings.MapSettings
 import ch.teamorg.repository.EventRepository
 import ch.teamorg.repository.TeamRepository
 import io.kotest.matchers.collections.shouldHaveSize
@@ -86,7 +87,7 @@ class EventListViewModelTest {
         EventListViewModel(
             eventRepository = FakeEventsRepository(events),
             teamRepository = FakeTeamRepo(),
-            userPreferences = UserPreferences(),
+            userPreferences = UserPreferences(MapSettings()),
             attendanceRepository = fakeAttendanceRepo
         )
 

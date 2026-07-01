@@ -61,6 +61,7 @@ kotlin {
                 implementation(libs.testcontainers.postgresql)
                 implementation(libs.testcontainers.junit)
                 implementation(libs.kotlinx.coroutinesTest)
+                implementation(libs.multiplatform.settings.test)
             }
         }
     }

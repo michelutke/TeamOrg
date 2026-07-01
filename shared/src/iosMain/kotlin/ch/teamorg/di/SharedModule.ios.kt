@@ -16,6 +16,8 @@ import ch.teamorg.data.repository.InviteRepositoryImpl
 import ch.teamorg.data.repository.NotificationRepositoryImpl
 import ch.teamorg.data.repository.TeamRepositoryImpl
 import ch.teamorg.preferences.UserPreferences
+import com.russhwolf.settings.NSUserDefaultsSettings
+import platform.Foundation.NSUserDefaults
 import ch.teamorg.repository.AbwesenheitRepository
 import ch.teamorg.repository.AttendanceRepository
 import ch.teamorg.repository.AuthRepository
@@ -29,7 +31,7 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 
 actual val sharedModule = module {
-    single { UserPreferences() }
+    single { UserPreferences(NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults)) }
     single { HttpClientFactory.create(get()) }
     single { DatabaseDriverFactory() }
     single { createDatabase(get()) }

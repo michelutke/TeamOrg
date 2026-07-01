@@ -1,11 +1,9 @@
 package ch.teamorg.preferences
 
-import com.russhwolf.settings.NSUserDefaultsSettings
 import com.russhwolf.settings.Settings
-import platform.Foundation.NSUserDefaults
 
-actual class UserPreferences {
-    private val settings: Settings = NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults)
+actual class UserPreferences actual constructor(settings: Settings) {
+    private val settings: Settings = settings
 
     actual fun saveToken(token: String) {
         settings.putString("auth_token", token)

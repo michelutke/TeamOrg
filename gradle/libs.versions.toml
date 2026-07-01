@@ -100,6 +100,7 @@ sqldelight-sqliteDriver = { module = "app.cash.sqldelight:sqlite-driver", versio
 
 # Multiplatform Settings
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
+multiplatform-settings-test = { module = "com.russhwolf:multiplatform-settings-test", version.ref = "multiplatform-settings" }
 
 # Server: DB
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }

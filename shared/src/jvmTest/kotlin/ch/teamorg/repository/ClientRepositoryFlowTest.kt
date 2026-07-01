@@ -9,6 +9,7 @@ import ch.teamorg.domain.RedeemResult
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.module as serverModule
 import ch.teamorg.preferences.UserPreferences
+import com.russhwolf.settings.MapSettings
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -144,7 +145,7 @@ class ClientRepositoryFlowTest {
      * [AuthResponse], bypassing the shared prefs node entirely.
      */
     private suspend fun registerUser(email: String, displayName: String, password: String = "Password1!"): AuthResponse {
-        val prefs = UserPreferences()
+        val prefs = UserPreferences(MapSettings())
         prefs.clearToken()
         val unauthClient = buildClient { null }
         return AuthRepositoryImpl(unauthClient, prefs)
@@ -228,7 +229,7 @@ class ClientRepositoryFlowTest {
 
     @Test
     fun `auth register saves token and AuthRepositoryImpl reports isLoggedIn`() = runBlocking {
-        val prefs = UserPreferences()
+        val prefs = UserPreferences(MapSettings())
         prefs.clearToken()
         val unauthClient = buildClient { null }
         val authRepo = AuthRepositoryImpl(unauthClient, prefs)
@@ -341,7 +342,7 @@ class ClientRepositoryFlowTest {
 
     @Test
     fun `single HttpClient picks up token saved after creation and getMe succeeds`() = runBlocking {
-        val prefs = UserPreferences()
+        val prefs = UserPreferences(MapSettings())
         prefs.clearToken()
 
         // Create the client BEFORE any token exists — mirrors app startup
@@ -395,7 +396,7 @@ class ClientRepositoryFlowTest {
         val playerInviteRepo = InviteRepositoryImpl(playerClient)
         val playerTeamRepo = TeamRepositoryImpl(playerClient)
         // Build an AuthRepositoryImpl for the player to test hasTeam()
-        val playerPrefs = UserPreferences().also { it.saveToken(playerAuth.token) }
+        val playerPrefs = UserPreferences(MapSettings()).also { it.saveToken(playerAuth.token) }
         val playerAuthRepo = AuthRepositoryImpl(playerClient, playerPrefs)
 
         // 4. Player views invite details
@@ -461,7 +462,7 @@ class ClientRepositoryFlowTest {
 
     @Test
     fun `single HttpClient picks up token saved after creation and hasTeam succeeds`() = runBlocking {
-        val prefs = UserPreferences()
+        val prefs = UserPreferences(MapSettings())
         prefs.clearToken()
 
         val client = buildClientWithPrefs(prefs)

@@ -1,11 +1,9 @@
 package ch.teamorg.preferences
 
-import com.russhwolf.settings.PreferencesSettings
 import com.russhwolf.settings.Settings
-import java.util.prefs.Preferences
 
-actual class UserPreferences {
-    private val settings: Settings = PreferencesSettings(Preferences.userRoot().node("ch.teamorg"))
+actual class UserPreferences actual constructor(settings: Settings) {
+    private val settings: Settings = settings
 
     actual fun saveToken(token: String) {
         settings.putString("auth_token", token)
