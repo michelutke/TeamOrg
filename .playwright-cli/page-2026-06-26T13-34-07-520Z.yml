@@ -1,0 +1,65 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - link "TO TeamOrg" [ref=e5] [cursor=pointer]:
+      - /url: /app
+      - generic [ref=e6]: TO
+      - generic [ref=e7]: TeamOrg
+    - navigation [ref=e8]:
+      - paragraph [ref=e9]: Verein
+      - link "Club" [ref=e10] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a
+        - img [ref=e11]
+        - text: Club
+      - link "Teams" [ref=e15] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+        - img [ref=e16]
+        - text: Teams
+      - paragraph [ref=e22]: Meine Teilnahme
+      - link "Start" [ref=e23] [cursor=pointer]:
+        - /url: /app
+        - img [ref=e24]
+        - text: Start
+      - link "Termine" [ref=e27] [cursor=pointer]:
+        - /url: /app/events
+        - img [ref=e28]
+        - text: Termine
+      - link "Teams" [ref=e30] [cursor=pointer]:
+        - /url: /app/teams
+        - img [ref=e31]
+        - text: Teams
+      - link "Inbox" [ref=e36] [cursor=pointer]:
+        - /url: /app/inbox
+        - img [ref=e37]
+        - text: Inbox
+    - generic [ref=e40]:
+      - link "Profil" [ref=e41] [cursor=pointer]:
+        - /url: /app/profile
+        - img [ref=e42]
+        - text: Profil
+      - generic [ref=e45]:
+        - link "DE" [ref=e46] [cursor=pointer]:
+          - /url: "?lang=de"
+        - link "EN" [ref=e47] [cursor=pointer]:
+          - /url: "?lang=en"
+      - generic [ref=e48]:
+        - paragraph [ref=e49]: manager
+        - paragraph [ref=e50]: utke.michel@gmail.com
+      - button "Abmelden" [ref=e52]:
+        - img [ref=e53]
+        - text: Abmelden
+  - main [ref=e56]:
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e60]:
+          - heading "VBC Thun" [level=1] [ref=e61]
+          - paragraph [ref=e62]: Volleyball · Thun, Switzerland
+        - button "Edit" [ref=e63] [cursor=pointer]
+      - generic [ref=e64]:
+        - heading "Co-managers" [level=2] [ref=e65]
+        - paragraph [ref=e66]: Invite another person to co-manage this club.
+        - button "Invite co-manager" [ref=e67] [cursor=pointer]
+      - generic [ref=e68]:
+        - heading "Teams" [level=2] [ref=e69]
+        - paragraph [ref=e70]: Manage rosters, invite members, update team info.
+        - link "View Teams ›" [ref=e71] [cursor=pointer]:
+          - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams

@@ -114,7 +114,7 @@ class AttendanceRepositoryImpl : AttendanceRepository {
             .innerJoin(TeamRolesTable, { EventTeamsTable.teamId }, { TeamRolesTable.teamId })
             .select(TeamRolesTable.userId)
             .where { EventTeamsTable.eventId eq eventId }
-            .map { it[TeamRolesTable.userId] }
+            .mapNotNull { it[TeamRolesTable.userId] }
             .toSet()
 
         // Read existing responses for roster members

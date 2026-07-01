@@ -1,0 +1,41 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]: VT
+      - generic [ref=e8]:
+        - generic [ref=e9]: VBC Thun
+        - generic [ref=e10]: Club Manager
+    - navigation [ref=e11]:
+      - link "Club" [ref=e12] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a
+        - img [ref=e13]
+        - text: Club
+      - link "Teams" [ref=e17] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+        - img [ref=e18]
+        - text: Teams
+    - button "Log out" [ref=e26] [cursor=pointer]:
+      - img [ref=e27]
+      - text: Log out
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - navigation [ref=e32]:
+        - link "‹ Back to Teams" [ref=e33] [cursor=pointer]:
+          - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - heading "3L pro b" [level=1] [ref=e36]
+          - generic [ref=e37]:
+            - button "Edit" [ref=e38] [cursor=pointer]
+            - button "Archive" [ref=e39] [cursor=pointer]
+        - paragraph [ref=e40]: 0 members
+      - generic [ref=e41]:
+        - heading "Invite members" [level=2] [ref=e42]
+        - generic [ref=e43]:
+          - paragraph [ref=e44]: Invite link generated!
+          - textbox [ref=e45]: https://teamorg.ch/i/8f73e542-47de-4348-bfe3-5b6862bf24b5
+          - paragraph [ref=e46]: "Expires: 03/07/2026, 11:44:47"
+        - button "Generate invite link" [ref=e47] [cursor=pointer]
+      - generic [ref=e48]:
+        - heading "Members" [level=2] [ref=e50]
+        - paragraph [ref=e52]: No members yet. Generate an invite link to add members.

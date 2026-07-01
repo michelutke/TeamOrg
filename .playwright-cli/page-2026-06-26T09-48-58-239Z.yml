@@ -1,0 +1,54 @@
+- generic [ref=e2]:
+  - generic [ref=e34]:
+    - complementary [ref=e35]:
+      - link "TO TeamOrg" [ref=e36] [cursor=pointer]:
+        - /url: /app
+        - generic [ref=e37]: TO
+        - generic [ref=e38]: TeamOrg
+      - navigation [ref=e39]:
+        - link "Start" [ref=e40] [cursor=pointer]:
+          - /url: /app
+          - img [ref=e41]
+          - text: Start
+        - link "Termine" [ref=e42] [cursor=pointer]:
+          - /url: /app/events
+          - img [ref=e43]
+          - text: Termine
+        - link "Teams" [ref=e44] [cursor=pointer]:
+          - /url: /app/teams
+          - img [ref=e45]
+          - text: Teams
+        - link "Inbox" [ref=e46] [cursor=pointer]:
+          - /url: /app/inbox
+          - img [ref=e47]
+          - text: Inbox
+        - link "Profil" [ref=e48] [cursor=pointer]:
+          - /url: /app/profile
+          - img [ref=e49]
+          - text: Profil
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - link "DE" [ref=e52] [cursor=pointer]:
+            - /url: "?lang=de"
+          - link "EN" [ref=e53] [cursor=pointer]:
+            - /url: "?lang=en"
+        - generic [ref=e54]:
+          - paragraph [ref=e55]: Co Manager One
+          - paragraph [ref=e56]: comanager1@michelutke.com
+        - button "Abmelden" [ref=e58]:
+          - img [ref=e59]
+          - text: Abmelden
+    - main [ref=e60]:
+      - generic [ref=e61]:
+        - heading "Hallo Co" [level=1] [ref=e62]
+        - paragraph [ref=e63]: Deine Teams auf einen Blick
+      - link "Manager 3L pro b Öffnen" [ref=e65] [cursor=pointer]:
+        - /url: /app/teams/9c03d756-f897-477a-b1f4-d52def749c68
+        - generic [ref=e66]:
+          - img [ref=e68]
+          - generic [ref=e69]: Manager
+        - heading "3L pro b" [level=3] [ref=e70]
+        - generic [ref=e71]:
+          - text: Öffnen
+          - img [ref=e72]
+  - generic [ref=e33]: Start — TeamOrg

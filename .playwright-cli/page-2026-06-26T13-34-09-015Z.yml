@@ -1,0 +1,62 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - link "TO TeamOrg" [ref=e5] [cursor=pointer]:
+      - /url: /app
+      - generic [ref=e6]: TO
+      - generic [ref=e7]: TeamOrg
+    - navigation [ref=e8]:
+      - paragraph [ref=e9]: Verein
+      - link "Club" [ref=e10] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a
+        - img [ref=e11]
+        - text: Club
+      - link "Teams" [ref=e15] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+        - img [ref=e16]
+        - text: Teams
+      - paragraph [ref=e22]: Meine Teilnahme
+      - link "Start" [ref=e23] [cursor=pointer]:
+        - /url: /app
+        - img [ref=e24]
+        - text: Start
+      - link "Termine" [ref=e27] [cursor=pointer]:
+        - /url: /app/events
+        - img [ref=e28]
+        - text: Termine
+      - link "Teams" [ref=e30] [cursor=pointer]:
+        - /url: /app/teams
+        - img [ref=e31]
+        - text: Teams
+      - link "Inbox" [ref=e36] [cursor=pointer]:
+        - /url: /app/inbox
+        - img [ref=e37]
+        - text: Inbox
+    - generic [ref=e40]:
+      - link "Profil" [ref=e41] [cursor=pointer]:
+        - /url: /app/profile
+        - img [ref=e42]
+        - text: Profil
+      - generic [ref=e45]:
+        - link "DE" [ref=e46] [cursor=pointer]:
+          - /url: "?lang=de"
+        - link "EN" [ref=e47] [cursor=pointer]:
+          - /url: "?lang=en"
+      - generic [ref=e48]:
+        - paragraph [ref=e49]: manager
+        - paragraph [ref=e50]: utke.michel@gmail.com
+      - button "Abmelden" [ref=e52]:
+        - img [ref=e53]
+        - text: Abmelden
+  - main [ref=e56]:
+    - generic [ref=e57]:
+      - heading "Hallo manager" [level=1] [ref=e58]
+      - paragraph [ref=e59]: Deine Teams auf einen Blick
+    - link "Spieler 3L pro b Öffnen" [ref=e61] [cursor=pointer]:
+      - /url: /app/teams/9c03d756-f897-477a-b1f4-d52def749c68
+      - generic [ref=e62]:
+        - img [ref=e64]
+        - generic [ref=e69]: Spieler
+      - heading "3L pro b" [level=3] [ref=e70]
+      - generic [ref=e71]:
+        - text: Öffnen
+        - img [ref=e72]

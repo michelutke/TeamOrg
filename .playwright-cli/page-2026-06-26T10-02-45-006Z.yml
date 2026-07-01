@@ -1,0 +1,86 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]: VT
+      - generic [ref=e8]:
+        - generic [ref=e9]: VBC Thun
+        - generic [ref=e10]: Club Manager
+    - navigation [ref=e11]:
+      - link "Club" [ref=e12] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a
+        - img [ref=e13]
+        - text: Club
+      - link "Teams" [ref=e17] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+        - img [ref=e18]
+        - text: Teams
+    - button "Log out" [ref=e26] [cursor=pointer]:
+      - img [ref=e27]
+      - text: Log out
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - navigation [ref=e32]:
+        - link "‹ Back to Teams" [ref=e33] [cursor=pointer]:
+          - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - heading "3L pro b" [level=1] [ref=e36]
+          - generic [ref=e37]:
+            - button "Edit" [ref=e38] [cursor=pointer]
+            - button "Archive" [ref=e39] [cursor=pointer]
+        - paragraph [ref=e40]: 4 members
+      - generic [ref=e41]:
+        - heading "Invite members" [level=2] [ref=e42]
+        - paragraph [ref=e43]: Add an email to invite one person privately — only that address can join (best for coaches). Leave it empty for a shareable link anyone can use.
+        - generic [ref=e44]:
+          - paragraph [ref=e45]: Shareable invite link generated!
+          - textbox [ref=e46]: https://teamorg.ch/i/5cd60956-a0ad-4fd6-90cd-a398da3771d0
+          - paragraph [ref=e47]: "Expires: 03/07/2026, 12:02:44"
+        - button "Invite a member" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]:
+        - heading "Members" [level=2] [ref=e51]
+        - table [ref=e52]:
+          - rowgroup [ref=e53]:
+            - row "Name Role Jersey Position Actions" [ref=e54]:
+              - columnheader "Name" [ref=e55]
+              - columnheader "Role" [ref=e56]
+              - columnheader "Jersey" [ref=e57]
+              - columnheader "Position" [ref=e58]
+              - columnheader "Actions" [ref=e59]
+          - rowgroup [ref=e60]:
+            - row "Player One player — — Make Coach Remove" [ref=e61]:
+              - cell "Player One" [ref=e62]
+              - cell "player" [ref=e63]
+              - cell "—" [ref=e64]
+              - cell "—" [ref=e65]
+              - cell "Make Coach Remove" [ref=e66]:
+                - generic [ref=e67]:
+                  - button "Make Coach" [ref=e69] [cursor=pointer]
+                  - button "Remove" [ref=e70] [cursor=pointer]
+            - row "Player Two player — — Make Coach Remove" [ref=e71]:
+              - cell "Player Two" [ref=e72]
+              - cell "player" [ref=e73]
+              - cell "—" [ref=e74]
+              - cell "—" [ref=e75]
+              - cell "Make Coach Remove" [ref=e76]:
+                - generic [ref=e77]:
+                  - button "Make Coach" [ref=e79] [cursor=pointer]
+                  - button "Remove" [ref=e80] [cursor=pointer]
+            - row "Coach One coach — — Make Player Remove" [ref=e81]:
+              - cell "Coach One" [ref=e82]
+              - cell "coach" [ref=e83]
+              - cell "—" [ref=e84]
+              - cell "—" [ref=e85]
+              - cell "Make Player Remove" [ref=e86]:
+                - generic [ref=e87]:
+                  - button "Make Player" [ref=e89] [cursor=pointer]
+                  - button "Remove" [ref=e90] [cursor=pointer]
+            - row "Player Three player — — Make Coach Remove" [ref=e91]:
+              - cell "Player Three" [ref=e92]
+              - cell "player" [ref=e93]
+              - cell "—" [ref=e94]
+              - cell "—" [ref=e95]
+              - cell "Make Coach Remove" [ref=e96]:
+                - generic [ref=e97]:
+                  - button "Make Coach" [ref=e99] [cursor=pointer]
+                  - button "Remove" [ref=e100] [cursor=pointer]

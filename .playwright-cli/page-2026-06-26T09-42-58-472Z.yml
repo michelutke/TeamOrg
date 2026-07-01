@@ -1,0 +1,52 @@
+- generic [ref=e2]:
+  - generic [ref=e18]:
+    - complementary [ref=e19]:
+      - link "TO TeamOrg" [ref=e20] [cursor=pointer]:
+        - /url: /app
+        - generic [ref=e21]: TO
+        - generic [ref=e22]: TeamOrg
+      - navigation [ref=e23]:
+        - link "Start" [ref=e24] [cursor=pointer]:
+          - /url: /app
+          - img [ref=e25]
+          - text: Start
+        - link "Termine" [ref=e26] [cursor=pointer]:
+          - /url: /app/events
+          - img [ref=e27]
+          - text: Termine
+        - link "Teams" [ref=e28] [cursor=pointer]:
+          - /url: /app/teams
+          - img [ref=e29]
+          - text: Teams
+        - link "Inbox" [ref=e30] [cursor=pointer]:
+          - /url: /app/inbox
+          - img [ref=e31]
+          - text: Inbox
+        - link "Profil" [ref=e32] [cursor=pointer]:
+          - /url: /app/profile
+          - img [ref=e33]
+          - text: Profil
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - link "DE" [ref=e36] [cursor=pointer]:
+            - /url: "?lang=de"
+          - link "EN" [ref=e37] [cursor=pointer]:
+            - /url: "?lang=en"
+        - generic [ref=e38]:
+          - paragraph [ref=e39]: manager
+          - paragraph [ref=e40]: utke.michel@gmail.com
+        - button "Abmelden" [ref=e42]:
+          - img [ref=e43]
+          - text: Abmelden
+    - main [ref=e44]:
+      - link "Zurück" [ref=e57] [cursor=pointer]:
+        - /url: /app/teams
+        - img [ref=e58]
+        - text: Zurück
+      - generic [ref=e59]:
+        - generic [ref=e60]: 3P
+        - generic [ref=e61]:
+          - heading "3L pro b" [level=1] [ref=e62]
+          - paragraph [ref=e63]: 0 Mitglieder
+      - paragraph [ref=e64]: Noch keine Mitglieder in diesem Team.
+  - generic [ref=e17]: 3L pro b — TeamOrg

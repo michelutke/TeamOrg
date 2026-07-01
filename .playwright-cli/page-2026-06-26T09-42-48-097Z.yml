@@ -1,0 +1,54 @@
+- generic [ref=e2]:
+  - generic [ref=e18]:
+    - complementary [ref=e19]:
+      - link "TO TeamOrg" [ref=e20] [cursor=pointer]:
+        - /url: /app
+        - generic [ref=e21]: TO
+        - generic [ref=e22]: TeamOrg
+      - navigation [ref=e23]:
+        - link "Start" [ref=e24] [cursor=pointer]:
+          - /url: /app
+          - img [ref=e25]
+          - text: Start
+        - link "Termine" [ref=e26] [cursor=pointer]:
+          - /url: /app/events
+          - img [ref=e27]
+          - text: Termine
+        - link "Teams" [ref=e28] [cursor=pointer]:
+          - /url: /app/teams
+          - img [ref=e29]
+          - text: Teams
+        - link "Inbox" [ref=e30] [cursor=pointer]:
+          - /url: /app/inbox
+          - img [ref=e31]
+          - text: Inbox
+        - link "Profil" [ref=e32] [cursor=pointer]:
+          - /url: /app/profile
+          - img [ref=e33]
+          - text: Profil
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - link "DE" [ref=e36] [cursor=pointer]:
+            - /url: "?lang=de"
+          - link "EN" [ref=e37] [cursor=pointer]:
+            - /url: "?lang=en"
+        - generic [ref=e38]:
+          - paragraph [ref=e39]: manager
+          - paragraph [ref=e40]: utke.michel@gmail.com
+        - button "Abmelden" [ref=e42]:
+          - img [ref=e43]
+          - text: Abmelden
+    - main [ref=e44]:
+      - generic [ref=e45]:
+        - heading "Hallo manager" [level=1] [ref=e46]
+        - paragraph [ref=e47]: Deine Teams auf einen Blick
+      - link "Manager 3L pro b Öffnen" [ref=e49] [cursor=pointer]:
+        - /url: /app/teams/9c03d756-f897-477a-b1f4-d52def749c68
+        - generic [ref=e50]:
+          - img [ref=e52]
+          - generic [ref=e53]: Manager
+        - heading "3L pro b" [level=3] [ref=e54]
+        - generic [ref=e55]:
+          - text: Öffnen
+          - img [ref=e56]
+  - generic [ref=e17]: Start — TeamOrg

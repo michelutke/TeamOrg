@@ -1,6 +1,5 @@
 package ch.teamorg.domain.repositories
 
-import ch.teamorg.db.tables.AttendanceRecordsTable
 import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
@@ -243,7 +242,6 @@ class NdsRepositoryImpl : NdsRepository {
 
         // Move attendance from the provisional placeholder to the real user, skipping events where
         // the real user already has a row (avoids PK clash on (event_id, user_id)).
-        moveAttendance(AttendanceRecordsTable, AttendanceRecordsTable.eventId, AttendanceRecordsTable.userId, provisionalUserId, realUserId)
         moveAttendance(AttendanceResponsesTable, AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId, provisionalUserId, realUserId)
 
         // Drop the provisional user's team role (the redeem already added the real user's role).

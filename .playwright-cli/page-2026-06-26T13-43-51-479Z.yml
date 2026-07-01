@@ -1,0 +1,49 @@
+- generic [ref=e2]:
+  - generic [ref=e18]:
+    - complementary [ref=e19]:
+      - link "TO TeamOrg" [ref=e20] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a
+        - generic [ref=e21]: TO
+        - generic [ref=e22]: TeamOrg
+      - navigation [ref=e23]:
+        - link "Club" [ref=e24] [cursor=pointer]:
+          - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a
+          - img [ref=e25]
+          - text: Club
+        - link "Teams" [ref=e26] [cursor=pointer]:
+          - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+          - img [ref=e27]
+          - text: Teams
+      - generic [ref=e28]:
+        - link "Profil" [ref=e29] [cursor=pointer]:
+          - /url: /app/profile
+          - img [ref=e30]
+          - text: Profil
+        - generic [ref=e31]:
+          - link "DE" [ref=e32] [cursor=pointer]:
+            - /url: "?lang=de"
+          - link "EN" [ref=e33] [cursor=pointer]:
+            - /url: "?lang=en"
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: manager
+          - paragraph [ref=e36]: utke.michel@gmail.com
+        - button "Abmelden" [ref=e38]:
+          - img [ref=e39]
+          - text: Abmelden
+    - main [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e44]:
+            - heading "VBC Thun" [level=1] [ref=e45]
+            - paragraph [ref=e46]: Volleyball · Thun, Switzerland
+          - button "Edit" [ref=e47] [cursor=pointer]
+        - generic [ref=e48]:
+          - heading "Co-managers" [level=2] [ref=e49]
+          - paragraph [ref=e50]: Invite another person to co-manage this club.
+          - button "Invite co-manager" [ref=e51] [cursor=pointer]
+        - generic [ref=e52]:
+          - heading "Teams" [level=2] [ref=e53]
+          - paragraph [ref=e54]: Manage rosters, invite members, update team info.
+          - link "View Teams ›" [ref=e55] [cursor=pointer]:
+            - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+  - generic [ref=e17]: VBC Thun — TeamOrg

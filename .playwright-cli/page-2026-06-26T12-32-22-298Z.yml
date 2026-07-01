@@ -1,0 +1,103 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]: VT
+      - generic [ref=e8]:
+        - generic [ref=e9]: VBC Thun
+        - generic [ref=e10]: Club Manager
+    - navigation [ref=e11]:
+      - link "Club" [ref=e12] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a
+        - img [ref=e13]
+        - text: Club
+      - link "Teams" [ref=e17] [cursor=pointer]:
+        - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+        - img [ref=e18]
+        - text: Teams
+    - button "Log out" [ref=e26] [cursor=pointer]:
+      - img [ref=e27]
+      - text: Log out
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - navigation [ref=e32]:
+        - link "‹ Back to Teams" [ref=e33] [cursor=pointer]:
+          - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - heading "3L pro b" [level=1] [ref=e36]
+          - generic [ref=e37]:
+            - link "Attendance" [ref=e38] [cursor=pointer]:
+              - /url: /manage/718d017f-3187-4ddb-9d1e-bf53cc27983a/teams/9c03d756-f897-477a-b1f4-d52def749c68/attendance
+            - button "Edit" [ref=e39] [cursor=pointer]
+            - button "Archive" [ref=e40] [cursor=pointer]
+        - paragraph [ref=e41]: 5 members
+      - generic [ref=e42]:
+        - heading "Invite members" [level=2] [ref=e43]
+        - paragraph [ref=e44]: Add an email to invite one person privately — only that address can join (best for coaches). Leave it empty for a shareable link anyone can use.
+        - button "Invite a member" [ref=e45] [cursor=pointer]
+      - generic [ref=e46]:
+        - heading "Subgroups" [level=2] [ref=e47]
+        - paragraph [ref=e48]: Organise the roster into subgroups (e.g. starters, U18) to target events at part of the team.
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - generic [ref=e114]: Subgroup name
+            - textbox "Subgroup name" [ref=e115]:
+              - /placeholder: e.g. Starters
+          - button "Create" [ref=e116] [cursor=pointer]
+          - button "Cancel" [ref=e117] [cursor=pointer]
+      - generic [ref=e50]:
+        - heading "Members" [level=2] [ref=e52]
+        - table [ref=e53]:
+          - rowgroup [ref=e54]:
+            - row "Name Role Jersey Position Actions" [ref=e55]:
+              - columnheader "Name" [ref=e56]
+              - columnheader "Role" [ref=e57]
+              - columnheader "Jersey" [ref=e58]
+              - columnheader "Position" [ref=e59]
+              - columnheader "Actions" [ref=e60]
+          - rowgroup [ref=e61]:
+            - row "Player One player — — Make Coach Remove" [ref=e62]:
+              - cell "Player One" [ref=e63]
+              - cell "player" [ref=e64]
+              - cell "—" [ref=e65]
+              - cell "—" [ref=e66]
+              - cell "Make Coach Remove" [ref=e67]:
+                - generic [ref=e68]:
+                  - button "Make Coach" [ref=e70] [cursor=pointer]
+                  - button "Remove" [ref=e71] [cursor=pointer]
+            - row "Player Two player 4 Usse Make Coach Remove" [ref=e72]:
+              - cell "Player Two" [ref=e73]
+              - cell "player" [ref=e74]
+              - cell "4" [ref=e75]
+              - cell "Usse" [ref=e76]
+              - cell "Make Coach Remove" [ref=e77]:
+                - generic [ref=e78]:
+                  - button "Make Coach" [ref=e80] [cursor=pointer]
+                  - button "Remove" [ref=e81] [cursor=pointer]
+            - row "Coach One coach — — Make Player Remove" [ref=e82]:
+              - cell "Coach One" [ref=e83]
+              - cell "coach" [ref=e84]
+              - cell "—" [ref=e85]
+              - cell "—" [ref=e86]
+              - cell "Make Player Remove" [ref=e87]:
+                - generic [ref=e88]:
+                  - button "Make Player" [ref=e90] [cursor=pointer]
+                  - button "Remove" [ref=e91] [cursor=pointer]
+            - row "Player Three player — — Make Coach Remove" [ref=e92]:
+              - cell "Player Three" [ref=e93]
+              - cell "player" [ref=e94]
+              - cell "—" [ref=e95]
+              - cell "—" [ref=e96]
+              - cell "Make Coach Remove" [ref=e97]:
+                - generic [ref=e98]:
+                  - button "Make Coach" [ref=e100] [cursor=pointer]
+                  - button "Remove" [ref=e101] [cursor=pointer]
+            - row "Coach Three coach — — Make Player Remove" [ref=e102]:
+              - cell "Coach Three" [ref=e103]
+              - cell "coach" [ref=e104]
+              - cell "—" [ref=e105]
+              - cell "—" [ref=e106]
+              - cell "Make Player Remove" [ref=e107]:
+                - generic [ref=e108]:
+                  - button "Make Player" [ref=e110] [cursor=pointer]
+                  - button "Remove" [ref=e111] [cursor=pointer]

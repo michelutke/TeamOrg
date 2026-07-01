@@ -1,21 +1,23 @@
 package ch.teamorg.infra.nds
 
-import ch.teamorg.db.tables.AttendanceRecordsTable
+import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventSeriesTable
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventType
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
 import ch.teamorg.db.tables.PatternType
-import ch.teamorg.db.tables.RecordStatus
 import ch.teamorg.domain.models.ParsedActivity
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -83,11 +85,13 @@ class NdsEventImporter {
 
         var attendance = 0
         if (attendanceMode == "keep") {
-            // Build (date -> eventId) including pre-existing events so re-imports still attach.
+            // (date -> eventId) for every dated NDS event of this team, including pre-existing ones
+            // so re-imports still attach. This is the full event set each member is enumerated over.
             val allNds = (EventsTable innerJoin EventTeamsTable)
                 .select(EventsTable.id, EventsTable.startAt)
                 .where { (EventTeamsTable.teamId eq teamId) and (EventsTable.externalSource eq "nds") }
                 .associate { dateKey(it[EventsTable.startAt]) to it[EventsTable.id] }
+            val dateToEventFull = allNds + dateToEvent
 
             // Match by name (birthdate is unreliable across the NDS exports — see upsertOne).
             val memberUserByName = NdsMembersTable
@@ -100,18 +104,40 @@ class NdsEventImporter {
 
             for (m in parsed.members) {
                 val userId = memberUserByName[m.lastName.lowercase() to m.firstName.lowercase()] ?: continue
-                for (date in m.attendedDates) {
-                    val eventId = allNds[date] ?: dateToEvent[date] ?: continue
-                    val inserted = AttendanceRecordsTable.insertIgnore {
-                        it[AttendanceRecordsTable.eventId] = eventId
-                        it[AttendanceRecordsTable.userId] = userId
-                        it[AttendanceRecordsTable.status] = RecordStatus.present
-                        it[AttendanceRecordsTable.setBy] = createdBy
+                // For EVERY dated NDS event of the team: attended → confirmed, otherwise → declined
+                // (excused). insertIgnore keeps existing rows (e.g. player self-responses) untouched.
+                for ((date, eventId) in dateToEventFull) {
+                    val attended = date in m.attendedDates
+                    val inserted = AttendanceResponsesTable.insertIgnore {
+                        it[AttendanceResponsesTable.eventId] = eventId
+                        it[AttendanceResponsesTable.userId] = userId
+                        it[AttendanceResponsesTable.status] = if (attended) "confirmed" else "declined"
+                        it[AttendanceResponsesTable.unexcused] = false
+                        it[AttendanceResponsesTable.manualOverride] = false
                     }.insertedCount
-                    attendance += inserted
+                    if (attended) attendance += inserted
                 }
             }
         }
+
+        // Auto-finalize past imported events; future ones stay open for coach check-in.
+        val now = Instant.now()
+        (EventsTable innerJoin EventTeamsTable)
+            .select(EventsTable.id)
+            .where {
+                (EventTeamsTable.teamId eq teamId) and
+                    (EventsTable.externalSource eq "nds") and
+                    (EventsTable.startAt less now) and
+                    EventsTable.checkInCompletedAt.isNull()
+            }
+            .map { it[EventsTable.id] }
+            .let { pastEventIds ->
+                if (pastEventIds.isNotEmpty()) {
+                    EventsTable.update({ EventsTable.id inList pastEventIds }) {
+                        it[EventsTable.checkInCompletedAt] = now
+                    }
+                }
+            }
 
         NdsImportCounts(eventsCreated = created, attendanceImported = attendance)
     }
