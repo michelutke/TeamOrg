@@ -358,15 +358,32 @@ class NotificationRepositoryImpl : NotificationRepository {
         val rows = AttendanceResponsesTable.selectAll()
             .where { AttendanceResponsesTable.eventId eq eventId }
             .toList()
-        val accepted = rows.count { it[AttendanceResponsesTable.status] == "accepted" }
+        val confirmed = rows.count { it[AttendanceResponsesTable.status] == "confirmed" }
         val declined = rows.count { it[AttendanceResponsesTable.status].startsWith("declined") }
         val unsure = rows.count { it[AttendanceResponsesTable.status] == "unsure" }
+
+        // Roster = union of team_roles.userId across the event's teams. noResponse = rostered
+        // members who have no confirmed/declined/unsure response (never responded or "no-response").
+        val eventTeamIds = EventTeamsTable.select(EventTeamsTable.teamId)
+            .where { EventTeamsTable.eventId eq eventId }
+            .map { it[EventTeamsTable.teamId] }
+        val rosterIds = if (eventTeamIds.isEmpty()) emptySet() else
+            TeamRolesTable.select(TeamRolesTable.userId)
+                .where { (TeamRolesTable.teamId inList eventTeamIds) and (TeamRolesTable.userId.isNotNull()) }
+                .mapNotNull { it[TeamRolesTable.userId] }
+                .toSet()
+        val respondedIds = rows
+            .filter { it[AttendanceResponsesTable.status] != "no-response" }
+            .map { it[AttendanceResponsesTable.userId] }
+            .toSet()
+        val noResponse = rosterIds.count { it !in respondedIds }
+
         AttendanceSummary(
-            accepted = accepted,
+            accepted = confirmed,
             declined = declined,
             unsure = unsure,
-            noResponse = 0,
-            total = rows.size
+            noResponse = noResponse,
+            total = rosterIds.size
         )
     }
 

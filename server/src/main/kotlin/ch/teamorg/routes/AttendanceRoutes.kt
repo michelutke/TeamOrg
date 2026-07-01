@@ -28,6 +28,10 @@ import kotlinx.datetime.Instant as KInstant
 
 private val attnLogger = LoggerFactory.getLogger("AttendanceRoutes")
 
+// Statuses a client may set on a write path. `declined-auto` is system-only (Abwesenheit rules),
+// so it is intentionally excluded from both the player and coach edit paths.
+private val WRITABLE_ATTENDANCE_STATUSES = setOf("no-response", "confirmed", "unsure", "declined")
+
 @Serializable
 private data class SubmitResponseRequest(val status: String, val reason: String? = null)
 
@@ -42,7 +46,6 @@ private data class RawAttendanceDto(
     val eventId: String,
     val userId: String,
     val responseStatus: String?,
-    val recordStatus: String?,
     val eventStartAt: KInstant
 )
 
@@ -62,7 +65,6 @@ private fun RawAttendanceRow.toDto() = RawAttendanceDto(
     eventId = eventId.toString(),
     userId = userId.toString(),
     responseStatus = responseStatus,
-    recordStatus = recordStatus,
     eventStartAt = KInstant.fromEpochMilliseconds(eventStartAt.toEpochMilli())
 )
 
@@ -98,6 +100,11 @@ fun Route.attendanceRoutes() {
             if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@put
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<SubmitResponseRequest>()
+
+            if (body.status !in WRITABLE_ATTENDANCE_STATUSES) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid attendance status")
+                return@put
+            }
 
             if (body.status == "unsure" && body.reason.isNullOrBlank()) {
                 call.respond(HttpStatusCode.BadRequest, "Reason required for unsure status")
@@ -160,6 +167,11 @@ fun Route.attendanceRoutes() {
 
             val coachId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<CoachResponseRequest>()
+
+            if (body.status !in WRITABLE_ATTENDANCE_STATUSES) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid attendance status")
+                return@put
+            }
 
             val event = eventRepository.findById(eventId)
             if (event?.checkInCompletedAt != null) {
