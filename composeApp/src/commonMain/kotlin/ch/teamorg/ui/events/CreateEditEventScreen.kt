@@ -375,6 +375,37 @@ fun CreateEditEventScreen(
                 )
             }
 
+            // ===== DEFAULT RESPONSE =====
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionLabel("Standardantwort")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TypePill(
+                        label = "Keine Vorgabe",
+                        selected = state.defaultResponse == "none",
+                        onClick = { viewModel.setDefaultResponse("none") }
+                    )
+                    TypePill(
+                        label = "Anwesend",
+                        selected = state.defaultResponse == "accepted",
+                        onClick = { viewModel.setDefaultResponse("accepted") }
+                    )
+                    TypePill(
+                        label = "Abgemeldet",
+                        selected = state.defaultResponse == "declined",
+                        onClick = { viewModel.setDefaultResponse("declined") }
+                    )
+                }
+                Text(
+                    when (state.defaultResponse) {
+                        "accepted" -> "Standard: Anwesend – Trainer muss Abwesende auflösen"
+                        "declined" -> "Standard: Abgemeldet – Trainer muss Anwesende auflösen"
+                        else -> "Keine Vorgabe – Trainer muss auflösen"
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             // Auto-scroll to bottom when min attendees expands
             LaunchedEffect(state.minAttendeesEnabled) {
                 if (state.minAttendeesEnabled) {

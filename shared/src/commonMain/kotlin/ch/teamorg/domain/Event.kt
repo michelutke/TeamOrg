@@ -55,7 +55,8 @@ data class CreateEventRequest(
     val minAttendees: Int? = null,
     val teamIds: List<String>,
     val subgroupIds: List<String> = emptyList(),
-    val recurring: RecurringPattern? = null
+    val recurring: RecurringPattern? = null,
+    val defaultResponse: String = "none"  // "none"|"accepted"|"declined"
 )
 
 @Serializable
@@ -78,7 +79,8 @@ data class EditEventRequest(
     val minAttendees: Int? = null,
     val teamIds: List<String>? = null,
     val subgroupIds: List<String>? = null,
-    val scope: String? = null  // "this_only" | "this_and_future" | "all"
+    val scope: String? = null,  // "this_only" | "this_and_future" | "all"
+    val defaultResponse: String? = null  // "none"|"accepted"|"declined"
 )
 
 @Serializable
