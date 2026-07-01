@@ -26,8 +26,9 @@
 	let editStatus = $state<'confirmed' | 'declined'>('confirmed');
 	let editUnexcused = $state(false);
 
-	// Finalize blocked dialog state — show when server returns finalizeBlocked.
-	let showFinalizeBlocked = $derived(!!form?.finalizeBlocked);
+	// Finalize blocked dialog — driven by local state so OK dismisses without navigating.
+	let dismissedFinalize = $state(false);
+	const showFinalizeBlocked = $derived(!dismissedFinalize && !!form?.finalizeBlocked);
 
 	function openEdit(r: { userId: string; displayName: string; status: string; unexcused: boolean }) {
 		editTarget = { userId: r.userId, displayName: r.displayName, currentStatus: r.status };
@@ -238,7 +239,7 @@
 						</form>
 					{/if}
 					{#if data.event.checkInStatus === 'awaiting_checkin'}
-						<form method="POST" action="?/finalize" use:enhance>
+						<form method="POST" action="?/finalize" use:enhance={() => { dismissedFinalize = false; return async ({ update }) => { await update(); }; }}>
 							<button
 								type="submit"
 								class="flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-[13px] font-medium text-on-primary hover:opacity-90"
@@ -530,7 +531,7 @@
 			<div class="mt-5 flex justify-end">
 				<button
 					type="button"
-					onclick={() => history.back()}
+					onclick={() => (dismissedFinalize = true)}
 					class="cursor-pointer rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90"
 				>
 					OK
