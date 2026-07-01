@@ -17,36 +17,9 @@ data class AttendanceResponse(
 )
 
 @Serializable
-data class AttendanceRecord(
-    val eventId: String,
-    val userId: String,
-    val status: String,           // "present"|"absent"|"excused"
-    val note: String? = null,
-    val setBy: String,
-    val setAt: Instant,
-    val previousStatus: String? = null,
-    val previousSetBy: String? = null
-)
-
-@Serializable
-data class CheckInEntry(
-    val userId: String,
-    val userName: String,
-    val userAvatar: String? = null,
-    val response: AttendanceResponse? = null,
-    val record: AttendanceRecord? = null
-)
-
-@Serializable
 data class SubmitResponseRequest(
     val status: String,
     val reason: String? = null
-)
-
-@Serializable
-data class SubmitCheckInRequest(
-    val status: String,
-    val note: String? = null
 )
 
 @Serializable

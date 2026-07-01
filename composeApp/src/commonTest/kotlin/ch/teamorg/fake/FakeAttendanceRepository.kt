@@ -1,10 +1,8 @@
 package ch.teamorg.fake
 
 import ch.teamorg.domain.AttendanceResponse
-import ch.teamorg.domain.CheckInEntry
 import ch.teamorg.domain.Event
 import ch.teamorg.domain.FinalizeResult
-import ch.teamorg.domain.SubmitCheckInRequest
 import ch.teamorg.domain.SubmitResponseRequest
 import ch.teamorg.repository.AttendanceRepository
 import kotlinx.datetime.Clock
@@ -16,8 +14,6 @@ class FakeAttendanceRepository : AttendanceRepository {
     var submitResponseResult: Result<AttendanceResponse> = Result.success(
         AttendanceResponse(eventId = "e1", userId = "u1", status = "confirmed", updatedAt = Clock.System.now())
     )
-    var getCheckInResult: Result<List<CheckInEntry>> = Result.success(emptyList())
-    var submitCheckInResult: Result<Unit> = Result.success(Unit)
     var setMemberResponseResult: Result<AttendanceResponse> = Result.success(
         AttendanceResponse(eventId = "e1", userId = "u1", status = "confirmed", updatedAt = Clock.System.now())
     )
@@ -40,8 +36,6 @@ class FakeAttendanceRepository : AttendanceRepository {
         submitResponseResult = Result.success(
             AttendanceResponse(eventId = "e1", userId = "u1", status = "confirmed", updatedAt = Clock.System.now())
         )
-        getCheckInResult = Result.success(emptyList())
-        submitCheckInResult = Result.success(Unit)
         setMemberResponseResult = Result.success(
             AttendanceResponse(eventId = "e1", userId = "u1", status = "confirmed", updatedAt = Clock.System.now())
         )
@@ -63,10 +57,6 @@ class FakeAttendanceRepository : AttendanceRepository {
     override suspend fun getMyResponse(eventId: String): Result<AttendanceResponse?> = getMyResponseResult
 
     override suspend fun submitResponse(eventId: String, request: SubmitResponseRequest): Result<AttendanceResponse> = submitResponseResult
-
-    override suspend fun getCheckIn(eventId: String): Result<List<CheckInEntry>> = getCheckInResult
-
-    override suspend fun submitCheckIn(eventId: String, userId: String, request: SubmitCheckInRequest): Result<Unit> = submitCheckInResult
 
     override suspend fun setMemberResponse(
         eventId: String,

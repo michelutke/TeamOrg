@@ -3,12 +3,10 @@ package ch.teamorg.data.repository
 import ch.teamorg.data.AttendanceCacheManager
 import ch.teamorg.data.MutationQueueManager
 import ch.teamorg.domain.AttendanceResponse
-import ch.teamorg.domain.CheckInEntry
 import ch.teamorg.domain.Event
 import ch.teamorg.domain.FinalizeBlockedBody
 import ch.teamorg.domain.FinalizeResult
 import ch.teamorg.domain.SetMemberResponseRequest
-import ch.teamorg.domain.SubmitCheckInRequest
 import ch.teamorg.domain.SubmitResponseRequest
 import ch.teamorg.repository.AttendanceRepository
 import io.ktor.client.HttpClient
@@ -119,32 +117,6 @@ class AttendanceRepositoryImpl(
         } catch (e: Exception) {
             Result.failure(e)
         }
-    }
-
-    override suspend fun getCheckIn(eventId: String): Result<List<CheckInEntry>> {
-        return try {
-            Result.success(httpClient.get("/events/$eventId/check-in").body())
-        } catch (e: ConnectTimeoutException) {
-            Result.success(emptyList())
-        } catch (e: HttpRequestTimeoutException) {
-            Result.success(emptyList())
-        } catch (e: IOException) {
-            Result.success(emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun submitCheckIn(
-        eventId: String,
-        userId: String,
-        request: SubmitCheckInRequest
-    ): Result<Unit> = runCatching {
-        httpClient.put("/events/$eventId/check-in/$userId") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }
-        Unit
     }
 
     override suspend fun setMemberResponse(

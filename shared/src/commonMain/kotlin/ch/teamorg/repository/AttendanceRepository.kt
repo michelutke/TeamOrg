@@ -1,10 +1,8 @@
 package ch.teamorg.repository
 
 import ch.teamorg.domain.AttendanceResponse
-import ch.teamorg.domain.CheckInEntry
 import ch.teamorg.domain.Event
 import ch.teamorg.domain.FinalizeResult
-import ch.teamorg.domain.SubmitCheckInRequest
 import ch.teamorg.domain.SubmitResponseRequest
 
 interface AttendanceRepository {
@@ -12,10 +10,6 @@ interface AttendanceRepository {
     suspend fun getEventAttendance(eventId: String): Result<List<AttendanceResponse>>
     suspend fun getMyResponse(eventId: String): Result<AttendanceResponse?>
     suspend fun submitResponse(eventId: String, request: SubmitResponseRequest): Result<AttendanceResponse>
-
-    // Coach check-in
-    suspend fun getCheckIn(eventId: String): Result<List<CheckInEntry>>
-    suspend fun submitCheckIn(eventId: String, userId: String, request: SubmitCheckInRequest): Result<Unit>
 
     // Coach attendance management
     suspend fun setMemberResponse(eventId: String, userId: String, status: String, unexcused: Boolean): Result<AttendanceResponse>
