@@ -94,7 +94,8 @@ fun EventCard(
     declinedCount: Int,
     myResponse: String?,
     onClick: () -> Unit,
-    onRsvpSelect: (String) -> Unit
+    onRsvpSelect: (String) -> Unit,
+    isCoach: Boolean = false
 ) {
     val event = ewt.event
     val isCancelled = event.status == "cancelled"
@@ -196,6 +197,20 @@ fun EventCard(
                     TypeChip(event.type)
                     if (myResponse != null) {
                         MyStatusChip(myResponse)
+                    }
+                    if (isCoach && event.checkInStatus == "awaiting_checkin") {
+                        Box(
+                            modifier = Modifier
+                                .clip(PillShape)
+                                .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                "Check-in offen",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
                     }
                     if (event.externalSource == "nds" && event.presentCount > 0) {
                         val ext = MaterialTheme.extendedColors

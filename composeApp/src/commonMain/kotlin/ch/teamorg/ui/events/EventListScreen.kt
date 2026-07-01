@@ -126,10 +126,13 @@ fun EventListScreen(
                 teams = state.teams,
                 selectedTeamIds = state.selectedTeamIds,
                 selectedTypes = state.selectedTypes,
+                showAwaitingOnly = state.showAwaitingOnly,
+                isCoach = state.isCoach,
                 onTeamToggle = viewModel::toggleTeamFilter,
                 onTeamsClear = viewModel::clearTeamFilters,
                 onTypeToggle = viewModel::toggleTypeFilter,
-                onTypesClear = viewModel::clearTypeFilters
+                onTypesClear = viewModel::clearTypeFilters,
+                onAwaitingToggle = viewModel::toggleAwaitingFilter
             )
 
             when (state.viewMode) {
@@ -171,10 +174,13 @@ private fun FilterRows(
     teams: List<MatchedTeam>,
     selectedTeamIds: Set<String>,
     selectedTypes: Set<String>,
+    showAwaitingOnly: Boolean,
+    isCoach: Boolean,
     onTeamToggle: (String) -> Unit,
     onTeamsClear: () -> Unit,
     onTypeToggle: (String) -> Unit,
-    onTypesClear: () -> Unit
+    onTypesClear: () -> Unit,
+    onAwaitingToggle: () -> Unit
 ) {
     Column {
         // Row 1: Team filters
@@ -198,7 +204,7 @@ private fun FilterRows(
                 )
             }
         }
-        // Row 2: Type filters
+        // Row 2: Type filters + coach-only awaiting filter
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp),
@@ -218,6 +224,15 @@ private fun FilterRows(
                     onClick = { onTypeToggle(value) },
                     label = label
                 )
+            }
+            if (isCoach) {
+                item {
+                    M3eFilterChip(
+                        selected = showAwaitingOnly,
+                        onClick = onAwaitingToggle,
+                        label = "Check-in offen"
+                    )
+                }
             }
         }
     }
@@ -280,7 +295,8 @@ private fun EventListContent(
                         declinedCount = counts?.declinedCount ?: 0,
                         myResponse = counts?.myResponse,
                         onClick = { onEventClick(ewt.event.id) },
-                        onRsvpSelect = { status -> onRsvpSelect(ewt.event.id, status) }
+                        onRsvpSelect = { status -> onRsvpSelect(ewt.event.id, status) },
+                        isCoach = state.isCoach
                     )
                 }
             }
@@ -529,6 +545,7 @@ private fun MonthView(
                 DayEventsList(
                     events = state.selectedDayEvents,
                     attendanceCounts = state.attendanceCounts,
+                    isCoach = state.isCoach,
                     onEventClick = onEventClick,
                     onRsvpSelect = onRsvpSelect
                 )
@@ -674,6 +691,7 @@ private fun DayCell(
 private fun DayEventsList(
     events: List<EventWithTeams>,
     attendanceCounts: Map<String, EventAttendanceCounts>,
+    isCoach: Boolean,
     onEventClick: (String) -> Unit,
     onRsvpSelect: (String, String) -> Unit
 ) {
@@ -689,7 +707,8 @@ private fun DayEventsList(
                 declinedCount = counts?.declinedCount ?: 0,
                 myResponse = counts?.myResponse,
                 onClick = { onEventClick(ewt.event.id) },
-                onRsvpSelect = { status -> onRsvpSelect(ewt.event.id, status) }
+                onRsvpSelect = { status -> onRsvpSelect(ewt.event.id, status) },
+                isCoach = isCoach
             )
         }
     }
