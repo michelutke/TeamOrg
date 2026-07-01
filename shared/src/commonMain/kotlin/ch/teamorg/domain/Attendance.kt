@@ -12,7 +12,8 @@ data class AttendanceResponse(
     val abwesenheitRuleId: String? = null,
     val manualOverride: Boolean = false,
     val respondedAt: Instant? = null,
-    val updatedAt: Instant
+    val updatedAt: Instant,
+    val unexcused: Boolean = false
 )
 
 @Serializable
@@ -52,6 +53,24 @@ data class SubmitCheckInRequest(
 data class BackfillStatus(
     val status: String   // "pending"|"done"|"failed"
 )
+
+@Serializable
+data class SetMemberResponseRequest(
+    val status: String,
+    val unexcused: Boolean
+)
+
+@Serializable
+data class FinalizeBlockedBody(
+    val reason: String,
+    val userIds: List<String>
+)
+
+sealed interface FinalizeResult {
+    data object Success : FinalizeResult
+    data class Blocked(val reason: String, val userIds: List<String>) : FinalizeResult
+    data class Failure(val cause: Throwable) : FinalizeResult
+}
 
 // Client-side computed stats (ADR-007: no server stats endpoint)
 data class AttendanceStats(

@@ -26,6 +26,9 @@ data class Event(
     val subgroupIds: List<String> = emptyList(),
     val externalSource: String? = null,
     val presentCount: Int = 0,
+    val checkInStatus: String = "open",     // "open"|"locked"|"awaiting_checkin"|"done"
+    val checkInCompletedAt: Instant? = null,
+    val defaultResponse: String = "none",   // "none"|"accepted"|"declined"
 )
 
 @Serializable
