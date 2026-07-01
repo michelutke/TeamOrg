@@ -63,24 +63,13 @@ fun MemberResponseRow(
 
         // Name / annotation column
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = displayName,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (response.manualOverride) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "✎",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.semantics { contentDescription = "Coach override" }
-                    )
-                }
-            }
+            Text(
+                text = displayName,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
             val isAutoDeclined = response.abwesenheitRuleId != null
             val reason = response.reason
