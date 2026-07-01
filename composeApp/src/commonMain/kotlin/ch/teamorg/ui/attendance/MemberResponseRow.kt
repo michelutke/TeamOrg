@@ -4,26 +4,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ch.teamorg.domain.CheckInEntry
+import ch.teamorg.domain.AttendanceResponse
 import ch.teamorg.ui.theme.extendedColors
 
 @Composable
 fun MemberResponseRow(
-    entry: CheckInEntry,
+    response: AttendanceResponse,
     isCoach: Boolean,
-    onStatusTap: (String) -> Unit    // "present"|"absent"|"excused"
+    coachEditable: Boolean,     // isCoach && checkInStatus != "done"
+    onEditTap: () -> Unit
 ) {
     val ext = MaterialTheme.extendedColors
     Row(
@@ -33,12 +36,10 @@ fun MemberResponseRow(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar (40dp circle with initials)
-        val initials = entry.userName
-            .split(" ")
-            .filter { it.isNotEmpty() }
+        // Avatar circle with initials derived from userId (no display-name on AttendanceResponse)
+        val initials = response.userId
             .take(2)
-            .joinToString("") { it.first().uppercase() }
+            .uppercase()
 
         Box(
             modifier = Modifier
@@ -57,19 +58,17 @@ fun MemberResponseRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Name + reason column
+        // Name / annotation column
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = entry.userName,
+                    text = response.userId,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                // Coach override indicator
-                val entryRecord = entry.record
-                if (entryRecord != null && entryRecord.setBy != entry.userId) {
+                if (response.manualOverride) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "✎",
@@ -79,9 +78,9 @@ fun MemberResponseRow(
                     )
                 }
             }
-            // Auto-decline annotation + reason
-            val isAutoDeclined = entry.response?.abwesenheitRuleId != null
-            val reason = entry.record?.note ?: entry.response?.reason
+
+            val isAutoDeclined = response.abwesenheitRuleId != null
+            val reason = response.reason
             val annotation = when {
                 isAutoDeclined && !reason.isNullOrBlank() -> "Auto-declined · $reason"
                 isAutoDeclined -> "Auto-declined"
@@ -97,68 +96,37 @@ fun MemberResponseRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
 
-        // Coach override mini controls
-        if (isCoach) {
-            val currentStatus = entry.record?.status
-                ?: when (entry.response?.status) {
-                    "confirmed" -> "present"
-                    "declined", "declined-auto" -> "absent"
-                    "unsure" -> "excused"
-                    else -> null
-                }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                CoachStatusButton(
-                    symbol = "✓",
-                    color = ext.going,
-                    isSelected = currentStatus == "present",
-                    contentDesc = "Set present",
-                    onClick = { onStatusTap("present") }
-                )
-                CoachStatusButton(
-                    symbol = "✗",
+            // Unexcused marker — coach view only
+            if (isCoach && response.unexcused &&
+                (response.status == "declined" || response.status == "declined-auto")) {
+                Text(
+                    text = "Nicht entschuldigt",
                     color = ext.declined,
-                    isSelected = currentStatus == "absent",
-                    contentDesc = "Set absent",
-                    onClick = { onStatusTap("absent") }
-                )
-                CoachStatusButton(
-                    symbol = "?",
-                    color = ext.unsure,
-                    isSelected = currentStatus == "excused",
-                    contentDesc = "Set excused",
-                    onClick = { onStatusTap("excused") }
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
-    }
-}
 
-@Composable
-private fun CoachStatusButton(
-    symbol: String,
-    color: Color,
-    isSelected: Boolean = false,
-    contentDesc: String,
-    onClick: () -> Unit
-) {
-    val bg = if (isSelected) color else MaterialTheme.colorScheme.surfaceContainerHigh
-    val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    Box(
-        modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(bg)
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = contentDesc },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = symbol,
-            color = textColor,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
+        // Edit button for coach (not shown in "done" state)
+        if (coachEditable) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .clickable(onClick = onEditTap)
+                    .semantics { contentDescription = "Edit attendance" },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
     }
 }

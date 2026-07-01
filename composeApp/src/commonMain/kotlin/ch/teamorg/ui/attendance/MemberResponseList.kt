@@ -12,44 +12,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ch.teamorg.domain.CheckInEntry
+import ch.teamorg.domain.AttendanceResponse
 import ch.teamorg.ui.theme.extendedColors
 
 @Composable
 fun MemberResponseList(
-    entries: List<CheckInEntry>,
+    responses: List<AttendanceResponse>,
     isCoach: Boolean,
-    onOverrideTap: (CheckInEntry, String) -> Unit  // entry + status button tapped
+    checkInStatus: String,
+    onEditTap: (AttendanceResponse) -> Unit
 ) {
-    if (entries.isEmpty()) {
+    if (responses.isEmpty()) {
         EmptyAttendanceState()
         return
     }
 
-    // Coach record status overrides player response status
-    fun effectiveStatus(entry: CheckInEntry): String? {
-        val recordStatus = entry.record?.status
-        if (recordStatus != null) return when (recordStatus) {
-            "present" -> "confirmed"
-            "absent" -> "declined"
-            "excused" -> "unsure"
-            else -> recordStatus
-        }
-        return entry.response?.status
-    }
-
-    val confirmed = entries.filter { effectiveStatus(it) == "confirmed" }
-    val maybe = entries.filter { effectiveStatus(it) == "unsure" }
-    val declined = entries.filter { entry ->
-        val s = effectiveStatus(entry)
-        s == "declined" || s == "declined-auto"
-    }
-    val noResponse = entries.filter { entry ->
-        val s = effectiveStatus(entry)
-        s == null || s == "no-response"
-    }
+    val confirmed = responses.filter { it.status == "confirmed" }
+    val maybe = responses.filter { it.status == "unsure" }
+    val declined = responses.filter { it.status == "declined" || it.status == "declined-auto" }
+    val noResponse = responses.filter { it.status == "no-response" }
 
     val ext = MaterialTheme.extendedColors
+    val coachEditable = isCoach && checkInStatus != "done"
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -57,11 +41,12 @@ fun MemberResponseList(
     ) {
         if (confirmed.isNotEmpty()) {
             ResponseSectionCard(label = "GOING", count = confirmed.size, color = ext.going) {
-                confirmed.forEach { entry ->
+                confirmed.forEach { response ->
                     MemberResponseRow(
-                        entry = entry,
+                        response = response,
                         isCoach = isCoach,
-                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                        coachEditable = coachEditable,
+                        onEditTap = { onEditTap(response) }
                     )
                 }
             }
@@ -69,11 +54,12 @@ fun MemberResponseList(
 
         if (maybe.isNotEmpty()) {
             ResponseSectionCard(label = "UNSURE", count = maybe.size, color = ext.unsure) {
-                maybe.forEach { entry ->
+                maybe.forEach { response ->
                     MemberResponseRow(
-                        entry = entry,
+                        response = response,
                         isCoach = isCoach,
-                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                        coachEditable = coachEditable,
+                        onEditTap = { onEditTap(response) }
                     )
                 }
             }
@@ -81,11 +67,12 @@ fun MemberResponseList(
 
         if (declined.isNotEmpty()) {
             ResponseSectionCard(label = "DECLINED", count = declined.size, color = ext.declined) {
-                declined.forEach { entry ->
+                declined.forEach { response ->
                     MemberResponseRow(
-                        entry = entry,
+                        response = response,
                         isCoach = isCoach,
-                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                        coachEditable = coachEditable,
+                        onEditTap = { onEditTap(response) }
                     )
                 }
             }
@@ -97,11 +84,12 @@ fun MemberResponseList(
                 count = noResponse.size,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             ) {
-                noResponse.forEach { entry ->
+                noResponse.forEach { response ->
                     MemberResponseRow(
-                        entry = entry,
+                        response = response,
                         isCoach = isCoach,
-                        onStatusTap = { status -> onOverrideTap(entry, status) }
+                        coachEditable = coachEditable,
+                        onEditTap = { onEditTap(response) }
                     )
                 }
             }
