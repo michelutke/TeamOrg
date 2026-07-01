@@ -2,6 +2,7 @@ package ch.teamorg.domain.repositories
 
 import ch.teamorg.db.tables.*
 import ch.teamorg.domain.models.*
+import ch.teamorg.domain.models.deriveCheckInStatus
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
@@ -733,39 +734,48 @@ class EventRepositoryImpl : EventRepository {
         return event.copy(teamIds = teamIds, subgroupIds = subgroupIds)
     }
 
-    /** Counts `present` attendance records grouped by event. Events with zero are absent from the map. */
-    private fun presentCountFor(eventIds: List<UUID>): Map<UUID, Int> {
-        if (eventIds.isEmpty()) return emptyMap()
-        val cnt = AttendanceRecordsTable.eventId.count()
-        return AttendanceRecordsTable
-            .select(AttendanceRecordsTable.eventId, cnt)
-            .where { (AttendanceRecordsTable.eventId inList eventIds) and (AttendanceRecordsTable.status eq RecordStatus.present) }
-            .groupBy(AttendanceRecordsTable.eventId)
-            .associate { it[AttendanceRecordsTable.eventId] to it[cnt].toInt() }
-    }
+    /** TODO(Task-N): re-implement once attendance_records table is replaced by check-in records. */
+    private fun presentCountFor(eventIds: List<UUID>): Map<UUID, Int> = emptyMap()
 
-    private fun rowToEvent(row: ResultRow) = Event(
-        id = row[EventsTable.id],
-        title = row[EventsTable.title],
-        type = row[EventsTable.type].name,
-        startAt = row[EventsTable.startAt],
-        endAt = row[EventsTable.endAt],
-        meetupAt = row[EventsTable.meetupAt],
-        location = row[EventsTable.location],
-        description = row[EventsTable.description],
-        minAttendees = row[EventsTable.minAttendees],
-        status = row[EventsTable.status].name,
-        cancelledAt = row[EventsTable.cancelledAt],
-        seriesId = row[EventsTable.seriesId],
-        seriesSequence = row[EventsTable.seriesSequence],
-        seriesOverride = row[EventsTable.seriesOverride],
-        createdBy = row[EventsTable.createdBy],
-        createdAt = row[EventsTable.createdAt],
-        updatedAt = row[EventsTable.updatedAt],
-        externalSource = row[EventsTable.externalSource],
-        externalStatus = row[EventsTable.externalStatus],
-        needsReview = row[EventsTable.needsReview]
-    )
+    private fun rowToEvent(row: ResultRow): Event {
+        val startAt = row[EventsTable.startAt]
+        val endAt = row[EventsTable.endAt]
+        val responseDeadline = row[EventsTable.responseDeadline]
+        val checkInCompletedAt = row[EventsTable.checkInCompletedAt]
+        val defaultResponse = row[EventsTable.defaultResponse]
+        val cutoff = responseDeadline ?: startAt
+        val checkInStatus = deriveCheckInStatus(
+            now = Instant.now(),
+            cutoff = cutoff,
+            endAt = endAt,
+            completedAt = checkInCompletedAt
+        )
+        return Event(
+            id = row[EventsTable.id],
+            title = row[EventsTable.title],
+            type = row[EventsTable.type].name,
+            startAt = startAt,
+            endAt = endAt,
+            meetupAt = row[EventsTable.meetupAt],
+            location = row[EventsTable.location],
+            description = row[EventsTable.description],
+            minAttendees = row[EventsTable.minAttendees],
+            status = row[EventsTable.status].name,
+            cancelledAt = row[EventsTable.cancelledAt],
+            seriesId = row[EventsTable.seriesId],
+            seriesSequence = row[EventsTable.seriesSequence],
+            seriesOverride = row[EventsTable.seriesOverride],
+            createdBy = row[EventsTable.createdBy],
+            createdAt = row[EventsTable.createdAt],
+            updatedAt = row[EventsTable.updatedAt],
+            externalSource = row[EventsTable.externalSource],
+            externalStatus = row[EventsTable.externalStatus],
+            needsReview = row[EventsTable.needsReview],
+            checkInCompletedAt = checkInCompletedAt,
+            defaultResponse = defaultResponse,
+            checkInStatus = checkInStatus
+        )
+    }
 
     private fun rowToEventSeries(row: ResultRow) = EventSeries(
         id = row[EventSeriesTable.id],
