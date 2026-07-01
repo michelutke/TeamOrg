@@ -293,7 +293,6 @@ class AttendanceRepositoryImpl : AttendanceRepository {
                 eventId = row[EventsTable.id],
                 userId = row.getOrNull(AttendanceResponsesTable.userId) ?: userId ?: UUID(0, 0),
                 responseStatus = row.getOrNull(AttendanceResponsesTable.status),
-                recordStatus = null,
                 eventStartAt = row[EventsTable.startAt]
             )
         }

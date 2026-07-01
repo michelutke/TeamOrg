@@ -27,7 +27,6 @@ data class RawAttendanceRow(
     val eventId: UUID,
     val userId: UUID,
     val responseStatus: String?,
-    val recordStatus: String?,
     val eventStartAt: Instant
 )
 
@@ -42,18 +41,6 @@ data class AttendanceResponseDto(
     val unexcused: Boolean = false,
     val respondedAt: KInstant? = null,
     val updatedAt: KInstant
-)
-
-@Serializable
-data class AttendanceRecordDto(
-    val eventId: String,
-    val userId: String,
-    val status: String,
-    val note: String? = null,
-    val setBy: String,
-    val setAt: KInstant,
-    val previousStatus: String? = null,
-    val previousSetBy: String? = null
 )
 
 interface AttendanceRepository {

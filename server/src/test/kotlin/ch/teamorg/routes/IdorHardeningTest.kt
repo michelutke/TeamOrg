@@ -46,7 +46,6 @@ class IdorHardeningTest : IntegrationTestBase() {
         val eventId: String,
         val userId: String,
         val responseStatus: String? = null,
-        val recordStatus: String? = null,
         val eventStartAt: String
     )
 
