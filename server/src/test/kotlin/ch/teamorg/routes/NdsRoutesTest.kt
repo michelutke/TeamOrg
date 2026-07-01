@@ -1,6 +1,7 @@
 package ch.teamorg.routes
 
 import ch.teamorg.db.tables.AttendanceRecordsTable
+import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
@@ -18,6 +19,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -217,10 +219,30 @@ class NdsRoutesTest : IntegrationTestBase() {
             }
         }
         // Fill in a location for every event (trainings need ORT).
-        transaction {
+        val eventIds = transaction {
             val ids = EventTeamsTable.select(EventTeamsTable.eventId)
                 .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
             EventsTable.update({ EventsTable.id inList ids }) { it[location] = "Halle Thun" }
+            ids
+        }
+
+        // Seed confirmed attendance_responses for the same (event, user) pairs that the NDS
+        // import created as present records. Export now reads confirmed responses, not records.
+        transaction {
+            val memberUserIds = NdsMembersTable.select(NdsMembersTable.userId)
+                .where { NdsMembersTable.teamId eq teamId }
+                .mapNotNull { it[NdsMembersTable.userId] }
+            val existingRecords = AttendanceRecordsTable.selectAll()
+                .where { AttendanceRecordsTable.eventId inList eventIds }.toList()
+            for (record in existingRecords) {
+                val userId = record[AttendanceRecordsTable.userId]
+                if (userId !in memberUserIds) continue
+                AttendanceResponsesTable.insertIgnore {
+                    it[AttendanceResponsesTable.eventId] = record[AttendanceRecordsTable.eventId]
+                    it[AttendanceResponsesTable.userId] = userId
+                    it[AttendanceResponsesTable.status] = "confirmed"
+                }
+            }
         }
 
         val report = createJsonClient().get("/teams/$teamId/nds/export/preflight") {
@@ -241,7 +263,7 @@ class NdsRoutesTest : IntegrationTestBase() {
         assertEquals(9, akt.size)
         assertTrue(akt.drop(1).all { it.startsWith("Training;") && it.contains(";18:00;90;Halle Thun;") })
 
-        // 6 present records + header. Every AWK row's tail must equal an Aktivitäten row's fields.
+        // 6 confirmed responses + header. Every AWK row's tail must match an Aktivitäten row.
         assertEquals("PERSONENNUMMER;FUNKTION;DATUM;AKTIVITAETSTYP;ZEIT;DAUER;ORT", awk[0])
         assertEquals(7, awk.size)
         assertTrue(awk.drop(1).all { it.contains(";Training;18:00;90;Halle Thun") })
