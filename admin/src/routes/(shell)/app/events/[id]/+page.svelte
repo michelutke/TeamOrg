@@ -159,14 +159,6 @@
 			</div>
 			{#if data.canManage}
 				<div class="flex shrink-0 gap-2">
-					{#if data.event.teamIds.length > 0}
-						<a
-							href="/app/teams/{data.event.teamIds[0]}/checkin/{data.event.id}"
-							class="flex items-center gap-1 rounded-full bg-surface-container-high px-4 py-2 text-[13px] font-medium text-on-surface hover:opacity-90"
-						>
-							<ClipboardCheck size={15} /> {data.m.checkin.title}
-						</a>
-					{/if}
 					<a
 						href="/app/events/{data.event.id}/edit"
 						class="flex items-center gap-1 rounded-full bg-surface-container-high px-4 py-2 text-[13px] font-medium text-on-surface hover:opacity-90"
