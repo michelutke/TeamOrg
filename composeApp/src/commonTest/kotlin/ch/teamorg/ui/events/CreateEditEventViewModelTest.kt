@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.hours
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -55,7 +56,7 @@ class CreateEditEventViewModelTest {
             title = "Training",
             type = "training",
             startAt = now,
-            endAt = now,
+            endAt = now + 1.5.hours,
             status = "active",
             createdBy = "u1",
             createdAt = now,
@@ -118,5 +119,37 @@ class CreateEditEventViewModelTest {
         )
         vm.setDefaultResponse("declined")
         vm.state.value.defaultResponse shouldBe "declined"
+    }
+
+    @Test
+    fun `create request carries defaultResponse`() = runTest {
+        val repo = FakeCreateEditEventRepository()
+        val vm = CreateEditEventViewModel(
+            eventRepository = repo,
+            clubRepository = FakeClubRepository(),
+            teamRepository = FakeTeamRepository()
+        )
+        // Satisfy validation: title + team
+        vm.setTitle("Training")
+        vm.toggleTeam("team1")
+        vm.setDefaultResponse("accepted")
+        vm.save()
+        repo.capturedCreate.size shouldBe 1
+        repo.capturedCreate[0].defaultResponse shouldBe "accepted"
+    }
+
+    @Test
+    fun `edit request carries defaultResponse`() = runTest {
+        val repo = FakeCreateEditEventRepository(event = makeEvent(defaultResponse = "none"))
+        val vm = CreateEditEventViewModel(
+            eventRepository = repo,
+            clubRepository = FakeClubRepository(),
+            teamRepository = FakeTeamRepository()
+        )
+        vm.loadForEdit("e1")
+        vm.setDefaultResponse("declined")
+        vm.save()
+        repo.capturedEdit.size shouldBe 1
+        repo.capturedEdit[0].defaultResponse shouldBe "declined"
     }
 }
