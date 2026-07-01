@@ -3,7 +3,6 @@ package ch.teamorg.data.repository
 import ch.teamorg.data.AttendanceCacheManager
 import ch.teamorg.data.MutationQueueManager
 import ch.teamorg.domain.AttendanceResponse
-import ch.teamorg.domain.Event
 import ch.teamorg.domain.FinalizeBlockedBody
 import ch.teamorg.domain.FinalizeResult
 import ch.teamorg.domain.SetMemberResponseRequest
@@ -154,20 +153,6 @@ class AttendanceRepositoryImpl(
     override suspend fun reopen(eventId: String): Result<Unit> = runCatching {
         httpClient.post("/events/$eventId/attendance/reopen")
         Unit
-    }
-
-    override suspend fun awaitingCheckIn(): Result<List<Event>> {
-        return try {
-            Result.success(httpClient.get("/users/me/events/awaiting-checkin").body())
-        } catch (e: ConnectTimeoutException) {
-            Result.success(emptyList())
-        } catch (e: HttpRequestTimeoutException) {
-            Result.success(emptyList())
-        } catch (e: IOException) {
-            Result.success(emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
     }
 
     override suspend fun getRawAttendance(

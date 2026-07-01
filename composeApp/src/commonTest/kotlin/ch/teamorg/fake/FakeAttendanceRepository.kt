@@ -1,7 +1,6 @@
 package ch.teamorg.fake
 
 import ch.teamorg.domain.AttendanceResponse
-import ch.teamorg.domain.Event
 import ch.teamorg.domain.FinalizeResult
 import ch.teamorg.domain.SubmitResponseRequest
 import ch.teamorg.repository.AttendanceRepository
@@ -19,7 +18,6 @@ class FakeAttendanceRepository : AttendanceRepository {
     )
     var finalizeResult: FinalizeResult = FinalizeResult.Success
     var reopenResult: Result<Unit> = Result.success(Unit)
-    var awaitingCheckInResult: Result<List<Event>> = Result.success(emptyList())
     var getRawAttendanceResult: Result<List<AttendanceResponse>> = Result.success(emptyList())
     var getTeamAttendanceResult: Result<List<AttendanceResponse>> = Result.success(emptyList())
 
@@ -41,7 +39,6 @@ class FakeAttendanceRepository : AttendanceRepository {
         )
         finalizeResult = FinalizeResult.Success
         reopenResult = Result.success(Unit)
-        awaitingCheckInResult = Result.success(emptyList())
         getRawAttendanceResult = Result.success(emptyList())
         getTeamAttendanceResult = Result.success(emptyList())
         lastSetMemberEventId = null
@@ -80,8 +77,6 @@ class FakeAttendanceRepository : AttendanceRepository {
         lastReopenEventId = eventId
         return reopenResult
     }
-
-    override suspend fun awaitingCheckIn(): Result<List<Event>> = awaitingCheckInResult
 
     override suspend fun getRawAttendance(userId: String, from: String?, to: String?): Result<List<AttendanceResponse>> = getRawAttendanceResult
 
