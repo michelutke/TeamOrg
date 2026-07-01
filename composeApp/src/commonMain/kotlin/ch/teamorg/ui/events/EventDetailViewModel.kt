@@ -147,7 +147,7 @@ class EventDetailViewModel(
         }
     }
 
-    fun finalize() {
+    fun finalizeEvent() {
         val eventId = _state.value.event?.event?.id ?: return
         _state.update { it.copy(isFinalizingOrReopening = true) }
         viewModelScope.launch {

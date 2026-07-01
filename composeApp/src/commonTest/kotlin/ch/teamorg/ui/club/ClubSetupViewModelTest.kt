@@ -51,7 +51,7 @@ class ClubSetupViewModelTest {
     // region — field updates
 
     @Test
-    fun onNameChange_updatesNameAndClearsError() = runTest {
+    fun onNameChange_updatesNameAndClearsError() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem()
             viewModel.onNameChange("FC Example")
@@ -61,7 +61,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun onSportTypeChange_updatesSportType() = runTest {
+    fun onSportTypeChange_updatesSportType() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem()
             viewModel.onSportTypeChange("football")
@@ -71,7 +71,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun onLocationChange_updatesLocation() = runTest {
+    fun onLocationChange_updatesLocation() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem()
             viewModel.onLocationChange("Zurich")
@@ -98,7 +98,7 @@ class ClubSetupViewModelTest {
     // region — createClub happy path
 
     @Test
-    fun createClub_withValidName_emitsClubCreatedEvent() = runTest {
+    fun createClub_withValidName_emitsClubCreatedEvent() = runTest(testDispatcher) {
         val expectedClub = Club(id = "club1", name = "FC Example", logoUrl = null, sportType = "volleyball")
         fakeClubRepo.createClubResult = Result.success(expectedClub)
         viewModel.onNameChange("FC Example")
@@ -112,7 +112,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun createClub_withValidName_storesClubIdInState() = runTest {
+    fun createClub_withValidName_storesClubIdInState() = runTest(testDispatcher) {
         fakeClubRepo.createClubResult = Result.success(
             Club(id = "club42", name = "FC Example", logoUrl = null, sportType = "volleyball")
         )
@@ -123,7 +123,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun createClub_withEmptyLocation_passesNullLocationToRepository() = runTest {
+    fun createClub_withEmptyLocation_passesNullLocationToRepository() = runTest(testDispatcher) {
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
 
@@ -131,7 +131,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun createClub_withLocation_passesLocationToRepository() = runTest {
+    fun createClub_withLocation_passesLocationToRepository() = runTest(testDispatcher) {
         viewModel.onNameChange("FC Example")
         viewModel.onLocationChange("Zurich")
         viewModel.createClub()
@@ -140,7 +140,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun createClub_clearsLoadingAfterSuccess() = runTest {
+    fun createClub_clearsLoadingAfterSuccess() = runTest(testDispatcher) {
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
 
@@ -150,7 +150,7 @@ class ClubSetupViewModelTest {
     // region — createClub error path
 
     @Test
-    fun createClub_onRepositoryFailure_setsErrorMessage() = runTest {
+    fun createClub_onRepositoryFailure_setsErrorMessage() = runTest(testDispatcher) {
         fakeClubRepo.createClubResult = Result.failure(Exception("Name already taken"))
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
@@ -159,7 +159,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun createClub_onRepositoryFailureWithNullMessage_setsDefaultError() = runTest {
+    fun createClub_onRepositoryFailureWithNullMessage_setsDefaultError() = runTest(testDispatcher) {
         fakeClubRepo.createClubResult = Result.failure(Exception())
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
@@ -168,7 +168,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun createClub_onFailure_clearsLoadingState() = runTest {
+    fun createClub_onFailure_clearsLoadingState() = runTest(testDispatcher) {
         fakeClubRepo.createClubResult = Result.failure(Exception("Error"))
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
@@ -179,7 +179,7 @@ class ClubSetupViewModelTest {
     // region — uploadLogo
 
     @Test
-    fun uploadLogo_withNoClubId_doesNothing() = runTest {
+    fun uploadLogo_withNoClubId_doesNothing() = runTest(testDispatcher) {
         // clubId is null initially; uploadLogo should be a no-op
         viewModel.uploadLogo(ByteArray(0), "png")
 
@@ -188,7 +188,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun uploadLogo_afterClubCreated_emitsLogoUploadedEvent() = runTest {
+    fun uploadLogo_afterClubCreated_emitsLogoUploadedEvent() = runTest(testDispatcher) {
         // Create club first to get clubId
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
@@ -202,7 +202,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun uploadLogo_afterClubCreated_updatesLogoUrl() = runTest {
+    fun uploadLogo_afterClubCreated_updatesLogoUrl() = runTest(testDispatcher) {
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
 
@@ -215,7 +215,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun uploadLogo_onFailure_setsErrorAndClearsUploading() = runTest {
+    fun uploadLogo_onFailure_setsErrorAndClearsUploading() = runTest(testDispatcher) {
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
 
@@ -228,7 +228,7 @@ class ClubSetupViewModelTest {
     }
 
     @Test
-    fun uploadLogo_passesExtensionToRepository() = runTest {
+    fun uploadLogo_passesExtensionToRepository() = runTest(testDispatcher) {
         viewModel.onNameChange("FC Example")
         viewModel.createClub()
         viewModel.uploadLogo(ByteArray(10), "png")

@@ -35,7 +35,7 @@ class AuthViewModelTest {
     // region -- initial state
 
     @Test
-    fun init_whenNotLoggedIn_emitsUnauthenticated() = runTest {
+    fun init_whenNotLoggedIn_emitsUnauthenticated() = runTest(testDispatcher) {
         fakeAuth.loggedIn = false
         viewModel = AuthViewModel(fakeAuth)
 
@@ -43,7 +43,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun init_whenLoggedIn_emitsAuthenticated() = runTest {
+    fun init_whenLoggedIn_emitsAuthenticated() = runTest(testDispatcher) {
         fakeAuth.loggedIn = true
         viewModel = AuthViewModel(fakeAuth)
 
@@ -51,7 +51,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun init_whenLoggedInButGetMeFails_emitsUnauthenticated() = runTest {
+    fun init_whenLoggedInButGetMeFails_emitsUnauthenticated() = runTest(testDispatcher) {
         fakeAuth.loggedIn = true
         fakeAuth.getMeResult = Result.failure(Exception("401"))
         viewModel = AuthViewModel(fakeAuth)
@@ -74,7 +74,7 @@ class AuthViewModelTest {
      * This test catches that at the ViewModel level by verifying the state transition.
      */
     @Test
-    fun checkAuthState_afterLoginSetsLoggedIn_emitsAuthenticated() = runTest {
+    fun checkAuthState_afterLoginSetsLoggedIn_emitsAuthenticated() = runTest(testDispatcher) {
         // Start unauthenticated
         fakeAuth.loggedIn = false
         viewModel = AuthViewModel(fakeAuth)
@@ -96,7 +96,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun checkAuthState_afterLoginSetsLoggedIn_hasTeamReflectsRoles() = runTest {
+    fun checkAuthState_afterLoginSetsLoggedIn_hasTeamReflectsRoles() = runTest(testDispatcher) {
         fakeAuth.loggedIn = false
         viewModel = AuthViewModel(fakeAuth)
 
@@ -111,7 +111,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun checkAuthState_afterLoginSetsLoggedIn_noTeam() = runTest {
+    fun checkAuthState_afterLoginSetsLoggedIn_noTeam() = runTest(testDispatcher) {
         fakeAuth.loggedIn = false
         viewModel = AuthViewModel(fakeAuth)
 
@@ -136,7 +136,7 @@ class AuthViewModelTest {
      * ensures LaunchedEffect(authState) re-fires in the real Compose tree).
      */
     @Test
-    fun checkAuthState_calledTwice_emitsAuthenticatedBothTimes() = runTest {
+    fun checkAuthState_calledTwice_emitsAuthenticatedBothTimes() = runTest(testDispatcher) {
         fakeAuth.loggedIn = true
         viewModel = AuthViewModel(fakeAuth)
         viewModel.state.value.shouldBeInstanceOf<AuthState.Authenticated>()
@@ -154,7 +154,7 @@ class AuthViewModelTest {
     // region -- logout
 
     @Test
-    fun logout_emitsUnauthenticated() = runTest {
+    fun logout_emitsUnauthenticated() = runTest(testDispatcher) {
         fakeAuth.loggedIn = true
         viewModel = AuthViewModel(fakeAuth)
         viewModel.state.value.shouldBeInstanceOf<AuthState.Authenticated>()

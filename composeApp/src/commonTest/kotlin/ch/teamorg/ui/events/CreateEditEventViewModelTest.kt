@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -77,17 +78,18 @@ class CreateEditEventViewModelTest {
     }
 
     @Test
-    fun `defaultResponse defaults to none on fresh form`() = runTest {
+    fun `defaultResponse defaults to none on fresh form`() = runTest(testDispatcher) {
         val vm = CreateEditEventViewModel(
             eventRepository = FakeCreateEditEventRepository(),
             clubRepository = FakeClubRepository(),
             teamRepository = FakeTeamRepository()
         )
+        advanceUntilIdle()
         vm.state.value.defaultResponse shouldBe "none"
     }
 
     @Test
-    fun `loadForEdit seeds defaultResponse from event`() = runTest {
+    fun `loadForEdit seeds defaultResponse from event`() = runTest(testDispatcher) {
         val repo = FakeCreateEditEventRepository(event = makeEvent(defaultResponse = "accepted"))
         val vm = CreateEditEventViewModel(
             eventRepository = repo,
@@ -95,11 +97,12 @@ class CreateEditEventViewModelTest {
             teamRepository = FakeTeamRepository()
         )
         vm.loadForEdit("e1")
+        advanceUntilIdle()
         vm.state.value.defaultResponse shouldBe "accepted"
     }
 
     @Test
-    fun `loadForEdit seeds declined defaultResponse from event`() = runTest {
+    fun `loadForEdit seeds declined defaultResponse from event`() = runTest(testDispatcher) {
         val repo = FakeCreateEditEventRepository(event = makeEvent(defaultResponse = "declined"))
         val vm = CreateEditEventViewModel(
             eventRepository = repo,
@@ -107,11 +110,12 @@ class CreateEditEventViewModelTest {
             teamRepository = FakeTeamRepository()
         )
         vm.loadForEdit("e1")
+        advanceUntilIdle()
         vm.state.value.defaultResponse shouldBe "declined"
     }
 
     @Test
-    fun `setDefaultResponse updates state`() = runTest {
+    fun `setDefaultResponse updates state`() = runTest(testDispatcher) {
         val vm = CreateEditEventViewModel(
             eventRepository = FakeCreateEditEventRepository(),
             clubRepository = FakeClubRepository(),
@@ -122,7 +126,7 @@ class CreateEditEventViewModelTest {
     }
 
     @Test
-    fun `create request carries defaultResponse`() = runTest {
+    fun `create request carries defaultResponse`() = runTest(testDispatcher) {
         val repo = FakeCreateEditEventRepository()
         val vm = CreateEditEventViewModel(
             eventRepository = repo,
@@ -134,12 +138,13 @@ class CreateEditEventViewModelTest {
         vm.toggleTeam("team1")
         vm.setDefaultResponse("accepted")
         vm.save()
+        advanceUntilIdle()
         repo.capturedCreate.size shouldBe 1
         repo.capturedCreate[0].defaultResponse shouldBe "accepted"
     }
 
     @Test
-    fun `edit request carries defaultResponse`() = runTest {
+    fun `edit request carries defaultResponse`() = runTest(testDispatcher) {
         val repo = FakeCreateEditEventRepository(event = makeEvent(defaultResponse = "none"))
         val vm = CreateEditEventViewModel(
             eventRepository = repo,
@@ -147,8 +152,10 @@ class CreateEditEventViewModelTest {
             teamRepository = FakeTeamRepository()
         )
         vm.loadForEdit("e1")
+        advanceUntilIdle()
         vm.setDefaultResponse("declined")
         vm.save()
+        advanceUntilIdle()
         repo.capturedEdit.size shouldBe 1
         repo.capturedEdit[0].defaultResponse shouldBe "declined"
     }

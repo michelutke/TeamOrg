@@ -61,7 +61,7 @@ class TeamRosterViewModelTest {
     // region — loadRoster happy path
 
     @Test
-    fun loadRoster_withSuccess_populatesMembers() = runTest {
+    fun loadRoster_withSuccess_populatesMembers() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(listOf(memberAlice, memberBob))
         viewModel.loadRoster("team1")
 
@@ -69,7 +69,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun loadRoster_withSuccess_clearsLoadingAndError() = runTest {
+    fun loadRoster_withSuccess_clearsLoadingAndError() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(listOf(memberAlice))
         viewModel.loadRoster("team1")
 
@@ -79,7 +79,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun loadRoster_passesTeamIdToRepository() = runTest {
+    fun loadRoster_passesTeamIdToRepository() = runTest(testDispatcher) {
         viewModel.loadRoster("team42")
 
         fakeTeamRepo.lastRosterTeamId shouldBe "team42"
@@ -88,7 +88,7 @@ class TeamRosterViewModelTest {
     // region — loadRoster: loading state
 
     @Test
-    fun loadRoster_afterSuccess_isLoadingIsFalse() = runTest {
+    fun loadRoster_afterSuccess_isLoadingIsFalse() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(listOf(memberAlice))
         viewModel.loadRoster("team1")
 
@@ -98,7 +98,7 @@ class TeamRosterViewModelTest {
     // region — loadRoster: pull-to-refresh
 
     @Test
-    fun loadRoster_withIsRefreshTrue_populatesMembersAndClearsRefreshing() = runTest {
+    fun loadRoster_withIsRefreshTrue_populatesMembersAndClearsRefreshing() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(listOf(memberAlice))
         viewModel.loadRoster("team1", isRefresh = true)
 
@@ -108,7 +108,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun loadRoster_withIsRefreshTrue_isLoadingRemainsFlase() = runTest {
+    fun loadRoster_withIsRefreshTrue_isLoadingRemainsFlase() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(listOf(memberAlice))
         viewModel.loadRoster("team1", isRefresh = true)
 
@@ -118,7 +118,7 @@ class TeamRosterViewModelTest {
     // region — loadRoster error path
 
     @Test
-    fun loadRoster_onFailure_setsErrorMessage() = runTest {
+    fun loadRoster_onFailure_setsErrorMessage() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.failure(Exception("Network error"))
         viewModel.loadRoster("team1")
 
@@ -126,7 +126,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun loadRoster_onFailureWithNullMessage_setsDefaultError() = runTest {
+    fun loadRoster_onFailureWithNullMessage_setsDefaultError() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.failure(Exception())
         viewModel.loadRoster("team1")
 
@@ -134,7 +134,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun loadRoster_onFailure_clearsLoadingAndRefreshing() = runTest {
+    fun loadRoster_onFailure_clearsLoadingAndRefreshing() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.failure(Exception("Error"))
         viewModel.loadRoster("team1")
 
@@ -146,7 +146,7 @@ class TeamRosterViewModelTest {
     // region — removeMember
 
     @Test
-    fun removeMember_withSuccess_removesMemberFromState() = runTest {
+    fun removeMember_withSuccess_removesMemberFromState() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(listOf(memberAlice, memberBob))
         viewModel.loadRoster("team1")
 
@@ -156,7 +156,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun removeMember_onFailure_setsErrorMessage() = runTest {
+    fun removeMember_onFailure_setsErrorMessage() = runTest(testDispatcher) {
         fakeTeamRepo.removeMemberResult = Result.failure(Exception("Not authorized"))
         viewModel.removeMember("team1", "u1")
 
@@ -164,7 +164,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun removeMember_onFailureWithNullMessage_setsDefaultError() = runTest {
+    fun removeMember_onFailureWithNullMessage_setsDefaultError() = runTest(testDispatcher) {
         fakeTeamRepo.removeMemberResult = Result.failure(Exception())
         viewModel.removeMember("team1", "u1")
 
@@ -172,7 +172,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun removeMember_passesCorrectIdsToRepository() = runTest {
+    fun removeMember_passesCorrectIdsToRepository() = runTest(testDispatcher) {
         viewModel.removeMember("team99", "userXYZ")
 
         fakeTeamRepo.lastRemovedTeamId shouldBe "team99"
@@ -182,7 +182,7 @@ class TeamRosterViewModelTest {
     // region — createInvite
 
     @Test
-    fun createInvite_withSuccess_setsInviteUrl() = runTest {
+    fun createInvite_withSuccess_setsInviteUrl() = runTest(testDispatcher) {
         fakeTeamRepo.createInviteResult = Result.success("https://teamorg.app/invite/xyz")
         viewModel.createInvite("team1", "player")
 
@@ -190,7 +190,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun createInvite_onFailure_setsErrorMessage() = runTest {
+    fun createInvite_onFailure_setsErrorMessage() = runTest(testDispatcher) {
         fakeTeamRepo.createInviteResult = Result.failure(Exception("Invite limit reached"))
         viewModel.createInvite("team1", "player")
 
@@ -198,7 +198,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun createInvite_onFailureWithNullMessage_setsDefaultError() = runTest {
+    fun createInvite_onFailureWithNullMessage_setsDefaultError() = runTest(testDispatcher) {
         fakeTeamRepo.createInviteResult = Result.failure(Exception())
         viewModel.createInvite("team1", "player")
 
@@ -206,7 +206,7 @@ class TeamRosterViewModelTest {
     }
 
     @Test
-    fun createInvite_passesRoleToRepository() = runTest {
+    fun createInvite_passesRoleToRepository() = runTest(testDispatcher) {
         viewModel.createInvite("team1", "coach")
 
         fakeTeamRepo.lastInviteRole shouldBe "coach"
@@ -216,7 +216,7 @@ class TeamRosterViewModelTest {
     // region — resetInvite
 
     @Test
-    fun resetInvite_clearsInviteUrl() = runTest {
+    fun resetInvite_clearsInviteUrl() = runTest(testDispatcher) {
         fakeTeamRepo.createInviteResult = Result.success("https://teamorg.app/invite/xyz")
         viewModel.createInvite("team1", "player")
         viewModel.resetInvite()

@@ -54,7 +54,7 @@ class ClubMembersViewModelTest {
     // region — loadMore appends pages
 
     @Test
-    fun init_withFullPage_appendsUsersAndEndReachedIsFalse() = runTest {
+    fun init_withFullPage_appendsUsersAndEndReachedIsFalse() = runTest(testDispatcher) {
         val page = List(25) { makeUser("u$it") }
         fakeClubRepo.listClubUsersResult = Result.success(page)
 
@@ -66,7 +66,7 @@ class ClubMembersViewModelTest {
     }
 
     @Test
-    fun loadMore_withShortPage_setsEndReached() = runTest {
+    fun loadMore_withShortPage_setsEndReached() = runTest(testDispatcher) {
         val shortPage = List(10) { makeUser("u$it") }
         fakeClubRepo.listClubUsersResult = Result.success(shortPage)
 
@@ -76,7 +76,7 @@ class ClubMembersViewModelTest {
     }
 
     @Test
-    fun loadMore_appendsSubsequentPage() = runTest {
+    fun loadMore_appendsSubsequentPage() = runTest(testDispatcher) {
         val firstPage = List(25) { makeUser("a$it") }
         val secondPage = List(5) { makeUser("b$it") }
         fakeClubRepo.listClubUsersResult = Result.success(firstPage)
@@ -91,7 +91,7 @@ class ClubMembersViewModelTest {
     }
 
     @Test
-    fun loadMore_whenEndReached_doesNotCallRepo() = runTest {
+    fun loadMore_whenEndReached_doesNotCallRepo() = runTest(testDispatcher) {
         fakeClubRepo.listClubUsersResult = Result.success(List(5) { makeUser("u$it") })
         viewModel.init("club1")
         // endReached = true now; capture call count after init
@@ -107,7 +107,7 @@ class ClubMembersViewModelTest {
     // region — filter
 
     @Test
-    fun setFilter_doesNotClearUsers() = runTest {
+    fun setFilter_doesNotClearUsers() = runTest(testDispatcher) {
         fakeClubRepo.listClubUsersResult = Result.success(List(5) { makeUser("u$it") })
         viewModel.init("club1")
 
@@ -120,7 +120,7 @@ class ClubMembersViewModelTest {
     // region — error handling
 
     @Test
-    fun init_onFailure_setsError() = runTest {
+    fun init_onFailure_setsError() = runTest(testDispatcher) {
         fakeClubRepo.listClubUsersResult = Result.failure(Exception("Network error"))
 
         viewModel.init("club1")
@@ -130,7 +130,7 @@ class ClubMembersViewModelTest {
     }
 
     @Test
-    fun clearError_resetsError() = runTest {
+    fun clearError_resetsError() = runTest(testDispatcher) {
         fakeClubRepo.listClubUsersResult = Result.failure(Exception("err"))
         viewModel.init("club1")
 
@@ -142,7 +142,7 @@ class ClubMembersViewModelTest {
     // region — init idempotent for same clubId
 
     @Test
-    fun init_calledTwiceWithSameId_doesNotResetState() = runTest {
+    fun init_calledTwiceWithSameId_doesNotResetState() = runTest(testDispatcher) {
         val page = List(5) { makeUser("u$it") }
         fakeClubRepo.listClubUsersResult = Result.success(page)
         viewModel.init("club1")

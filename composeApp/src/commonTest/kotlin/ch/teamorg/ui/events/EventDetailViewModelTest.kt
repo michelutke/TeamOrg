@@ -18,6 +18,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -113,12 +114,14 @@ class EventDetailViewModelTest {
     // region — finalize
 
     @Test
-    fun finalize_success_triggersEventReload() = runTest {
+    fun finalize_success_triggersEventReload() = runTest(testDispatcher) {
         fakeAttendanceRepo.finalizeResult = FinalizeResult.Success
         val vm = makeViewModel(makeEvent(checkInStatus = "awaiting_checkin"))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
-        vm.finalize()
+        vm.finalizeEvent()
+        advanceUntilIdle()
 
         // After success the VM reloads; isFinalizingOrReopening returns to false
         vm.state.value.isFinalizingOrReopening shouldBe false
@@ -126,7 +129,7 @@ class EventDetailViewModelTest {
     }
 
     @Test
-    fun finalize_blocked_unsure_surfacesBlockedState_withUserIdFallback() = runTest {
+    fun finalize_blocked_unsure_surfacesBlockedState_withUserIdFallback() = runTest(testDispatcher) {
         fakeAttendanceRepo.finalizeResult = FinalizeResult.Blocked(
             reason = "unsure",
             userIds = listOf("u-alice", "u-bob")
@@ -134,8 +137,10 @@ class EventDetailViewModelTest {
         // no roster loaded → fallback to userId
         val vm = makeViewModel(makeEvent(checkInStatus = "awaiting_checkin"))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
-        vm.finalize()
+        vm.finalizeEvent()
+        advanceUntilIdle()
 
         val blocked = vm.state.value.finalizeBlocked
         blocked shouldNotBe null
@@ -147,7 +152,7 @@ class EventDetailViewModelTest {
     }
 
     @Test
-    fun finalize_blocked_resolvesDisplayNames_fromRoster() = runTest {
+    fun finalize_blocked_resolvesDisplayNames_fromRoster() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(
             listOf(
                 makeMember("u-alice", "Alice Muster"),
@@ -160,8 +165,10 @@ class EventDetailViewModelTest {
         )
         val vm = makeViewModel(makeEvent(checkInStatus = "awaiting_checkin", teamIds = listOf("team-1")))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
-        vm.finalize()
+        vm.finalizeEvent()
+        advanceUntilIdle()
 
         val blocked = vm.state.value.finalizeBlocked
         blocked shouldNotBe null
@@ -170,15 +177,17 @@ class EventDetailViewModelTest {
     }
 
     @Test
-    fun finalize_blocked_noResponse_surfacesBlockedState() = runTest {
+    fun finalize_blocked_noResponse_surfacesBlockedState() = runTest(testDispatcher) {
         fakeAttendanceRepo.finalizeResult = FinalizeResult.Blocked(
             reason = "no-response",
             userIds = listOf("u-charlie")
         )
         val vm = makeViewModel(makeEvent(checkInStatus = "awaiting_checkin"))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
-        vm.finalize()
+        vm.finalizeEvent()
+        advanceUntilIdle()
 
         val blocked = vm.state.value.finalizeBlocked
         blocked shouldNotBe null
@@ -187,22 +196,25 @@ class EventDetailViewModelTest {
     }
 
     @Test
-    fun rosterMap_populatedAfterLoad() = runTest {
+    fun rosterMap_populatedAfterLoad() = runTest(testDispatcher) {
         fakeTeamRepo.getRosterResult = Result.success(
             listOf(makeMember("u-alice", "Alice Muster"))
         )
         val vm = makeViewModel(makeEvent(teamIds = listOf("team-1")))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
         vm.state.value.rosterMap["u-alice"]?.displayName shouldBe "Alice Muster"
     }
 
     @Test
-    fun dismissFinalizeBlocked_clearsFinalizeBlockedState() = runTest {
+    fun dismissFinalizeBlocked_clearsFinalizeBlockedState() = runTest(testDispatcher) {
         fakeAttendanceRepo.finalizeResult = FinalizeResult.Blocked(reason = "unsure", userIds = listOf("u1"))
         val vm = makeViewModel(makeEvent())
         vm.loadEvent("e1")
-        vm.finalize()
+        advanceUntilIdle()
+        vm.finalizeEvent()
+        advanceUntilIdle()
 
         vm.dismissFinalizeBlocked()
 
@@ -214,12 +226,14 @@ class EventDetailViewModelTest {
     // region — reopen
 
     @Test
-    fun reopen_success_triggersEventReload() = runTest {
+    fun reopen_success_triggersEventReload() = runTest(testDispatcher) {
         fakeAttendanceRepo.reopenResult = Result.success(Unit)
         val vm = makeViewModel(makeEvent(checkInStatus = "done"))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
         vm.reopen()
+        advanceUntilIdle()
 
         vm.state.value.isFinalizingOrReopening shouldBe false
         fakeAttendanceRepo.lastReopenEventId shouldBe "e1"
@@ -230,11 +244,13 @@ class EventDetailViewModelTest {
     // region — setMemberResponse
 
     @Test
-    fun setMemberResponse_forwardsToRepo() = runTest {
+    fun setMemberResponse_forwardsToRepo() = runTest(testDispatcher) {
         val vm = makeViewModel(makeEvent())
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
         vm.setMemberResponse("u-alice", "declined", unexcused = true)
+        advanceUntilIdle()
 
         fakeAttendanceRepo.lastSetMemberEventId shouldBe "e1"
         fakeAttendanceRepo.lastSetMemberUserId shouldBe "u-alice"
@@ -243,12 +259,14 @@ class EventDetailViewModelTest {
     }
 
     @Test
-    fun setMemberResponse_failure_surfacesError() = runTest {
+    fun setMemberResponse_failure_surfacesError() = runTest(testDispatcher) {
         fakeAttendanceRepo.setMemberResponseResult = Result.failure(RuntimeException("409 Conflict"))
         val vm = makeViewModel(makeEvent())
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
         vm.setMemberResponse("u-alice", "confirmed", unexcused = false)
+        advanceUntilIdle()
 
         vm.state.value.error shouldBe "409 Conflict"
     }
@@ -258,17 +276,19 @@ class EventDetailViewModelTest {
     // region — rsvp lock gating (state shape)
 
     @Test
-    fun state_checkInStatus_open_rsvpNotLocked() = runTest {
+    fun state_checkInStatus_open_rsvpNotLocked() = runTest(testDispatcher) {
         val vm = makeViewModel(makeEvent(checkInStatus = "open"))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
         vm.state.value.event?.event?.checkInStatus shouldBe "open"
     }
 
     @Test
-    fun state_checkInStatus_done_isPresent() = runTest {
+    fun state_checkInStatus_done_isPresent() = runTest(testDispatcher) {
         val vm = makeViewModel(makeEvent(checkInStatus = "done"))
         vm.loadEvent("e1")
+        advanceUntilIdle()
 
         vm.state.value.event?.event?.checkInStatus shouldBe "done"
     }

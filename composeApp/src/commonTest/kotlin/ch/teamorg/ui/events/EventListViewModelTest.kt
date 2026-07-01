@@ -16,6 +16,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -105,7 +106,7 @@ class EventListViewModelTest {
     // region — awaiting filter
 
     @Test
-    fun toggleAwaitingFilter_restrictsEventsToAwaitingCheckIn() = runTest {
+    fun toggleAwaitingFilter_restrictsEventsToAwaitingCheckIn() = runTest(testDispatcher) {
         val events = listOf(
             makeEvent("e1", checkInStatus = "open"),
             makeEvent("e2", checkInStatus = "awaiting_checkin"),
@@ -113,11 +114,13 @@ class EventListViewModelTest {
             makeEvent("e4", checkInStatus = "awaiting_checkin")
         )
         val vm = makeViewModel(events)
+        advanceUntilIdle()
 
         vm.state.value.events shouldHaveSize 4
         vm.state.value.showAwaitingOnly shouldBe false
 
         vm.toggleAwaitingFilter()
+        advanceUntilIdle()
 
         vm.state.value.showAwaitingOnly shouldBe true
         val filtered = vm.state.value.events
@@ -126,23 +129,26 @@ class EventListViewModelTest {
     }
 
     @Test
-    fun toggleAwaitingFilter_toggleOff_restoresAllEvents() = runTest {
+    fun toggleAwaitingFilter_toggleOff_restoresAllEvents() = runTest(testDispatcher) {
         val events = listOf(
             makeEvent("e1", checkInStatus = "open"),
             makeEvent("e2", checkInStatus = "awaiting_checkin")
         )
         val vm = makeViewModel(events)
+        advanceUntilIdle()
 
         vm.toggleAwaitingFilter()
+        advanceUntilIdle()
         vm.state.value.events shouldHaveSize 1
 
         vm.toggleAwaitingFilter()
+        advanceUntilIdle()
         vm.state.value.events shouldHaveSize 2
         vm.state.value.showAwaitingOnly shouldBe false
     }
 
     @Test
-    fun awaitingFilter_composesWith_teamFilter() = runTest {
+    fun awaitingFilter_composesWith_teamFilter() = runTest(testDispatcher) {
         val events = listOf(
             makeEvent("e1", checkInStatus = "awaiting_checkin").let { ewt ->
                 ewt.copy(matchedTeams = listOf(MatchedTeam(id = "team-a", name = "Team A")))
@@ -155,9 +161,11 @@ class EventListViewModelTest {
             }
         )
         val vm = makeViewModel(events)
+        advanceUntilIdle()
 
         vm.toggleTeamFilter("team-a")
         vm.toggleAwaitingFilter()
+        advanceUntilIdle()
 
         val filtered = vm.state.value.events
         filtered shouldHaveSize 1
