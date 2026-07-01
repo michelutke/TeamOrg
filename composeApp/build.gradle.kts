@@ -62,6 +62,8 @@ kotlin {
             implementation(libs.kotlinx.coroutinesTest)
             implementation(libs.turbine)
             implementation(libs.kotest.assertions)
+            implementation(libs.multiplatform.settings)
+            implementation(libs.multiplatform.settings.test)
         }
         val androidUnitTest by getting {
             dependencies {

@@ -69,6 +69,7 @@ function parseEventForm(form: FormData) {
 		location: ((form.get('location') as string)?.trim() || null) as string | null,
 		description: ((form.get('description') as string)?.trim() || null) as string | null,
 		minAttendees: minRaw ? Number(minRaw) : null,
+		defaultResponse: (form.get('defaultResponse') as string) || 'none',
 		recurring: parseRecurring(form)
 	};
 }

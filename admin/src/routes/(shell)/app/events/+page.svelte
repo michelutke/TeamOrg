@@ -92,11 +92,11 @@
 	{/if}
 </header>
 
-{#if data.teams.length > 1}
+{#if data.teams.length > 1 || data.isCoachOrManager}
 	<div class="mb-6 flex flex-wrap gap-2">
 		<a
 			href="/app/events"
-			class="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors {!data.teamFilter
+			class="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors {!data.teamFilter && !data.awaitingFilter
 				? 'bg-secondary-container text-on-secondary-container'
 				: 'bg-surface text-on-surface-variant hover:bg-surface-container-high'}"
 		>
@@ -113,6 +113,16 @@
 				{team.name}
 			</a>
 		{/each}
+		{#if data.isCoachOrManager}
+			<a
+				href="/app/events?filter=awaiting_checkin"
+				class="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors {data.awaitingFilter
+					? 'bg-tertiary-container text-on-tertiary-container'
+					: 'bg-surface text-on-surface-variant hover:bg-surface-container-high'}"
+			>
+				Check-in offen
+			</a>
+		{/if}
 	</div>
 {/if}
 
@@ -155,6 +165,11 @@
 						{#if event.externalSource === 'nds' && event.presentCount > 0}
 							<span class="rounded-full bg-success-container px-2 py-0.5 text-[10px] font-semibold text-success">
 								{event.presentCount} anwesend
+							</span>
+						{/if}
+						{#if data.isCoachOrManager && event.checkInStatus === 'awaiting_checkin'}
+							<span class="rounded-full bg-tertiary-container px-2 py-0.5 text-[10px] font-semibold text-on-tertiary-container">
+								Check-in offen
 							</span>
 						{/if}
 					</div>

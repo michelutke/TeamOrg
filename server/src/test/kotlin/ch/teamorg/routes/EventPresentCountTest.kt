@@ -1,7 +1,6 @@
 package ch.teamorg.routes
 
-import ch.teamorg.db.tables.AttendanceRecordsTable
-import ch.teamorg.db.tables.RecordStatus
+import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.domain.models.Event
 import ch.teamorg.domain.models.EventWithTeams
 import ch.teamorg.test.IntegrationTestBase
@@ -61,8 +60,21 @@ class EventPresentCountTest : IntegrationTestBase() {
         }.body<Event>()
     }
 
+    private fun insertResponse(eventId: UUID, userId: UUID, status: String) {
+        transaction {
+            val now = Instant.now()
+            AttendanceResponsesTable.insert { row ->
+                row[AttendanceResponsesTable.eventId] = eventId
+                row[AttendanceResponsesTable.userId] = userId
+                row[AttendanceResponsesTable.status] = status
+                row[AttendanceResponsesTable.respondedAt] = now
+                row[AttendanceResponsesTable.updatedAt] = now
+            }
+        }
+    }
+
     @Test
-    fun `event payload carries presentCount`() = withTeamorgTestApplication {
+    fun `event payload carries presentCount from confirmed responses`() = withTeamorgTestApplication {
         val coachAuth = registerAndLogin("epc_coach@example.com", displayName = "Coach EPC")
         val playerAuth = registerAndLogin("epc_player@example.com", displayName = "Player EPC")
 
@@ -70,25 +82,10 @@ class EventPresentCountTest : IntegrationTestBase() {
         val eventId = event.id
         val coachId = UUID.fromString(coachAuth.userId)
         val playerId = UUID.fromString(playerAuth.userId)
-        val now = Instant.now()
 
-        // Insert one present + one absent record directly
-        transaction {
-            AttendanceRecordsTable.insert { row ->
-                row[AttendanceRecordsTable.eventId] = eventId
-                row[AttendanceRecordsTable.userId] = coachId
-                row[AttendanceRecordsTable.status] = RecordStatus.present
-                row[AttendanceRecordsTable.setBy] = coachId
-                row[AttendanceRecordsTable.setAt] = now
-            }
-            AttendanceRecordsTable.insert { row ->
-                row[AttendanceRecordsTable.eventId] = eventId
-                row[AttendanceRecordsTable.userId] = playerId
-                row[AttendanceRecordsTable.status] = RecordStatus.absent
-                row[AttendanceRecordsTable.setBy] = coachId
-                row[AttendanceRecordsTable.setAt] = now
-            }
-        }
+        // One confirmed + one declined — only the confirmed counts.
+        insertResponse(eventId, coachId, "confirmed")
+        insertResponse(eventId, playerId, "declined")
 
         val client = createJsonClient()
         val result = client.get("/events/$eventId") {
@@ -99,7 +96,7 @@ class EventPresentCountTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `event payload has presentCount zero when no records`() = withTeamorgTestApplication {
+    fun `event payload has presentCount zero when no confirmed responses`() = withTeamorgTestApplication {
         val coachAuth = registerAndLogin("epc_zero_coach@example.com", displayName = "Coach EPC Zero")
 
         val event = createEvent(coachAuth.token, "Event EPC Zero")
@@ -114,7 +111,7 @@ class EventPresentCountTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `users me events list carries presentCount`() = withTeamorgTestApplication {
+    fun `users me events list carries presentCount from confirmed responses`() = withTeamorgTestApplication {
         val client = createJsonClient()
 
         val managerAuth = registerAndLogin("epc_list_mgr@example.com", displayName = "Manager EPC List")
@@ -145,17 +142,7 @@ class EventPresentCountTest : IntegrationTestBase() {
         }.body<Event>()
 
         val managerId = UUID.fromString(managerAuth.userId)
-        val now = Instant.now()
-
-        transaction {
-            AttendanceRecordsTable.insert { row ->
-                row[AttendanceRecordsTable.eventId] = event.id
-                row[AttendanceRecordsTable.userId] = managerId
-                row[AttendanceRecordsTable.status] = RecordStatus.present
-                row[AttendanceRecordsTable.setBy] = managerId
-                row[AttendanceRecordsTable.setAt] = now
-            }
-        }
+        insertResponse(event.id, managerId, "confirmed")
 
         val events = client.get("/users/me/events") {
             header(HttpHeaders.Authorization, "Bearer ${managerAuth.token}")

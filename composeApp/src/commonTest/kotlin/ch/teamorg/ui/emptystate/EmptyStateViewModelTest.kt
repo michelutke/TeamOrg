@@ -38,7 +38,7 @@ class EmptyStateViewModelTest {
     // region — init: profile link loading
 
     @Test
-    fun init_withGetMeSuccess_setsProfileLink() = runTest {
+    fun init_withGetMeSuccess_setsProfileLink() = runTest(testDispatcher) {
         fakeAuth.getMeResult = Result.success(
             AuthUser(userId = "user42", email = "a@b.com", displayName = "Alice", avatarUrl = null)
         )
@@ -48,7 +48,7 @@ class EmptyStateViewModelTest {
     }
 
     @Test
-    fun init_profileLink_containsUserId() = runTest {
+    fun init_profileLink_containsUserId() = runTest(testDispatcher) {
         fakeAuth.getMeResult = Result.success(
             AuthUser(userId = "abc-xyz", email = "a@b.com", displayName = "Alice", avatarUrl = null)
         )
@@ -58,7 +58,7 @@ class EmptyStateViewModelTest {
     }
 
     @Test
-    fun init_withGetMeFailure_profileLinkRemainsEmpty() = runTest {
+    fun init_withGetMeFailure_profileLinkRemainsEmpty() = runTest(testDispatcher) {
         fakeAuth.getMeResult = Result.failure(Exception("Not authenticated"))
         createViewModel()
 
@@ -68,7 +68,7 @@ class EmptyStateViewModelTest {
     // region — field updates
 
     @Test
-    fun onInviteLinkChange_updatesInviteLinkAndClearsError() = runTest {
+    fun onInviteLinkChange_updatesInviteLinkAndClearsError() = runTest(testDispatcher) {
         createViewModel()
         viewModel.state.test {
             awaitItem() // initial (may include profile link emission)
@@ -85,7 +85,7 @@ class EmptyStateViewModelTest {
     // region — onJoinTeamClick
 
     @Test
-    fun onJoinTeamClick_withBlankLink_setsError() = runTest {
+    fun onJoinTeamClick_withBlankLink_setsError() = runTest(testDispatcher) {
         createViewModel()
         viewModel.onJoinTeamClick()
 
@@ -93,7 +93,7 @@ class EmptyStateViewModelTest {
     }
 
     @Test
-    fun onJoinTeamClick_withValidLink_emitsNavigateToInvite() = runTest {
+    fun onJoinTeamClick_withValidLink_emitsNavigateToInvite() = runTest(testDispatcher) {
         createViewModel()
         viewModel.onInviteLinkChange("teamorg://invite/team/abc123")
         viewModel.events.test {
@@ -104,7 +104,7 @@ class EmptyStateViewModelTest {
     }
 
     @Test
-    fun onJoinTeamClick_withPlainToken_emitsNavigateToInvite() = runTest {
+    fun onJoinTeamClick_withPlainToken_emitsNavigateToInvite() = runTest(testDispatcher) {
         createViewModel()
         viewModel.onInviteLinkChange("abc123")
         viewModel.events.test {
@@ -117,7 +117,7 @@ class EmptyStateViewModelTest {
     // region — onCreateClubClick
 
     @Test
-    fun onCreateClubClick_emitsNavigateToClubSetupEvent() = runTest {
+    fun onCreateClubClick_emitsNavigateToClubSetupEvent() = runTest(testDispatcher) {
         createViewModel()
         viewModel.events.test {
             viewModel.onCreateClubClick()
@@ -129,7 +129,7 @@ class EmptyStateViewModelTest {
     // region — onProfileLinkCopied
 
     @Test
-    fun onProfileLinkCopied_setsInfoMessage() = runTest {
+    fun onProfileLinkCopied_setsInfoMessage() = runTest(testDispatcher) {
         createViewModel()
         viewModel.onProfileLinkCopied()
 
@@ -139,7 +139,7 @@ class EmptyStateViewModelTest {
     // region — dismissMessages
 
     @Test
-    fun dismissMessages_clearsErrorAndInfoMessage() = runTest {
+    fun dismissMessages_clearsErrorAndInfoMessage() = runTest(testDispatcher) {
         createViewModel()
         viewModel.onProfileLinkCopied() // sets infoMessage
         viewModel.dismissMessages()
@@ -150,7 +150,7 @@ class EmptyStateViewModelTest {
     }
 
     @Test
-    fun dismissMessages_withOnlyError_clearsError() = runTest {
+    fun dismissMessages_withOnlyError_clearsError() = runTest(testDispatcher) {
         createViewModel()
         // manually trigger an error-like scenario via field update + check dismissal
         viewModel.onInviteLinkChange("link")

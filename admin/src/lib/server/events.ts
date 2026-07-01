@@ -21,6 +21,9 @@ export interface AppEvent {
 	externalStatus: string | null;
 	needsReview: boolean;
 	presentCount: number;
+	checkInStatus: string;
+	checkInCompletedAt: string | null;
+	defaultResponse: string;
 }
 
 export interface EventWithTeams {
@@ -34,4 +37,5 @@ export interface AttendanceResponse {
 	status: string;
 	reason: string | null;
 	manualOverride: boolean;
+	unexcused: boolean;
 }

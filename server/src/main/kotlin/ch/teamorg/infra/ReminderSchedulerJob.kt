@@ -24,6 +24,7 @@ fun Application.startReminderSchedulerJob() {
             try {
                 fireDueReminders(notificationRepo, pushService)
                 fireCoachSummaries(notificationRepo, pushService, eventRepository)
+                fireAwaitingCheckInReminders(notificationRepo, pushService)
                 notificationRepo.deleteOldNotifications(90)
             } catch (e: Exception) {
                 logger.error("Reminder scheduler error", e)
@@ -60,6 +61,44 @@ private suspend fun fireDueReminders(
     }
     if (dueReminders.isNotEmpty()) {
         logger.info("ReminderSchedulerJob: fired ${dueReminders.size} due reminders")
+    }
+}
+
+internal suspend fun fireAwaitingCheckInReminders(
+    notificationRepo: NotificationRepository,
+    pushService: PushService
+) {
+    val usersWithAwaiting = notificationRepo.getUsersWithAwaitingCheckIn()
+    if (usersWithAwaiting.isEmpty()) return
+
+    // 2-day dedup bucket: epoch / (2 * 24 * 3600)
+    val twoDayBucket = System.currentTimeMillis() / 1000 / (2 * 24 * 3600)
+    val notified = mutableListOf<String>()
+
+    for (userId in usersWithAwaiting) {
+        val key = "awaiting_checkin:$userId:$twoDayBucket"
+        val inserted = notificationRepo.createNotification(
+            userId = userId,
+            type = "awaiting_checkin",
+            title = "Check-in pending",
+            body = "One or more past events are awaiting check-in",
+            entityId = null,
+            entityType = null,
+            idempotencyKey = key
+        )
+        if (inserted) {
+            pushService.sendToUsers(
+                listOf(userId.toString()),
+                "Check-in pending",
+                "One or more past events are awaiting check-in",
+                mapOf("type" to "awaiting_checkin")
+            )
+            notified.add(userId.toString())
+        }
+    }
+
+    if (notified.isNotEmpty()) {
+        logger.info("ReminderSchedulerJob: sent awaiting-check-in reminders to ${notified.size} users")
     }
 }
 

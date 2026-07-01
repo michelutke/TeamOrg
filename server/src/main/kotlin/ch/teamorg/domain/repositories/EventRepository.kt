@@ -54,4 +54,11 @@ interface EventRepository {
     suspend fun listImportableSeries(teamId: UUID): ImportableSeriesResult
     suspend fun listSyncedExternalGameIds(clubId: UUID): List<Long>
     suspend fun hasSyncedGameWithin(clubId: UUID, windowStart: Instant, windowEnd: Instant): Boolean
+
+    /**
+     * Events where the user is coach or club_manager of one of the event's teams,
+     * end_at < now, check_in_completed_at IS NULL, status != cancelled.
+     * Used for the "awaiting check-in" coach filter.
+     */
+    suspend fun listAwaitingCheckInForUser(userId: UUID): List<EventWithTeams>
 }

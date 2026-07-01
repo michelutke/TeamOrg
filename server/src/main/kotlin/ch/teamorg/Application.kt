@@ -1,7 +1,6 @@
 package ch.teamorg
 
 import ch.teamorg.infra.DatabaseFactory
-import ch.teamorg.infra.startAutoPresentJob
 import ch.teamorg.infra.startMaterialisationJob
 import ch.teamorg.infra.startReminderSchedulerJob
 import ch.teamorg.infra.startSwissVolleySyncJob
@@ -35,7 +34,6 @@ fun Application.module() {
     configureAuth()
     configureRouting()
     startMaterialisationJob()
-    startAutoPresentJob()
     startReminderSchedulerJob()
     startSwissVolleySyncJob()
 }

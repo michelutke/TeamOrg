@@ -37,8 +37,11 @@ private data class EditEventWithScope(
     val description: String? = null,
     val minAttendees: Int? = null,
     val teamIds: List<String>? = null,
-    val subgroupIds: List<String>? = null
+    val subgroupIds: List<String>? = null,
+    val defaultResponse: String? = null
 )
+
+private val VALID_DEFAULT_RESPONSES = setOf("none", "accepted", "declined")
 
 @Serializable
 private data class CancelScopeRequest(val scope: String? = "this_only")
@@ -77,6 +80,12 @@ fun Route.eventRoutes() {
             call.respond(events)
         }
 
+        get("/users/me/events/awaiting-checkin") {
+            val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+            val events = eventRepository.listAwaitingCheckInForUser(userId)
+            call.respond(events)
+        }
+
         get("/teams/{teamId}/events") {
             val teamId = UUID.fromString(call.parameters["teamId"])
             if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
@@ -97,6 +106,10 @@ fun Route.eventRoutes() {
         post("/events") {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val request = call.receive<CreateEventRequest>()
+            if (request.defaultResponse !in VALID_DEFAULT_RESPONSES) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid defaultResponse")
+                return@post
+            }
             // An event may only be created for teams the caller coaches/manages.
             for (teamId in request.teamIds) {
                 if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
@@ -140,6 +153,10 @@ fun Route.eventRoutes() {
             if (!call.requireEventAccess(id, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@patch
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<EditEventWithScope>()
+            if (body.defaultResponse != null && body.defaultResponse !in VALID_DEFAULT_RESPONSES) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid defaultResponse")
+                return@patch
+            }
             val scope = RecurringScope.valueOf(body.scope ?: "this_only")
             val editRequest = EditEventRequest(
                 title = body.title,
@@ -151,7 +168,8 @@ fun Route.eventRoutes() {
                 description = body.description,
                 minAttendees = body.minAttendees,
                 teamIds = body.teamIds?.map { UUID.fromString(it) },
-                subgroupIds = body.subgroupIds?.map { UUID.fromString(it) }
+                subgroupIds = body.subgroupIds?.map { UUID.fromString(it) },
+                defaultResponse = body.defaultResponse
             )
 
             val existing = eventRepository.findById(id)

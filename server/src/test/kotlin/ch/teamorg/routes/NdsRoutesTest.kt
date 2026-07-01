@@ -1,10 +1,11 @@
 package ch.teamorg.routes
 
-import ch.teamorg.db.tables.AttendanceRecordsTable
+import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
 import ch.teamorg.domain.models.Club
+import ch.teamorg.domain.models.deriveCheckInStatus
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
@@ -136,14 +137,28 @@ class NdsRoutesTest : IntegrationTestBase() {
         assertEquals(2, seriesIds.size)
         assertEquals(0, standalone)
 
-        // Attendance: total 'J' marks (coach 2 + Lara 3 + Tim 1) = 6 present records.
-        val presentCount = transaction {
+        // Attendance: total 'J' marks (coach 2 + Lara 3 + Tim 1) = 6 confirmed responses.
+        // Non-attended dates get 'declined' responses; attendanceImported counts only confirmed.
+        val (confirmedCount, declinedCount, openCount) = transaction {
             val ids = EventTeamsTable.select(EventTeamsTable.eventId)
                 .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
-            AttendanceRecordsTable.selectAll().where { AttendanceRecordsTable.eventId inList ids }.count()
+            val confirmed = AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId inList ids) and (AttendanceResponsesTable.status eq "confirmed") }
+                .count()
+            val declined = AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId inList ids) and (AttendanceResponsesTable.status eq "declined") }
+                .count()
+            // All fixture events are in the future (Aug 2026) → none auto-finalized.
+            val open = EventsTable.selectAll()
+                .where { (EventsTable.id inList ids) and EventsTable.checkInCompletedAt.isNull() }
+                .count()
+            Triple(confirmed, declined, open)
         }
-        assertEquals(6, presentCount)
+        assertEquals(6, confirmedCount)
         assertEquals(6, res.attendanceImported)
+        // 3 matched members × 8 events = 24 responses; 6 confirmed → 18 declined.
+        assertEquals(18, declinedCount)
+        assertEquals(8, openCount) // future events stay open
 
         // Members list exposed via API; all unclaimed (provisional) initially.
         val members = createJsonClient().get("/teams/$teamId/nds/members") {
@@ -217,11 +232,21 @@ class NdsRoutesTest : IntegrationTestBase() {
             }
         }
         // Fill in a location for every event (trainings need ORT).
-        transaction {
+        val eventIds = transaction {
             val ids = EventTeamsTable.select(EventTeamsTable.eventId)
                 .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
             EventsTable.update({ EventsTable.id inList ids }) { it[location] = "Halle Thun" }
+            ids
         }
+
+        // The NDS import already wrote confirmed attendance_responses for every attended (event, user)
+        // pair (6 'J' marks). Export reads those confirmed responses directly — no extra seeding.
+        val confirmedForExport = transaction {
+            AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId inList eventIds) and (AttendanceResponsesTable.status eq "confirmed") }
+                .count()
+        }
+        assertEquals(6, confirmedForExport)
 
         val report = createJsonClient().get("/teams/$teamId/nds/export/preflight") {
             header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
@@ -241,7 +266,7 @@ class NdsRoutesTest : IntegrationTestBase() {
         assertEquals(9, akt.size)
         assertTrue(akt.drop(1).all { it.startsWith("Training;") && it.contains(";18:00;90;Halle Thun;") })
 
-        // 6 present records + header. Every AWK row's tail must equal an Aktivitäten row's fields.
+        // 6 confirmed responses + header. Every AWK row's tail must match an Aktivitäten row.
         assertEquals("PERSONENNUMMER;FUNKTION;DATUM;AKTIVITAETSTYP;ZEIT;DAUER;ORT", awk[0])
         assertEquals(7, awk.size)
         assertTrue(awk.drop(1).all { it.contains(";Training;18:00;90;Halle Thun") })
@@ -280,13 +305,15 @@ class NdsRoutesTest : IntegrationTestBase() {
         assertEquals(laraUser.userId, claimed.userId.toString())
         assertTrue(claimed.claimed)
 
-        // Lara's 3 present records moved from the provisional user to the real user.
+        // Lara's 3 confirmed responses (attended dates) moved from the provisional user to the real
+        // user; nothing left on the provisional. (Records no longer exist — responses are the model.)
         val realUserId = UUID.fromString(laraUser.userId)
         val (movedToReal, leftOnProvisional) = transaction {
-            val real = AttendanceRecordsTable.selectAll()
-                .where { AttendanceRecordsTable.userId eq realUserId }.count()
-            val prov = AttendanceRecordsTable.selectAll()
-                .where { AttendanceRecordsTable.userId eq provisionalUserId }.count()
+            val real = AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.userId eq realUserId) and (AttendanceResponsesTable.status eq "confirmed") }
+                .count()
+            val prov = AttendanceResponsesTable.selectAll()
+                .where { AttendanceResponsesTable.userId eq provisionalUserId }.count()
             real to prov
         }
         assertEquals(3, movedToReal)
@@ -302,7 +329,7 @@ class NdsRoutesTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `large realistic import writes the expected present record total`() = withTeamorgTestApplication {
+    fun `large realistic import writes the expected confirmed response total`() = withTeamorgTestApplication {
         val mgr = register("nds_large@example.com"); promoteToSuperAdmin(mgr.userId)
         val clubId = createClub(mgr.token, "LargeClub")
         val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.largeAnwesenheitslisteBytes("large-1"))
@@ -314,7 +341,78 @@ class NdsRoutesTest : IntegrationTestBase() {
             contentType(ContentType.Application.Json)
             setBody(NdsImportRequest(createTeamName = "Large", nutzergruppe = "NG2", parsed = parsed, importEvents = true, attendanceMode = "keep"))
         }.body<NdsImportResponse>()
+        // attendanceImported counts confirmed responses only (one per attended date).
         assertEquals(expected, res.attendanceImported)
+        val teamId = UUID.fromString(res.teamId)
+        val confirmedCount = transaction {
+            val ids = EventTeamsTable.select(EventTeamsTable.eventId)
+                .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
+            AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId inList ids) and (AttendanceResponsesTable.status eq "confirmed") }
+                .count()
+        }
+        assertEquals(expected.toLong(), confirmedCount)
+    }
+
+    @Test
+    fun `auto-finalize marks past imported events done and leaves future events open`() = withTeamorgTestApplication {
+        val mgr = register("nds_finalize@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "FinalizeClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        // All fixture events are in the future → the import left them all open.
+        val eventIds = transaction {
+            EventTeamsTable.select(EventTeamsTable.eventId)
+                .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
+        }
+        val openAfterImport = transaction {
+            EventsTable.selectAll()
+                .where { (EventsTable.id inList eventIds) and EventsTable.checkInCompletedAt.isNull() }
+                .count()
+        }
+        assertEquals(8, openAfterImport)
+
+        // Backdate ONE event into the past, then re-import (idempotent: no new events, but the
+        // auto-finalize pass runs over all past NDS events of the team).
+        val pastEventId = eventIds.first()
+        transaction {
+            EventsTable.update({ EventsTable.id eq pastEventId }) {
+                it[startAt] = java.time.Instant.now().minusSeconds(86_400)
+                it[endAt] = java.time.Instant.now().minusSeconds(82_800)
+            }
+        }
+        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes())
+            .body<ParsedAnwesenheitsliste>()
+        createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(teamId = res.teamId, parsed = parsed, importEvents = true, attendanceMode = "keep"))
+        }
+
+        val now = java.time.Instant.now()
+        transaction {
+            val rows = EventsTable.selectAll().where { EventsTable.id inList eventIds }.toList()
+            val past = rows.single { it[EventsTable.id] == pastEventId }
+            val pastStatus = deriveCheckInStatus(
+                now,
+                past[EventsTable.responseDeadline] ?: past[EventsTable.startAt],
+                past[EventsTable.endAt],
+                past[EventsTable.checkInCompletedAt]
+            )
+            assertEquals("done", pastStatus) // past imported event auto-finalized
+            // Every other (future) event stays open.
+            val futures = rows.filter { it[EventsTable.id] != pastEventId }
+            assertTrue(futures.all { it[EventsTable.checkInCompletedAt] == null })
+            assertTrue(futures.all {
+                deriveCheckInStatus(
+                    now,
+                    it[EventsTable.responseDeadline] ?: it[EventsTable.startAt],
+                    it[EventsTable.endAt],
+                    it[EventsTable.checkInCompletedAt]
+                ) == "open"
+            })
+        }
     }
 
     @Test
@@ -338,10 +436,11 @@ class NdsRoutesTest : IntegrationTestBase() {
         assertTrue(updated.claimed)
         val provisionalUserId = lara.userId!!
         val (movedToReal, leftOnProvisional) = transaction {
-            val real = AttendanceRecordsTable.selectAll()
-                .where { AttendanceRecordsTable.userId eq UUID.fromString(realUser.userId) }.count()
-            val prov = AttendanceRecordsTable.selectAll()
-                .where { AttendanceRecordsTable.userId eq provisionalUserId }.count()
+            val real = AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.userId eq UUID.fromString(realUser.userId)) and (AttendanceResponsesTable.status eq "confirmed") }
+                .count()
+            val prov = AttendanceResponsesTable.selectAll()
+                .where { AttendanceResponsesTable.userId eq provisionalUserId }.count()
             real to prov
         }
         assertEquals(3, movedToReal)
@@ -430,13 +529,16 @@ class NdsRoutesTest : IntegrationTestBase() {
             assertEquals("111111111", lara.personNumber)
             assertEquals(java.time.LocalDate.of(2008, 5, 20), lara.birthDate)
 
-            // Coach attendance still imported (matched by name despite birthdate difference).
-            val presentCount = transaction {
+            // Coach attendance still imported (matched by name despite birthdate difference):
+            // 6 confirmed responses across all matched members.
+            val confirmedCount = transaction {
                 val ids = EventTeamsTable.select(EventTeamsTable.eventId)
                     .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
-                AttendanceRecordsTable.selectAll().where { AttendanceRecordsTable.eventId inList ids }.count()
+                AttendanceResponsesTable.selectAll()
+                    .where { (AttendanceResponsesTable.eventId inList ids) and (AttendanceResponsesTable.status eq "confirmed") }
+                    .count()
             }
-            assertEquals(6, presentCount)
+            assertEquals(6, confirmedCount)
 
             // With person numbers present from the start, export only needs locations.
             transaction {

@@ -35,6 +35,7 @@ data class EventListState(
     val error: String? = null,
     val selectedTeamIds: Set<String> = emptySet(),
     val selectedTypes: Set<String> = emptySet(),
+    val showAwaitingOnly: Boolean = false,
     val isCoach: Boolean = false,
     val teams: List<MatchedTeam> = emptyList(),
     val viewMode: EventViewMode = EventViewMode.LIST,
@@ -81,7 +82,9 @@ class EventListViewModel(
                 ewt.matchedTeams.any { it.id in current.selectedTeamIds }
             val matchesType = current.selectedTypes.isEmpty() ||
                 ewt.event.type in current.selectedTypes
-            matchesTeam && matchesType
+            val matchesAwaiting = !current.showAwaitingOnly ||
+                ewt.event.checkInStatus == "awaiting_checkin"
+            matchesTeam && matchesType && matchesAwaiting
         }
         val byDate = buildDateMap(filtered)
         _state.update {
@@ -200,6 +203,11 @@ class EventListViewModel(
 
     fun clearTypeFilters() {
         _state.update { it.copy(selectedTypes = emptySet()) }
+        applyFilters()
+    }
+
+    fun toggleAwaitingFilter() {
+        _state.update { it.copy(showAwaitingOnly = !it.showAwaitingOnly) }
         applyFilters()
     }
 

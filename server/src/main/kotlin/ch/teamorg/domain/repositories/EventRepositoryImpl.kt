@@ -2,10 +2,13 @@ package ch.teamorg.domain.repositories
 
 import ch.teamorg.db.tables.*
 import ch.teamorg.domain.models.*
+import ch.teamorg.domain.models.deriveCheckInStatus
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.time.LocalDate
@@ -47,6 +50,7 @@ class EventRepositoryImpl : EventRepository {
             it[EventsTable.seriesId] = seriesId
             it[EventsTable.seriesSequence] = seriesSequence
             it[EventsTable.responseDeadline] = request.responseDeadline
+            it[EventsTable.defaultResponse] = request.defaultResponse
             it[EventsTable.createdBy] = createdBy
         } get EventsTable.id
 
@@ -216,6 +220,7 @@ class EventRepositoryImpl : EventRepository {
             if (request.location != null) stmt[EventsTable.location] = request.location
             if (request.description != null) stmt[EventsTable.description] = request.description
             if (request.minAttendees != null) stmt[EventsTable.minAttendees] = request.minAttendees
+            if (request.defaultResponse != null) stmt[EventsTable.defaultResponse] = request.defaultResponse
             stmt[EventsTable.updatedAt] = Instant.now()
         }
         if (updated == 0) return@transaction null
@@ -299,7 +304,8 @@ class EventRepositoryImpl : EventRepository {
                 minAttendees = source.minAttendees,
                 teamIds = teamIds,
                 subgroupIds = subgroupIds,
-                recurring = null
+                recurring = null,
+                defaultResponse = source.defaultResponse
             ),
             createdBy = createdBy,
             seriesId = null,
@@ -329,6 +335,7 @@ class EventRepositoryImpl : EventRepository {
             it[EventSeriesTable.templateLocation] = request.location
             it[EventSeriesTable.templateDescription] = request.description
             it[EventSeriesTable.templateMinAttendees] = request.minAttendees
+            it[EventSeriesTable.templateDefaultResponse] = request.defaultResponse
             it[EventSeriesTable.createdBy] = createdBy
         } get EventSeriesTable.id
 
@@ -350,6 +357,7 @@ class EventRepositoryImpl : EventRepository {
             if (request.location != null) stmt[EventSeriesTable.templateLocation] = request.location
             if (request.description != null) stmt[EventSeriesTable.templateDescription] = request.description
             if (request.minAttendees != null) stmt[EventSeriesTable.templateMinAttendees] = request.minAttendees
+            if (request.defaultResponse != null) stmt[EventSeriesTable.templateDefaultResponse] = request.defaultResponse
         }
         Unit
     }
@@ -416,6 +424,7 @@ class EventRepositoryImpl : EventRepository {
                     it[EventsTable.minAttendees] = series.templateMinAttendees
                     it[EventsTable.seriesId] = series.id
                     it[EventsTable.seriesSequence] = actualSeq
+                    it[EventsTable.defaultResponse] = series.templateDefaultResponse
                     it[EventsTable.createdBy] = series.createdBy
                 } get EventsTable.id
 
@@ -502,6 +511,7 @@ class EventRepositoryImpl : EventRepository {
             if (request.location != null) stmt[EventsTable.location] = request.location
             if (request.description != null) stmt[EventsTable.description] = request.description
             if (request.minAttendees != null) stmt[EventsTable.minAttendees] = request.minAttendees
+            if (request.defaultResponse != null) stmt[EventsTable.defaultResponse] = request.defaultResponse
             stmt[EventsTable.updatedAt] = now
         }
     }
@@ -538,6 +548,7 @@ class EventRepositoryImpl : EventRepository {
             it[EventsTable.externalSyncedAt] = now
             it[EventsTable.externalStatus] = "synced"
             it[EventsTable.needsReview] = false
+            it[EventsTable.defaultResponse] = "none"
             it[EventsTable.createdBy] = createdBy
         } get EventsTable.id
 
@@ -706,6 +717,64 @@ class EventRepositoryImpl : EventRepository {
             .any()
     }
 
+    override suspend fun listAwaitingCheckInForUser(userId: UUID): List<EventWithTeams> = transaction {
+        val now = Instant.now()
+
+        // Resolve teams the user coaches directly
+        val coachedTeamIds = TeamRolesTable.select(TeamRolesTable.teamId)
+            .where { (TeamRolesTable.userId eq userId) and (TeamRolesTable.role eq "coach") }
+            .map { it[TeamRolesTable.teamId] }
+
+        // Resolve teams from clubs where user is club_manager
+        val managedClubIds = ClubRolesTable.select(ClubRolesTable.clubId)
+            .where { (ClubRolesTable.userId eq userId) and (ClubRolesTable.role eq "club_manager") }
+            .map { it[ClubRolesTable.clubId] }
+        val clubManagedTeamIds = if (managedClubIds.isNotEmpty()) {
+            TeamsTable.select(TeamsTable.id)
+                .where { (TeamsTable.clubId inList managedClubIds) and TeamsTable.archivedAt.isNull() }
+                .map { it[TeamsTable.id] }
+        } else emptyList()
+
+        val relevantTeamIds = (coachedTeamIds + clubManagedTeamIds).distinct()
+        if (relevantTeamIds.isEmpty()) return@transaction emptyList()
+
+        // Events: end_at < now, check_in_completed_at IS NULL, not cancelled, on a relevant team
+        val eventRows = (EventsTable innerJoin EventTeamsTable)
+            .selectAll()
+            .where {
+                (EventTeamsTable.teamId inList relevantTeamIds) and
+                (EventsTable.endAt less now) and
+                EventsTable.checkInCompletedAt.isNull() and
+                (EventsTable.status neq EventStatus.cancelled)
+            }
+            .map(::rowToEvent)
+
+        val uniqueEventIds = eventRows.map { it.id }.distinct()
+        if (uniqueEventIds.isEmpty()) return@transaction emptyList()
+
+        val counts = presentCountFor(uniqueEventIds)
+        uniqueEventIds.mapNotNull { eid ->
+            val event = eventRows.firstOrNull { it.id == eid } ?: return@mapNotNull null
+            val teamIds = EventTeamsTable.select(EventTeamsTable.teamId)
+                .where { EventTeamsTable.eventId eq eid }
+                .map { it[EventTeamsTable.teamId] }
+            val subgroupIds = EventSubgroupsTable.select(EventSubgroupsTable.subgroupId)
+                .where { EventSubgroupsTable.eventId eq eid }
+                .map { it[EventSubgroupsTable.subgroupId] }
+            val matchedTeams = (EventTeamsTable innerJoin TeamsTable)
+                .select(TeamsTable.id, TeamsTable.name)
+                .where {
+                    (EventTeamsTable.eventId eq eid) and
+                    (EventTeamsTable.teamId inList relevantTeamIds)
+                }
+                .map { MatchedTeam(id = it[TeamsTable.id], name = it[TeamsTable.name]) }
+            EventWithTeams(
+                event = event.copy(teamIds = teamIds, subgroupIds = subgroupIds, presentCount = counts[eid] ?: 0),
+                matchedTeams = matchedTeams
+            )
+        }
+    }
+
     private fun rowToSyncedEventRef(row: ResultRow): SyncedEventRef {
         val now = Instant.now()
         val startAt = row[EventsTable.startAt]
@@ -733,39 +802,56 @@ class EventRepositoryImpl : EventRepository {
         return event.copy(teamIds = teamIds, subgroupIds = subgroupIds)
     }
 
-    /** Counts `present` attendance records grouped by event. Events with zero are absent from the map. */
+    /** Returns confirmed-response counts per event, used for the presence chip on event cards. */
     private fun presentCountFor(eventIds: List<UUID>): Map<UUID, Int> {
         if (eventIds.isEmpty()) return emptyMap()
-        val cnt = AttendanceRecordsTable.eventId.count()
-        return AttendanceRecordsTable
-            .select(AttendanceRecordsTable.eventId, cnt)
-            .where { (AttendanceRecordsTable.eventId inList eventIds) and (AttendanceRecordsTable.status eq RecordStatus.present) }
-            .groupBy(AttendanceRecordsTable.eventId)
-            .associate { it[AttendanceRecordsTable.eventId] to it[cnt].toInt() }
+        val cnt = AttendanceResponsesTable.eventId.count()
+        return AttendanceResponsesTable
+            .select(AttendanceResponsesTable.eventId, cnt)
+            .where { (AttendanceResponsesTable.eventId inList eventIds) and (AttendanceResponsesTable.status eq "confirmed") }
+            .groupBy(AttendanceResponsesTable.eventId)
+            .associate { it[AttendanceResponsesTable.eventId] to it[cnt].toInt() }
     }
 
-    private fun rowToEvent(row: ResultRow) = Event(
-        id = row[EventsTable.id],
-        title = row[EventsTable.title],
-        type = row[EventsTable.type].name,
-        startAt = row[EventsTable.startAt],
-        endAt = row[EventsTable.endAt],
-        meetupAt = row[EventsTable.meetupAt],
-        location = row[EventsTable.location],
-        description = row[EventsTable.description],
-        minAttendees = row[EventsTable.minAttendees],
-        status = row[EventsTable.status].name,
-        cancelledAt = row[EventsTable.cancelledAt],
-        seriesId = row[EventsTable.seriesId],
-        seriesSequence = row[EventsTable.seriesSequence],
-        seriesOverride = row[EventsTable.seriesOverride],
-        createdBy = row[EventsTable.createdBy],
-        createdAt = row[EventsTable.createdAt],
-        updatedAt = row[EventsTable.updatedAt],
-        externalSource = row[EventsTable.externalSource],
-        externalStatus = row[EventsTable.externalStatus],
-        needsReview = row[EventsTable.needsReview]
-    )
+    private fun rowToEvent(row: ResultRow): Event {
+        val startAt = row[EventsTable.startAt]
+        val endAt = row[EventsTable.endAt]
+        val responseDeadline = row[EventsTable.responseDeadline]
+        val checkInCompletedAt = row[EventsTable.checkInCompletedAt]
+        val defaultResponse = row[EventsTable.defaultResponse]
+        val cutoff = responseDeadline ?: startAt
+        val checkInStatus = deriveCheckInStatus(
+            now = Instant.now(),
+            cutoff = cutoff,
+            endAt = endAt,
+            completedAt = checkInCompletedAt
+        )
+        return Event(
+            id = row[EventsTable.id],
+            title = row[EventsTable.title],
+            type = row[EventsTable.type].name,
+            startAt = startAt,
+            endAt = endAt,
+            meetupAt = row[EventsTable.meetupAt],
+            location = row[EventsTable.location],
+            description = row[EventsTable.description],
+            minAttendees = row[EventsTable.minAttendees],
+            status = row[EventsTable.status].name,
+            cancelledAt = row[EventsTable.cancelledAt],
+            seriesId = row[EventsTable.seriesId],
+            seriesSequence = row[EventsTable.seriesSequence],
+            seriesOverride = row[EventsTable.seriesOverride],
+            createdBy = row[EventsTable.createdBy],
+            createdAt = row[EventsTable.createdAt],
+            updatedAt = row[EventsTable.updatedAt],
+            externalSource = row[EventsTable.externalSource],
+            externalStatus = row[EventsTable.externalStatus],
+            needsReview = row[EventsTable.needsReview],
+            checkInCompletedAt = checkInCompletedAt,
+            defaultResponse = defaultResponse,
+            checkInStatus = checkInStatus
+        )
+    }
 
     private fun rowToEventSeries(row: ResultRow) = EventSeries(
         id = row[EventSeriesTable.id],
@@ -782,6 +868,7 @@ class EventRepositoryImpl : EventRepository {
         templateLocation = row[EventSeriesTable.templateLocation],
         templateDescription = row[EventSeriesTable.templateDescription],
         templateMinAttendees = row[EventSeriesTable.templateMinAttendees],
+        templateDefaultResponse = row[EventSeriesTable.templateDefaultResponse],
         createdBy = row[EventSeriesTable.createdBy],
         createdAt = row[EventSeriesTable.createdAt]
     )

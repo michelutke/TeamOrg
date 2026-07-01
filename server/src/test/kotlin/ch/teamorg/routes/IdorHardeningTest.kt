@@ -33,7 +33,7 @@ class IdorHardeningTest : IntegrationTestBase() {
     private data class EditEventPayload(val scope: String? = "this_only", val title: String? = null)
 
     @Serializable
-    private data class CheckInPayload(val status: String, val note: String? = null)
+    private data class CoachResponsePayload(val status: String, val unexcused: Boolean = false)
 
     @Serializable
     private data class SubGroupPayload(val id: String, val teamId: String, val name: String, val memberCount: Long = 0)
@@ -46,7 +46,6 @@ class IdorHardeningTest : IntegrationTestBase() {
         val eventId: String,
         val userId: String,
         val responseStatus: String? = null,
-        val recordStatus: String? = null,
         val eventStartAt: String
     )
 
@@ -180,7 +179,7 @@ class IdorHardeningTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `check-in by coach of a different team returns 403`() = withTeamorgTestApplication {
+    fun `coach attendance edit by coach of a different team returns 403`() = withTeamorgTestApplication {
         val client = createJsonClient()
 
         // Team A with its own coach and an event
@@ -200,10 +199,10 @@ class IdorHardeningTest : IntegrationTestBase() {
 
         // Coach B is a coach/club_manager — but NOT of team A — must be rejected on team A's event
         val target = register("idor_ci_target@example.com")
-        val response = client.put("/events/${event.id}/check-in/${target.userId}") {
+        val response = client.put("/events/${event.id}/attendance/${target.userId}") {
             header(HttpHeaders.Authorization, "Bearer ${coachB.token}")
             contentType(ContentType.Application.Json)
-            setBody(CheckInPayload(status = "present"))
+            setBody(CoachResponsePayload(status = "confirmed"))
         }
 
         assertEquals(HttpStatusCode.Forbidden, response.status)

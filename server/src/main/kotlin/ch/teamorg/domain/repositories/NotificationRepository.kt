@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.util.UUID
@@ -101,6 +102,13 @@ interface NotificationRepository {
     suspend fun getManagerIdsForClub(clubId: UUID): List<UUID>
     suspend fun getEventAttendanceSummary(eventId: UUID): AttendanceSummary
     suspend fun getUpcomingEventsForCoachSummary(withinMinutes: Int = 120): List<EventReminderInfo>
+
+    /**
+     * Returns distinct user IDs of coaches (direct team role) and club_managers (via club)
+     * who have at least one awaiting-check-in event (end_at < now, check_in_completed_at IS NULL,
+     * not cancelled). Used by the scheduler to fan-out push reminders.
+     */
+    suspend fun getUsersWithAwaitingCheckIn(): List<UUID>
 }
 
 class NotificationRepositoryImpl : NotificationRepository {
@@ -350,15 +358,32 @@ class NotificationRepositoryImpl : NotificationRepository {
         val rows = AttendanceResponsesTable.selectAll()
             .where { AttendanceResponsesTable.eventId eq eventId }
             .toList()
-        val accepted = rows.count { it[AttendanceResponsesTable.status] == "accepted" }
+        val confirmed = rows.count { it[AttendanceResponsesTable.status] == "confirmed" }
         val declined = rows.count { it[AttendanceResponsesTable.status].startsWith("declined") }
         val unsure = rows.count { it[AttendanceResponsesTable.status] == "unsure" }
+
+        // Roster = union of team_roles.userId across the event's teams. noResponse = rostered
+        // members who have no confirmed/declined/unsure response (never responded or "no-response").
+        val eventTeamIds = EventTeamsTable.select(EventTeamsTable.teamId)
+            .where { EventTeamsTable.eventId eq eventId }
+            .map { it[EventTeamsTable.teamId] }
+        val rosterIds = if (eventTeamIds.isEmpty()) emptySet() else
+            TeamRolesTable.select(TeamRolesTable.userId)
+                .where { (TeamRolesTable.teamId inList eventTeamIds) and (TeamRolesTable.userId.isNotNull()) }
+                .mapNotNull { it[TeamRolesTable.userId] }
+                .toSet()
+        val respondedIds = rows
+            .filter { it[AttendanceResponsesTable.status] != "no-response" }
+            .map { it[AttendanceResponsesTable.userId] }
+            .toSet()
+        val noResponse = rosterIds.count { it !in respondedIds }
+
         AttendanceSummary(
-            accepted = accepted,
+            accepted = confirmed,
             declined = declined,
             unsure = unsure,
-            noResponse = 0,
-            total = rows.size
+            noResponse = noResponse,
+            total = rosterIds.size
         )
     }
 
@@ -382,6 +407,55 @@ class NotificationRepositoryImpl : NotificationRepository {
                     teamIds = teamIds
                 )
             }
+    }
+
+    override suspend fun getUsersWithAwaitingCheckIn(): List<UUID> = transaction {
+        val now = Instant.now()
+
+        // Awaiting-check-in event ids: ended, not finalized, not cancelled
+        val awaitingEventIds = EventsTable
+            .select(EventsTable.id)
+            .where {
+                (EventsTable.endAt less now) and
+                EventsTable.checkInCompletedAt.isNull() and
+                (EventsTable.status neq EventStatus.cancelled)
+            }
+            .map { it[EventsTable.id] }
+
+        if (awaitingEventIds.isEmpty()) return@transaction emptyList()
+
+        // Teams linked to those events
+        val awaitingTeamIds = EventTeamsTable.select(EventTeamsTable.teamId)
+            .where { EventTeamsTable.eventId inList awaitingEventIds }
+            .map { it[EventTeamsTable.teamId] }
+            .distinct()
+
+        if (awaitingTeamIds.isEmpty()) return@transaction emptyList()
+
+        // Direct coaches on those teams
+        val coachIds = TeamRolesTable.select(TeamRolesTable.userId)
+            .where {
+                (TeamRolesTable.teamId inList awaitingTeamIds) and
+                (TeamRolesTable.role eq "coach") and
+                TeamRolesTable.userId.isNotNull()
+            }
+            .mapNotNull { it[TeamRolesTable.userId] }
+
+        // Club managers whose managed clubs contain those teams
+        val clubIds = TeamsTable.select(TeamsTable.clubId)
+            .where { TeamsTable.id inList awaitingTeamIds }
+            .map { it[TeamsTable.clubId] }
+            .distinct()
+        val managerIds = if (clubIds.isNotEmpty()) {
+            ClubRolesTable.select(ClubRolesTable.userId)
+                .where {
+                    (ClubRolesTable.clubId inList clubIds) and
+                    (ClubRolesTable.role eq "club_manager")
+                }
+                .map { it[ClubRolesTable.userId] }
+        } else emptyList()
+
+        (coachIds + managerIds).distinct()
     }
 
     private fun rowToNotification(row: ResultRow) = NotificationRow(

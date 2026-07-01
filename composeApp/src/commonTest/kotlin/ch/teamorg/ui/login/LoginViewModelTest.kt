@@ -47,7 +47,7 @@ class LoginViewModelTest {
     // region — field updates
 
     @Test
-    fun onEmailChange_updatesEmailAndClearsError() = runTest {
+    fun onEmailChange_updatesEmailAndClearsError() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem() // initial
 
@@ -61,7 +61,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun onPasswordChange_updatesPasswordAndClearsError() = runTest {
+    fun onPasswordChange_updatesPasswordAndClearsError() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem() // initial
 
@@ -75,7 +75,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun onEmailChange_whenErrorPresent_clearsError() = runTest {
+    fun onEmailChange_whenErrorPresent_clearsError() = runTest(testDispatcher) {
         // put ViewModel into error state first
         viewModel.onLoginClick() // blank fields -> error
         viewModel.state.test {
@@ -122,7 +122,7 @@ class LoginViewModelTest {
     // region — happy path
 
     @Test
-    fun onLoginClick_withValidCredentials_emitsLoginSuccess() = runTest {
+    fun onLoginClick_withValidCredentials_emitsLoginSuccess() = runTest(testDispatcher) {
         viewModel.onEmailChange("alice@example.com")
         viewModel.onPasswordChange("password123")
 
@@ -134,7 +134,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun onLoginClick_withValidCredentials_clearsLoadingAndError() = runTest {
+    fun onLoginClick_withValidCredentials_clearsLoadingAndError() = runTest(testDispatcher) {
         viewModel.onEmailChange("alice@example.com")
         viewModel.onPasswordChange("password123")
         viewModel.onLoginClick()
@@ -145,7 +145,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun onLoginClick_passesBothFieldsToRepository() = runTest {
+    fun onLoginClick_passesBothFieldsToRepository() = runTest(testDispatcher) {
         viewModel.onEmailChange("alice@example.com")
         viewModel.onPasswordChange("secret123")
         viewModel.onLoginClick()
@@ -157,7 +157,7 @@ class LoginViewModelTest {
     // region — error path
 
     @Test
-    fun onLoginClick_onRepositoryFailure_setsErrorMessage() = runTest {
+    fun onLoginClick_onRepositoryFailure_setsErrorMessage() = runTest(testDispatcher) {
         fakeAuth.loginResult = Result.failure(Exception("Invalid credentials"))
         viewModel.onEmailChange("alice@example.com")
         viewModel.onPasswordChange("wrongpass")
@@ -167,7 +167,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun onLoginClick_onRepositoryFailureWithNullMessage_setsDefaultError() = runTest {
+    fun onLoginClick_onRepositoryFailureWithNullMessage_setsDefaultError() = runTest(testDispatcher) {
         fakeAuth.loginResult = Result.failure(Exception())
         viewModel.onEmailChange("alice@example.com")
         viewModel.onPasswordChange("pass")
@@ -178,7 +178,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun onLoginClick_onFailure_clearsLoadingState() = runTest {
+    fun onLoginClick_onFailure_clearsLoadingState() = runTest(testDispatcher) {
         fakeAuth.loginResult = Result.failure(Exception("Server error"))
         viewModel.onEmailChange("alice@example.com")
         viewModel.onPasswordChange("pass")

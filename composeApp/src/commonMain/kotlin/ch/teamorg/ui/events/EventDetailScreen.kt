@@ -29,8 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ch.teamorg.domain.CheckInEntry
+import ch.teamorg.domain.AttendanceResponse
 import ch.teamorg.domain.EventWithTeams
+import ch.teamorg.domain.TeamMember
 import ch.teamorg.ui.attendance.AttendanceRsvpButtons
 import ch.teamorg.ui.attendance.BegrundungSheet
 import ch.teamorg.ui.attendance.MemberResponseList
@@ -55,6 +56,12 @@ private fun formatTime(instant: Instant): String {
     return "${l.hour.toString().padStart(2, '0')}:${l.minute.toString().padStart(2, '0')}"
 }
 
+// Default status when opening coach-edit sheet
+private fun coachEditDefault(currentStatus: String?): String = when (currentStatus) {
+    "declined", "declined-auto" -> "declined"
+    else -> "confirmed"    // unsure / no-response / confirmed → confirmed
+}
+
 @Composable
 fun EventDetailScreen(
     viewModel: EventDetailViewModel,
@@ -69,13 +76,17 @@ fun EventDetailScreen(
     var showUncancelScopeSheet by remember { mutableStateOf(false) }
     var showBegrundung by remember { mutableStateOf(false) }
     var begrundungStatus by remember { mutableStateOf("unsure") }
-    var showOverrideReason by remember { mutableStateOf(false) }
-    var overrideTarget by remember { mutableStateOf<CheckInEntry?>(null) }
-    var overrideStatus by remember { mutableStateOf("") }
     var showReminderSheet by remember { mutableStateOf(false) }
+
+    // Coach edit sheet state
+    var coachEditTarget by remember { mutableStateOf<AttendanceResponse?>(null) }
+    var coachEditStatus by remember { mutableStateOf("confirmed") }
+    var coachEditUnexcused by remember { mutableStateOf(false) }
 
     val isCancelled = state.event?.event?.status == "cancelled"
     val isSeries = state.event?.event?.seriesId != null
+    val checkInStatus = state.event?.event?.checkInStatus ?: "open"
+    val rsvpLocked = checkInStatus != "open"
 
     Column(
         modifier = Modifier
@@ -99,7 +110,6 @@ fun EventDetailScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Edit / more
             if (state.isCoach) {
                 Box {
                     IconButton(onClick = { showMenu = true }) {
@@ -139,7 +149,6 @@ fun EventDetailScreen(
             }
         }
 
-        // Cancel scope sheet
         if (showCancelScopeSheet) {
             RecurringScopeSheet(
                 mode = "cancel",
@@ -151,7 +160,6 @@ fun EventDetailScreen(
             )
         }
 
-        // Uncancel scope sheet
         if (showUncancelScopeSheet) {
             RecurringScopeSheet(
                 mode = "uncancel",
@@ -178,9 +186,13 @@ fun EventDetailScreen(
                 declinedCount = state.declinedCount,
                 responseDeadline = state.responseDeadline,
                 deadlinePassed = state.deadlinePassed,
-                checkInEntries = state.checkInEntries,
+                attendanceResponses = state.attendanceResponses,
+                rosterMap = state.rosterMap,
                 isCoach = state.isCoach,
+                checkInStatus = checkInStatus,
+                rsvpLocked = rsvpLocked,
                 reminderLeadMinutes = state.reminderLeadMinutes,
+                isFinalizingOrReopening = state.isFinalizingOrReopening,
                 onReminderTap = { showReminderSheet = true },
                 onRsvpSelect = { status ->
                     if (status == "unsure" || status == "declined") {
@@ -190,15 +202,13 @@ fun EventDetailScreen(
                         viewModel.submitResponse(status, null)
                     }
                 },
-                onOverrideTap = { entry, status ->
-                    if (status == "absent" || status == "excused") {
-                        overrideTarget = entry
-                        overrideStatus = status
-                        showOverrideReason = true
-                    } else {
-                        viewModel.submitOverride(entry.userId, status, null)
-                    }
-                }
+                onEditResponseTap = { response ->
+                    coachEditTarget = response
+                    coachEditStatus = coachEditDefault(response.status)
+                    coachEditUnexcused = response.unexcused
+                },
+                onFinalize = { viewModel.finalizeEvent() },
+                onReopen = { viewModel.reopen() }
             )
         }
 
@@ -212,19 +222,50 @@ fun EventDetailScreen(
             }
         )
 
-        BegrundungSheet(
-            visible = showOverrideReason,
-            mode = overrideStatus,
-            onDismiss = { showOverrideReason = false; overrideTarget = null },
-            onConfirm = { reason ->
-                val target = overrideTarget
-                if (target != null) {
-                    viewModel.submitOverride(target.userId, overrideStatus, reason.ifBlank { null })
+        // Coach edit bottom sheet
+        val editTarget = coachEditTarget
+        if (editTarget != null) {
+            CoachEditSheet(
+                status = coachEditStatus,
+                unexcused = coachEditUnexcused,
+                onStatusChange = { coachEditStatus = it; if (it != "declined") coachEditUnexcused = false },
+                onUnexcusedChange = { coachEditUnexcused = it },
+                onConfirm = {
+                    viewModel.setMemberResponse(editTarget.userId, coachEditStatus, coachEditUnexcused)
+                    coachEditTarget = null
+                },
+                onDismiss = { coachEditTarget = null }
+            )
+        }
+
+        // Finalize blocked dialog
+        val blocked = state.finalizeBlocked
+        if (blocked != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissFinalizeBlocked() },
+                title = { Text("CheckIn konnte nicht abgeschlossen werden") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(blocked.reason)
+                        if (blocked.memberNames.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            blocked.memberNames.forEach { name ->
+                                Text(
+                                    text = "• $name",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissFinalizeBlocked() }) {
+                        Text("OK")
+                    }
                 }
-                showOverrideReason = false
-                overrideTarget = null
-            }
-        )
+            )
+        }
 
         val eventId = state.event?.event?.id
         if (showReminderSheet && eventId != null) {
@@ -244,6 +285,82 @@ fun EventDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CoachEditSheet(
+    status: String,
+    unexcused: Boolean,
+    onStatusChange: (String) -> Unit,
+    onUnexcusedChange: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                "Anwesenheit bearbeiten",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FilterChip(
+                    selected = status == "confirmed",
+                    onClick = { onStatusChange("confirmed") },
+                    label = { Text("Anwesend") },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = status == "declined",
+                    onClick = { onStatusChange("declined") },
+                    label = { Text("Abgemeldet") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (status == "declined") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onUnexcusedChange(!unexcused) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Nicht entschuldigt",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Switch(
+                        checked = unexcused,
+                        onCheckedChange = onUnexcusedChange
+                    )
+                }
+            }
+
+            Button(
+                onClick = onConfirm,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Speichern")
+            }
+        }
+    }
+}
+
 @Composable
 private fun EventDetailBody(
     ewt: EventWithTeams,
@@ -253,12 +370,18 @@ private fun EventDetailBody(
     declinedCount: Int,
     responseDeadline: Instant?,
     deadlinePassed: Boolean,
-    checkInEntries: List<CheckInEntry>,
+    attendanceResponses: List<AttendanceResponse>,
+    rosterMap: Map<String, TeamMember>,
     isCoach: Boolean,
+    checkInStatus: String,
+    rsvpLocked: Boolean,
     reminderLeadMinutes: Int?,
+    isFinalizingOrReopening: Boolean,
     onReminderTap: () -> Unit,
     onRsvpSelect: (String) -> Unit,
-    onOverrideTap: (CheckInEntry, String) -> Unit
+    onEditResponseTap: (AttendanceResponse) -> Unit,
+    onFinalize: () -> Unit,
+    onReopen: () -> Unit
 ) {
     val event = ewt.event
     val isCancelled = event.status == "cancelled"
@@ -273,7 +396,6 @@ private fun EventDetailBody(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Cancelled banner
         if (isCancelled) {
             Box(
                 modifier = Modifier
@@ -291,7 +413,6 @@ private fun EventDetailBody(
             }
         }
 
-        // Hero card
         HeroCard(
             ewt = ewt,
             isCoach = isCoach,
@@ -299,20 +420,70 @@ private fun EventDetailBody(
             responseDeadline = responseDeadline
         )
 
-        // RSVP buttons
+        // RSVP section
         Column(modifier = Modifier.fillMaxWidth()) {
             AttendanceRsvpButtons(
                 currentResponse = myResponse,
                 confirmedCount = confirmedCount,
                 maybeCount = maybeCount,
                 declinedCount = declinedCount,
-                deadlinePassed = deadlinePassed,
+                deadlinePassed = deadlinePassed || rsvpLocked,
                 compact = false,
                 onSelect = onRsvpSelect
             )
-            if (responseDeadline != null) {
+            if (rsvpLocked) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Zeit zum An-/Abmelden abgelaufen",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (responseDeadline != null && !rsvpLocked) {
                 Spacer(modifier = Modifier.height(8.dp))
                 ResponseDeadlineLabel(deadline = responseDeadline)
+            }
+        }
+
+        // Coach finalize / reopen buttons
+        if (isCoach) {
+            when (checkInStatus) {
+                "awaiting_checkin" -> {
+                    Button(
+                        onClick = onFinalize,
+                        enabled = !isFinalizingOrReopening,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isFinalizingOrReopening) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("CheckIn abschliessen")
+                        }
+                    }
+                }
+                "done" -> {
+                    OutlinedButton(
+                        onClick = onReopen,
+                        enabled = !isFinalizingOrReopening,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isFinalizingOrReopening) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("CheckIn wieder öffnen")
+                        }
+                    }
+                }
+                else -> {}
             }
         }
 
@@ -341,7 +512,7 @@ private fun EventDetailBody(
             }
         }
 
-        // Reminder row (no dedicated design — styled as M3 tonal list item)
+        // Reminder row
         val reminderText = when {
             reminderLeadMinutes == null -> "Global default (2 h)"
             reminderLeadMinutes == -1 -> "No reminder"
@@ -383,11 +554,13 @@ private fun EventDetailBody(
             )
         }
 
-        // Member response list (grouped & sorted, tonal section cards)
+        // Member response list
         MemberResponseList(
-            entries = checkInEntries,
+            responses = attendanceResponses,
             isCoach = isCoach,
-            onOverrideTap = onOverrideTap
+            checkInStatus = checkInStatus,
+            rosterMap = rosterMap,
+            onEditTap = onEditResponseTap
         )
     }
 }
@@ -408,7 +581,6 @@ private fun HeroCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Type chip row
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 modifier = Modifier
@@ -450,14 +622,11 @@ private fun HeroCard(
         )
 
         if (isCoach) {
-            // Coach hero: compact info chips
             CoachInfoChips(ewt = ewt, isMultiDay = isMultiDay)
         } else {
-            // Player hero: structured icon tile rows
             PlayerInfoTiles(ewt = ewt, isMultiDay = isMultiDay)
         }
 
-        // Respond-by pill
         if (responseDeadline != null) {
             val l = responseDeadline.toLocalDateTime(TimeZone.currentSystemDefault())
             val day = l.dayOfWeek.name.take(3).lowercase().replaceFirstChar { it.uppercase() }

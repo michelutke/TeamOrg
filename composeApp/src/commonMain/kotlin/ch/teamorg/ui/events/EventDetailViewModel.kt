@@ -2,15 +2,18 @@ package ch.teamorg.ui.events
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ch.teamorg.domain.CheckInEntry
+import ch.teamorg.domain.AttendanceResponse
 import ch.teamorg.domain.EventWithTeams
-import ch.teamorg.domain.SubmitCheckInRequest
+import ch.teamorg.domain.FinalizeResult
 import ch.teamorg.domain.SubmitResponseRequest
-import ch.teamorg.preferences.UserPreferences
+import ch.teamorg.domain.TeamMember
 import ch.teamorg.repository.AttendanceRepository
 import ch.teamorg.repository.EventRepository
 import ch.teamorg.repository.NotificationRepository
 import ch.teamorg.repository.TeamRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -18,6 +21,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
+
+data class FinalizeBlockedState(
+    val reason: String,
+    val memberNames: List<String>   // display names (id fallback) for the dialog
+)
 
 data class EventDetailState(
     val event: EventWithTeams? = null,
@@ -30,9 +38,12 @@ data class EventDetailState(
     val declinedCount: Int = 0,
     val responseDeadline: Instant? = null,
     val deadlinePassed: Boolean = false,
-    val checkInEntries: List<CheckInEntry> = emptyList(),
+    val attendanceResponses: List<AttendanceResponse> = emptyList(),
+    val rosterMap: Map<String, TeamMember> = emptyMap(),   // userId → TeamMember for name/avatar
     val reminderLeadMinutes: Int? = null,
-    val isLoadingReminder: Boolean = false
+    val isLoadingReminder: Boolean = false,
+    val isFinalizingOrReopening: Boolean = false,
+    val finalizeBlocked: FinalizeBlockedState? = null
 )
 
 sealed class DetailEvent {
@@ -43,7 +54,6 @@ sealed class DetailEvent {
 class EventDetailViewModel(
     private val eventRepository: EventRepository,
     private val teamRepository: TeamRepository,
-    private val userPreferences: UserPreferences,
     private val attendanceRepository: AttendanceRepository,
     private val notificationRepository: NotificationRepository
 ) : ViewModel() {
@@ -63,6 +73,7 @@ class EventDetailViewModel(
                     checkCoachRole()
                     loadAttendance(eventId)
                     loadReminderOverride(eventId)
+                    loadRosterMap(ewt.event.teamIds)
                 }
                 .onFailure { e ->
                     _state.update { it.copy(error = e.message, isLoading = false) }
@@ -70,14 +81,29 @@ class EventDetailViewModel(
         }
     }
 
+    private fun loadRosterMap(teamIds: List<String>) {
+        viewModelScope.launch {
+            val map = mutableMapOf<String, TeamMember>()
+            coroutineScope {
+                teamIds.map { teamId ->
+                    async { teamRepository.getTeamRoster(teamId) }
+                }.awaitAll().forEach { result ->
+                    result.onSuccess { members ->
+                        members.forEach { member -> map[member.userId] = member }
+                    }
+                    // ignore failures — best-effort, like web's try/catch
+                }
+            }
+            _state.update { it.copy(rosterMap = map) }
+        }
+    }
+
     fun loadAttendance(eventId: String) {
         viewModelScope.launch {
-            // Load my response
             attendanceRepository.getMyResponse(eventId).onSuccess { response ->
                 _state.update { it.copy(myResponse = response?.status) }
             }
 
-            // Load counts from attendance responses (same endpoint list view uses — reliable)
             attendanceRepository.getEventAttendance(eventId).onSuccess { responses ->
                 val confirmed = responses.count { it.status == "confirmed" }
                 val maybe = responses.count { it.status == "unsure" }
@@ -88,21 +114,16 @@ class EventDetailViewModel(
                     it.copy(
                         confirmedCount = confirmed,
                         maybeCount = maybe,
-                        declinedCount = declined
+                        declinedCount = declined,
+                        attendanceResponses = responses
                     )
                 }
-            }
-
-            // Load check-in entries for coach list display
-            attendanceRepository.getCheckIn(eventId).onSuccess { entries ->
-                _state.update { it.copy(checkInEntries = entries) }
             }
         }
     }
 
     fun submitResponse(status: String, reason: String?) {
         val eventId = _state.value.event?.event?.id ?: return
-        // Optimistic update
         _state.update { it.copy(myResponse = status) }
         viewModelScope.launch {
             val request = SubmitResponseRequest(status = status, reason = reason)
@@ -112,21 +133,75 @@ class EventDetailViewModel(
                     loadAttendance(eventId)
                 }
                 .onFailure {
-                    // Revert optimistic update on failure
                     _state.update { it.copy(myResponse = null) }
                 }
         }
     }
 
-    fun submitOverride(userId: String, status: String, note: String?) {
+    fun setMemberResponse(userId: String, status: String, unexcused: Boolean) {
         val eventId = _state.value.event?.event?.id ?: return
         viewModelScope.launch {
-            val request = SubmitCheckInRequest(status = status, note = note)
-            attendanceRepository.submitCheckIn(eventId, userId, request)
+            attendanceRepository.setMemberResponse(eventId, userId, status, unexcused)
+                .onSuccess { loadAttendance(eventId) }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun finalizeEvent() {
+        val eventId = _state.value.event?.event?.id ?: return
+        _state.update { it.copy(isFinalizingOrReopening = true) }
+        viewModelScope.launch {
+            when (val result = attendanceRepository.finalize(eventId)) {
+                is FinalizeResult.Success -> {
+                    _state.update { it.copy(isFinalizingOrReopening = false) }
+                    loadEvent(eventId)
+                }
+                is FinalizeResult.Blocked -> {
+                    val roster = _state.value.rosterMap
+                    val memberNames = result.userIds.map { uid ->
+                        roster[uid]?.displayName ?: uid
+                    }
+                    val blockedMessage = when (result.reason) {
+                        "unsure" -> "Unsichere Spieler müssen zuerst als anwesend oder abwesend markiert werden."
+                        "no-response" -> "Spieler ohne Antwort müssen zuerst als anwesend oder abwesend markiert werden."
+                        else -> result.reason
+                    }
+                    _state.update {
+                        it.copy(
+                            isFinalizingOrReopening = false,
+                            finalizeBlocked = FinalizeBlockedState(
+                                reason = blockedMessage,
+                                memberNames = memberNames
+                            )
+                        )
+                    }
+                }
+                is FinalizeResult.Failure -> {
+                    _state.update {
+                        it.copy(isFinalizingOrReopening = false, error = result.cause.message)
+                    }
+                }
+            }
+        }
+    }
+
+    fun reopen() {
+        val eventId = _state.value.event?.event?.id ?: return
+        _state.update { it.copy(isFinalizingOrReopening = true) }
+        viewModelScope.launch {
+            attendanceRepository.reopen(eventId)
                 .onSuccess {
-                    loadAttendance(eventId)
+                    _state.update { it.copy(isFinalizingOrReopening = false) }
+                    loadEvent(eventId)
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isFinalizingOrReopening = false, error = e.message) }
                 }
         }
+    }
+
+    fun dismissFinalizeBlocked() {
+        _state.update { it.copy(finalizeBlocked = null) }
     }
 
     fun cancelEvent(scope: String = "this_only") {

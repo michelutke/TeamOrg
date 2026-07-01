@@ -42,6 +42,7 @@ data class CreateEditEventState(
     val selectedSubgroupIds: Set<String> = emptySet(),
     val recurringEnabled: Boolean = false,
     val recurringPattern: RecurringPatternState? = null,
+    val defaultResponse: String = "none",  // "none"|"accepted"|"declined"
 
     // UI state
     val isEditMode: Boolean = false,
@@ -203,6 +204,10 @@ class CreateEditEventViewModel(
         }
     }
 
+    fun setDefaultResponse(value: String) {
+        _state.update { it.copy(defaultResponse = value) }
+    }
+
     fun setRecurringEnabled(enabled: Boolean) {
         _state.update { it.copy(recurringEnabled = enabled) }
     }
@@ -238,6 +243,7 @@ class CreateEditEventViewModel(
                         selectedSubgroupIds = e.subgroupIds.toSet(),
                         isSeriesEvent = if (isDuplicate) false else e.seriesId != null,
                         recurringEnabled = false,
+                        defaultResponse = e.defaultResponse,
                         availableTeams = ewt.matchedTeams
                     )
                 }
@@ -274,7 +280,8 @@ class CreateEditEventViewModel(
                     minAttendees = if (s.minAttendeesEnabled) s.minAttendees else null,
                     teamIds = s.selectedTeamIds.toList(),
                     subgroupIds = s.selectedSubgroupIds.toList(),
-                    scope = scope
+                    scope = scope,
+                    defaultResponse = s.defaultResponse
                 )
                 eventRepository.editEvent(s.editEventId, request)
                     .onSuccess {
@@ -303,7 +310,8 @@ class CreateEditEventViewModel(
                     minAttendees = if (s.minAttendeesEnabled) s.minAttendees else null,
                     teamIds = s.selectedTeamIds.toList(),
                     subgroupIds = s.selectedSubgroupIds.toList(),
-                    recurring = recurring
+                    recurring = recurring,
+                    defaultResponse = s.defaultResponse
                 )
                 eventRepository.createEvent(request)
                     .onSuccess {

@@ -15,7 +15,9 @@ import ch.teamorg.data.repository.EventRepositoryImpl
 import ch.teamorg.data.repository.InviteRepositoryImpl
 import ch.teamorg.data.repository.NotificationRepositoryImpl
 import ch.teamorg.data.repository.TeamRepositoryImpl
+import android.content.Context
 import ch.teamorg.preferences.UserPreferences
+import com.russhwolf.settings.SharedPreferencesSettings
 import ch.teamorg.repository.AbwesenheitRepository
 import ch.teamorg.repository.AttendanceRepository
 import ch.teamorg.repository.AuthRepository
@@ -29,7 +31,13 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 
 actual val sharedModule = module {
-    single { UserPreferences(get()) }
+    single {
+        UserPreferences(
+            SharedPreferencesSettings(
+                get<Context>().getSharedPreferences("teamorg_prefs", Context.MODE_PRIVATE)
+            )
+        )
+    }
     single { HttpClientFactory.create(get()) }
     single { DatabaseDriverFactory(get()) }
     single { createDatabase(get()) }

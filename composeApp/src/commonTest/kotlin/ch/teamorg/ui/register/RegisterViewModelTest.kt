@@ -49,7 +49,7 @@ class RegisterViewModelTest {
     // region — field updates
 
     @Test
-    fun onDisplayNameChange_updatesDisplayNameAndClearsError() = runTest {
+    fun onDisplayNameChange_updatesDisplayNameAndClearsError() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem()
             viewModel.onDisplayNameChange("Alice")
@@ -59,7 +59,7 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun onEmailChange_updatesEmailAndClearsError() = runTest {
+    fun onEmailChange_updatesEmailAndClearsError() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem()
             viewModel.onEmailChange("alice@example.com")
@@ -69,7 +69,7 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun onPasswordChange_updatesPasswordAndClearsError() = runTest {
+    fun onPasswordChange_updatesPasswordAndClearsError() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem()
             viewModel.onPasswordChange("password1")
@@ -79,7 +79,7 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun onConfirmPasswordChange_updatesConfirmPasswordAndClearsError() = runTest {
+    fun onConfirmPasswordChange_updatesConfirmPasswordAndClearsError() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem()
             viewModel.onConfirmPasswordChange("password1")
@@ -179,7 +179,7 @@ class RegisterViewModelTest {
     // region — happy path
 
     @Test
-    fun onRegisterClick_withValidFields_emitsRegisterSuccess() = runTest {
+    fun onRegisterClick_withValidFields_emitsRegisterSuccess() = runTest(testDispatcher) {
         fillValidFields()
         viewModel.registerSuccess.test {
             viewModel.onRegisterClick()
@@ -189,7 +189,7 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun onRegisterClick_withValidFields_clearsLoadingAndError() = runTest {
+    fun onRegisterClick_withValidFields_clearsLoadingAndError() = runTest(testDispatcher) {
         fillValidFields()
         viewModel.onRegisterClick()
 
@@ -199,7 +199,7 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun onRegisterClick_passesCorrectDataToRepository() = runTest {
+    fun onRegisterClick_passesCorrectDataToRepository() = runTest(testDispatcher) {
         fillValidFields()
         viewModel.onRegisterClick()
 
@@ -211,7 +211,7 @@ class RegisterViewModelTest {
     // region — error path
 
     @Test
-    fun onRegisterClick_onRepositoryFailure_setsErrorMessage() = runTest {
+    fun onRegisterClick_onRepositoryFailure_setsErrorMessage() = runTest(testDispatcher) {
         fakeAuth.registerResult = Result.failure(Exception("Email already exists"))
         fillValidFields()
         viewModel.onRegisterClick()
@@ -220,7 +220,7 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun onRegisterClick_onRepositoryFailureWithNullMessage_setsDefaultError() = runTest {
+    fun onRegisterClick_onRepositoryFailureWithNullMessage_setsDefaultError() = runTest(testDispatcher) {
         fakeAuth.registerResult = Result.failure(Exception())
         fillValidFields()
         viewModel.onRegisterClick()
@@ -230,7 +230,7 @@ class RegisterViewModelTest {
     }
 
     @Test
-    fun onRegisterClick_onFailure_clearsLoadingState() = runTest {
+    fun onRegisterClick_onFailure_clearsLoadingState() = runTest(testDispatcher) {
         fakeAuth.registerResult = Result.failure(Exception("Server error"))
         fillValidFields()
         viewModel.onRegisterClick()

@@ -67,7 +67,7 @@ class InviteViewModelTest {
     // region — loadInvite happy path
 
     @Test
-    fun loadInvite_withSuccess_populatesInviteDetails() = runTest {
+    fun loadInvite_withSuccess_populatesInviteDetails() = runTest(testDispatcher) {
         fakeInviteRepo.getInviteDetailsResult = Result.success(sampleDetails)
         viewModel.loadInvite("abc123")
 
@@ -77,14 +77,14 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun loadInvite_passesTokenToRepository() = runTest {
+    fun loadInvite_passesTokenToRepository() = runTest(testDispatcher) {
         viewModel.loadInvite("mytoken")
 
         fakeInviteRepo.lastDetailsToken shouldBe "mytoken"
     }
 
     @Test
-    fun loadInvite_clearsErrorBeforeCall() = runTest {
+    fun loadInvite_clearsErrorBeforeCall() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem() // initial
             viewModel.loadInvite("abc123")
@@ -97,7 +97,7 @@ class InviteViewModelTest {
     // region — loadInvite error path
 
     @Test
-    fun loadInvite_onFailure_setsErrorMessage() = runTest {
+    fun loadInvite_onFailure_setsErrorMessage() = runTest(testDispatcher) {
         fakeInviteRepo.getInviteDetailsResult = Result.failure(Exception("Token expired"))
         viewModel.loadInvite("abc123")
 
@@ -105,7 +105,7 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun loadInvite_onFailureWithNullMessage_setsDefaultError() = runTest {
+    fun loadInvite_onFailureWithNullMessage_setsDefaultError() = runTest(testDispatcher) {
         fakeInviteRepo.getInviteDetailsResult = Result.failure(Exception())
         viewModel.loadInvite("abc123")
 
@@ -113,7 +113,7 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun loadInvite_onFailure_clearsLoadingState() = runTest {
+    fun loadInvite_onFailure_clearsLoadingState() = runTest(testDispatcher) {
         fakeInviteRepo.getInviteDetailsResult = Result.failure(Exception("Error"))
         viewModel.loadInvite("abc123")
 
@@ -123,7 +123,7 @@ class InviteViewModelTest {
     // region — redeemInvite happy path
 
     @Test
-    fun redeemInvite_withSuccess_setsIsRedeemedTrue() = runTest {
+    fun redeemInvite_withSuccess_setsIsRedeemedTrue() = runTest(testDispatcher) {
         viewModel.redeemInvite("abc123")
 
         val state = viewModel.state.value
@@ -132,7 +132,7 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun redeemInvite_passesTokenToRepository() = runTest {
+    fun redeemInvite_passesTokenToRepository() = runTest(testDispatcher) {
         viewModel.redeemInvite("inviteToken")
 
         fakeInviteRepo.lastRedeemToken shouldBe "inviteToken"
@@ -141,7 +141,7 @@ class InviteViewModelTest {
     // region — redeemInvite: already-member (Success) path
 
     @Test
-    fun redeemInvite_withSuccessResult_treatsAsSuccess() = runTest {
+    fun redeemInvite_withSuccessResult_treatsAsSuccess() = runTest(testDispatcher) {
         // Repository maps 409 / already-member to RedeemResult.Success
         fakeInviteRepo.redeemInviteResult = RedeemResult.Success
         viewModel.redeemInvite("abc123")
@@ -155,7 +155,7 @@ class InviteViewModelTest {
     // region — redeemInvite: email mismatch
 
     @Test
-    fun redeemInvite_emailMismatch_setsGermanMessageWithBothEmails() = runTest {
+    fun redeemInvite_emailMismatch_setsGermanMessageWithBothEmails() = runTest(testDispatcher) {
         fakeInviteRepo.redeemInviteResult = RedeemResult.EmailMismatch("invited@example.com")
         fakeAuthRepo.getMeResult = Result.success(
             AuthUser(userId = "u1", email = "current@example.com", displayName = "Cur", avatarUrl = null)
@@ -175,7 +175,7 @@ class InviteViewModelTest {
     // region — redeemInvite: expired / inactive / not found
 
     @Test
-    fun redeemInvite_expired_setsGermanExpiredMessage() = runTest {
+    fun redeemInvite_expired_setsGermanExpiredMessage() = runTest(testDispatcher) {
         fakeInviteRepo.redeemInviteResult = RedeemResult.Expired
         viewModel.redeemInvite("abc123")
 
@@ -186,7 +186,7 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun redeemInvite_inactive_setsGermanInactiveMessage() = runTest {
+    fun redeemInvite_inactive_setsGermanInactiveMessage() = runTest(testDispatcher) {
         fakeInviteRepo.redeemInviteResult = RedeemResult.Inactive
         viewModel.redeemInvite("abc123")
 
@@ -194,7 +194,7 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun redeemInvite_notFound_setsGermanNotFoundMessage() = runTest {
+    fun redeemInvite_notFound_setsGermanNotFoundMessage() = runTest(testDispatcher) {
         fakeInviteRepo.redeemInviteResult = RedeemResult.NotFound
         viewModel.redeemInvite("abc123")
 
@@ -204,7 +204,7 @@ class InviteViewModelTest {
     // region — redeemInvite error path
 
     @Test
-    fun redeemInvite_onError_setsErrorMessage() = runTest {
+    fun redeemInvite_onError_setsErrorMessage() = runTest(testDispatcher) {
         fakeInviteRepo.redeemInviteResult = RedeemResult.Error("Invite expired")
         viewModel.redeemInvite("abc123")
 
@@ -215,7 +215,7 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun redeemInvite_onError_clearsRedeemingState() = runTest {
+    fun redeemInvite_onError_clearsRedeemingState() = runTest(testDispatcher) {
         fakeInviteRepo.redeemInviteResult = RedeemResult.Error("Server error")
         viewModel.redeemInvite("abc123")
 
@@ -230,7 +230,7 @@ class InviteViewModelTest {
      * InviteScreen's LaunchedEffect uses to trigger onJoinSuccess.
      */
     @Test
-    fun fullFlow_loadThenRedeem_setsIsRedeemedTrue() = runTest {
+    fun fullFlow_loadThenRedeem_setsIsRedeemedTrue() = runTest(testDispatcher) {
         fakeInviteRepo.getInviteDetailsResult = Result.success(sampleDetails)
 
         // Load invite
@@ -246,7 +246,7 @@ class InviteViewModelTest {
     }
 
     @Test
-    fun fullFlow_loadThenRedeem_inviteDetailsPreservedAfterRedeem() = runTest {
+    fun fullFlow_loadThenRedeem_inviteDetailsPreservedAfterRedeem() = runTest(testDispatcher) {
         fakeInviteRepo.getInviteDetailsResult = Result.success(sampleDetails)
 
         viewModel.loadInvite("abc123")
@@ -261,7 +261,7 @@ class InviteViewModelTest {
      * Ensures isRedeeming=true is emitted before isRedeemed=true.
      */
     @Test
-    fun redeemInvite_emitsRedeemingThenRedeemed() = runTest {
+    fun redeemInvite_emitsRedeemingThenRedeemed() = runTest(testDispatcher) {
         viewModel.state.test {
             awaitItem() // initial state
 
@@ -278,7 +278,7 @@ class InviteViewModelTest {
     // region — error does not set isRedeemed (prevents false navigation)
 
     @Test
-    fun redeemInvite_onError_doesNotSetIsRedeemed() = runTest {
+    fun redeemInvite_onError_doesNotSetIsRedeemed() = runTest(testDispatcher) {
         fakeInviteRepo.redeemInviteResult = RedeemResult.Error("Network timeout")
         viewModel.redeemInvite("abc123")
 
@@ -295,7 +295,7 @@ class InviteViewModelTest {
      * triggers onJoinSuccess.
      */
     @Test
-    fun authenticatedUserWithExistingTeam_redeemInvite_setsIsRedeemed() = runTest {
+    fun authenticatedUserWithExistingTeam_redeemInvite_setsIsRedeemed() = runTest(testDispatcher) {
         // Simulate: user loaded invite details (authenticated, has teams already)
         fakeInviteRepo.getInviteDetailsResult = Result.success(sampleDetails)
         viewModel.loadInvite("abc123")
@@ -317,7 +317,7 @@ class InviteViewModelTest {
      * The final state must have isRedeemed=true which is the navigation trigger.
      */
     @Test
-    fun authenticatedUserWithExistingTeam_fullFlow_turbineVerifiesIsRedeemed() = runTest {
+    fun authenticatedUserWithExistingTeam_fullFlow_turbineVerifiesIsRedeemed() = runTest(testDispatcher) {
         fakeInviteRepo.getInviteDetailsResult = Result.success(sampleDetails)
         fakeInviteRepo.redeemInviteResult = RedeemResult.Success
 

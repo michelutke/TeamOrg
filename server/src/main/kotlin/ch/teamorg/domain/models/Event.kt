@@ -30,7 +30,10 @@ data class Event(
     val externalSource: String? = null,
     val externalStatus: String? = null,
     val needsReview: Boolean = false,
-    val presentCount: Int = 0
+    val presentCount: Int = 0,
+    @Serializable(with = InstantSerializer::class) val checkInCompletedAt: Instant? = null,
+    val defaultResponse: String = "none",
+    val checkInStatus: String = "open"
 )
 
 @Serializable
@@ -71,6 +74,7 @@ data class EventSeries(
     val templateLocation: String?,
     val templateDescription: String?,
     val templateMinAttendees: Int?,
+    val templateDefaultResponse: String = "none",
     @Serializable(with = UUIDSerializer::class) val createdBy: UUID,
     @Serializable(with = InstantSerializer::class) val createdAt: Instant
 )
@@ -113,7 +117,8 @@ data class CreateEventRequest(
     val teamIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList(),
     val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID> = emptyList(),
     val recurring: RecurringPattern? = null,
-    @Serializable(with = InstantSerializer::class) val responseDeadline: Instant? = null
+    @Serializable(with = InstantSerializer::class) val responseDeadline: Instant? = null,
+    val defaultResponse: String = "none"
 )
 
 @Serializable
@@ -137,7 +142,8 @@ data class EditEventRequest(
     val description: String?,
     val minAttendees: Int?,
     val teamIds: List<@Serializable(with = UUIDSerializer::class) UUID>?,
-    val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID>?
+    val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID>?,
+    val defaultResponse: String? = null,
 )
 
 enum class RecurringScope { this_only, this_and_future, all }

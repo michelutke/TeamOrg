@@ -28,3 +28,6 @@ google-services.json
 
 # Local deployment secrets handoff (never commit)
 docs/deploy-secrets.local.md
+
+# Playwright CLI session artifacts
+.playwright-cli/

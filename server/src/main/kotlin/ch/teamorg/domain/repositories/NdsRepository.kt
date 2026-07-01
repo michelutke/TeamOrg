@@ -1,12 +1,10 @@
 package ch.teamorg.domain.repositories
 
-import ch.teamorg.db.tables.AttendanceRecordsTable
 import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
-import ch.teamorg.db.tables.RecordStatus
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
@@ -244,7 +242,6 @@ class NdsRepositoryImpl : NdsRepository {
 
         // Move attendance from the provisional placeholder to the real user, skipping events where
         // the real user already has a row (avoids PK clash on (event_id, user_id)).
-        moveAttendance(AttendanceRecordsTable, AttendanceRecordsTable.eventId, AttendanceRecordsTable.userId, provisionalUserId, realUserId)
         moveAttendance(AttendanceResponsesTable, AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId, provisionalUserId, realUserId)
 
         // Drop the provisional user's team role (the redeem already added the real user's role).
@@ -295,18 +292,18 @@ class NdsRepositoryImpl : NdsRepository {
     }
 
     override suspend fun listExportAttendances(teamId: UUID): List<ExportAttendance> = transaction {
-        AttendanceRecordsTable
-            .innerJoin(EventTeamsTable, { AttendanceRecordsTable.eventId }, { EventTeamsTable.eventId })
-            .innerJoin(NdsMembersTable, { AttendanceRecordsTable.userId }, { NdsMembersTable.userId })
+        AttendanceResponsesTable
+            .innerJoin(EventTeamsTable, { AttendanceResponsesTable.eventId }, { EventTeamsTable.eventId })
+            .innerJoin(NdsMembersTable, { AttendanceResponsesTable.userId }, { NdsMembersTable.userId })
             .selectAll()
             .where {
                 (EventTeamsTable.teamId eq teamId) and
                     (NdsMembersTable.teamId eq teamId) and
-                    (AttendanceRecordsTable.status eq RecordStatus.present)
+                    (AttendanceResponsesTable.status eq "confirmed")
             }
             .map {
                 ExportAttendance(
-                    eventId = it[AttendanceRecordsTable.eventId],
+                    eventId = it[AttendanceResponsesTable.eventId],
                     personNumber = it[NdsMembersTable.personNumber],
                     funktion = it[NdsMembersTable.funktion],
                     lastName = it[NdsMembersTable.lastName],

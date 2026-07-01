@@ -1,13 +1,9 @@
 package ch.teamorg.preferences
 
-import android.content.Context
 import com.russhwolf.settings.Settings
-import com.russhwolf.settings.SharedPreferencesSettings
 
-actual class UserPreferences(context: Context) {
-    private val settings: Settings = SharedPreferencesSettings(
-        context.getSharedPreferences("teamorg_prefs", Context.MODE_PRIVATE)
-    )
+actual class UserPreferences actual constructor(settings: Settings) {
+    private val settings: Settings = settings
 
     actual fun saveToken(token: String) {
         settings.putString("auth_token", token)

@@ -8,6 +8,7 @@
 		location: string | null;
 		description: string | null;
 		minAttendees: number | null;
+		defaultResponse?: string | null;
 		teamIds: string[];
 		recurring?: {
 			patternType: string;
@@ -62,6 +63,7 @@
 	let location = $state(initial.location ?? '');
 	let description = $state(initial.description ?? '');
 	let minAttendees = $state(initial.minAttendees != null ? String(initial.minAttendees) : '');
+	let defaultResponse = $state(initial.defaultResponse ?? 'none');
 	let selected = $state<string[]>(initial.teamIds ?? (teams.length === 1 ? [teams[0].id] : []));
 
 	function toggleTeam(id: string) {
@@ -82,6 +84,7 @@
 	}
 
 	const types = ['training', 'match', 'other'] as const;
+	const defaultResponses = ['none', 'accepted', 'declined'] as const;
 	const patterns = ['weekly', 'daily', 'custom'] as const;
 	const weekdayKeys = [
 		'weekdayMon',
@@ -168,6 +171,21 @@
 	<label class="flex flex-col gap-1">
 		<span class="text-[12px] font-medium text-primary">{m.eventForm.fMinAttendees}</span>
 		<input type="number" name="minAttendees" bind:value={minAttendees} min="0" class={inputCls} />
+	</label>
+
+	<label class="flex flex-col gap-1">
+		<span class="text-[12px] font-medium text-primary">{m.eventForm.fDefaultResponse}</span>
+		<select name="defaultResponse" bind:value={defaultResponse} class={inputCls}>
+			{#each defaultResponses as r (r)}
+				<option value={r}>
+					{r === 'none'
+						? m.eventForm.defaultResponseNone
+						: r === 'accepted'
+							? m.eventForm.defaultResponseAccepted
+							: m.eventForm.defaultResponseDeclined}
+				</option>
+			{/each}
+		</select>
 	</label>
 
 	<!-- Recurrence -->

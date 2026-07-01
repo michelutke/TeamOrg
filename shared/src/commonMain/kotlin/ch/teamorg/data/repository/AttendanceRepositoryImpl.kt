@@ -3,19 +3,23 @@ package ch.teamorg.data.repository
 import ch.teamorg.data.AttendanceCacheManager
 import ch.teamorg.data.MutationQueueManager
 import ch.teamorg.domain.AttendanceResponse
-import ch.teamorg.domain.CheckInEntry
-import ch.teamorg.domain.SubmitCheckInRequest
+import ch.teamorg.domain.FinalizeBlockedBody
+import ch.teamorg.domain.FinalizeResult
+import ch.teamorg.domain.SetMemberResponseRequest
 import ch.teamorg.domain.SubmitResponseRequest
 import ch.teamorg.repository.AttendanceRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.utils.io.errors.IOException
 import kotlinx.datetime.Clock
@@ -114,29 +118,40 @@ class AttendanceRepositoryImpl(
         }
     }
 
-    override suspend fun getCheckIn(eventId: String): Result<List<CheckInEntry>> {
+    override suspend fun setMemberResponse(
+        eventId: String,
+        userId: String,
+        status: String,
+        unexcused: Boolean
+    ): Result<AttendanceResponse> = runCatching {
+        httpClient.put("/events/$eventId/attendance/$userId") {
+            contentType(ContentType.Application.Json)
+            setBody(SetMemberResponseRequest(status = status, unexcused = unexcused))
+        }.body()
+    }
+
+    override suspend fun finalize(eventId: String): FinalizeResult {
         return try {
-            Result.success(httpClient.get("/events/$eventId/check-in").body())
-        } catch (e: ConnectTimeoutException) {
-            Result.success(emptyList())
-        } catch (e: HttpRequestTimeoutException) {
-            Result.success(emptyList())
-        } catch (e: IOException) {
-            Result.success(emptyList())
+            httpClient.post("/events/$eventId/attendance/finalize")
+            FinalizeResult.Success
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.Conflict) {
+                try {
+                    val blocked: FinalizeBlockedBody = e.response.body()
+                    FinalizeResult.Blocked(reason = blocked.reason, userIds = blocked.userIds)
+                } catch (parseEx: Exception) {
+                    FinalizeResult.Failure(parseEx)
+                }
+            } else {
+                FinalizeResult.Failure(e)
+            }
         } catch (e: Exception) {
-            Result.failure(e)
+            FinalizeResult.Failure(e)
         }
     }
 
-    override suspend fun submitCheckIn(
-        eventId: String,
-        userId: String,
-        request: SubmitCheckInRequest
-    ): Result<Unit> = runCatching {
-        httpClient.put("/events/$eventId/check-in/$userId") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }
+    override suspend fun reopen(eventId: String): Result<Unit> = runCatching {
+        httpClient.post("/events/$eventId/attendance/reopen")
         Unit
     }
 

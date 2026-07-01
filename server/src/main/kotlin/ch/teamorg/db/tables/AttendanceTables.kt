@@ -10,7 +10,6 @@ import java.util.UUID
 // Note: ResponseStatus values contain hyphens ('declined-auto', 'no-response') which are invalid
 // Kotlin identifiers, so we use plain text columns for attendance_responses.status.
 
-enum class RecordStatus { present, absent, excused }
 enum class PresetType { holidays, injury, work, school, travel, other }
 enum class RuleType { recurring, period }
 
@@ -26,18 +25,7 @@ object AttendanceResponsesTable : Table("attendance_responses") {
     val manualOverride = bool("manual_override").default(false)
     val respondedAt = timestamp("responded_at").nullable()
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
-    override val primaryKey = PrimaryKey(eventId, userId)
-}
-
-object AttendanceRecordsTable : Table("attendance_records") {
-    val eventId = uuid("event_id").references(EventsTable.id, onDelete = ReferenceOption.CASCADE)
-    val userId = uuid("user_id").references(UsersTable.id, onDelete = ReferenceOption.CASCADE)
-    val status = enumerationByName<RecordStatus>("status", 10)
-    val note = text("note").nullable()
-    val setBy = uuid("set_by").references(UsersTable.id)
-    val setAt = timestamp("set_at").defaultExpression(CurrentTimestamp)
-    val previousStatus = enumerationByName<RecordStatus>("previous_status", 10).nullable()
-    val previousSetBy = uuid("previous_set_by").references(UsersTable.id).nullable()
+    val unexcused = bool("unexcused").default(false)
     override val primaryKey = PrimaryKey(eventId, userId)
 }
 

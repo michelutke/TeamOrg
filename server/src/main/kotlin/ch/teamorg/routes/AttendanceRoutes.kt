@@ -4,6 +4,7 @@ import ch.teamorg.domain.repositories.AttendanceRepository
 import ch.teamorg.domain.repositories.AttendanceResponseDto
 import ch.teamorg.domain.repositories.AttendanceResponseRow
 import ch.teamorg.domain.repositories.EventRepository
+import ch.teamorg.domain.repositories.FinalizeResult
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.RawAttendanceRow
 import ch.teamorg.domain.repositories.TeamRepository
@@ -27,15 +28,24 @@ import kotlinx.datetime.Instant as KInstant
 
 private val attnLogger = LoggerFactory.getLogger("AttendanceRoutes")
 
+// Statuses a client may set on a write path. `declined-auto` is system-only (Abwesenheit rules),
+// so it is intentionally excluded from both the player and coach edit paths.
+private val WRITABLE_ATTENDANCE_STATUSES = setOf("no-response", "confirmed", "unsure", "declined")
+
 @Serializable
 private data class SubmitResponseRequest(val status: String, val reason: String? = null)
+
+@Serializable
+private data class CoachResponseRequest(val status: String, val unexcused: Boolean = false)
+
+@Serializable
+private data class FinalizeBlockedPayload(val reason: String, val userIds: List<String>)
 
 @Serializable
 private data class RawAttendanceDto(
     val eventId: String,
     val userId: String,
     val responseStatus: String?,
-    val recordStatus: String?,
     val eventStartAt: KInstant
 )
 
@@ -46,6 +56,7 @@ private fun AttendanceResponseRow.toDto() = AttendanceResponseDto(
     reason = reason,
     abwesenheitRuleId = abwesenheitRuleId?.toString(),
     manualOverride = manualOverride,
+    unexcused = unexcused,
     respondedAt = respondedAt?.let { KInstant.fromEpochMilliseconds(it.toEpochMilli()) },
     updatedAt = KInstant.fromEpochMilliseconds(updatedAt.toEpochMilli())
 )
@@ -54,7 +65,6 @@ private fun RawAttendanceRow.toDto() = RawAttendanceDto(
     eventId = eventId.toString(),
     userId = userId.toString(),
     responseStatus = responseStatus,
-    recordStatus = recordStatus,
     eventStartAt = KInstant.fromEpochMilliseconds(eventStartAt.toEpochMilli())
 )
 
@@ -91,13 +101,25 @@ fun Route.attendanceRoutes() {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<SubmitResponseRequest>()
 
+            if (body.status !in WRITABLE_ATTENDANCE_STATUSES) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid attendance status")
+                return@put
+            }
+
             if (body.status == "unsure" && body.reason.isNullOrBlank()) {
                 call.respond(HttpStatusCode.BadRequest, "Reason required for unsure status")
                 return@put
             }
 
-            if (attendanceRepo.isDeadlinePassed(eventId)) {
-                call.respond(HttpStatusCode.Conflict, "Response deadline has passed")
+            // Reject if the event is done (finalized)
+            val event = eventRepository.findById(eventId)
+            if (event?.checkInCompletedAt != null) {
+                call.respond(HttpStatusCode.Forbidden, "Event attendance is finalized")
+                return@put
+            }
+
+            if (attendanceRepo.isPastCutoff(eventId)) {
+                call.respond(HttpStatusCode.Forbidden, "Zeit abgelaufen")
                 return@put
             }
 
@@ -105,10 +127,10 @@ fun Route.attendanceRoutes() {
 
             call.application.launch(Dispatchers.IO) {
                 try {
-                    val event = eventRepository.findById(eventId) ?: return@launch
+                    val notifEvent = event ?: return@launch
                     val playerName = "A player"
                     val epoch = java.time.Instant.now().epochSecond / 3600
-                    for (teamId in event.teamIds) {
+                    for (teamId in notifEvent.teamIds) {
                         val coachIds = notificationRepo.getCoachIdsForTeam(teamId)
                         for (coachId in coachIds) {
                             val settings = notificationRepo.getSettings(coachId, teamId)
@@ -118,7 +140,7 @@ fun Route.attendanceRoutes() {
                                     userId = coachId,
                                     type = "response",
                                     title = "RSVP: $playerName",
-                                    body = "$playerName ${body.status} for ${event.title}",
+                                    body = "$playerName ${body.status} for ${notifEvent.title}",
                                     entityId = eventId,
                                     entityType = "event",
                                     idempotencyKey = "response:${coachId}:${eventId}:${userId}:${body.status}:$epoch"
@@ -132,6 +154,32 @@ fun Route.attendanceRoutes() {
                 }
             }
 
+            call.respond(updated.toDto())
+        }
+
+        // Coach/club_manager edits any member's attendance response.
+        // SECURITY: requireEventAccess resolves the caller's role server-side from the event's
+        // teams — no client-supplied role is trusted. A plain player cannot reach this route.
+        put("/events/{id}/attendance/{userId}") {
+            val eventId = UUID.fromString(call.parameters["id"])
+            val targetUserId = UUID.fromString(call.parameters["userId"])
+            if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@put
+
+            val coachId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+            val body = call.receive<CoachResponseRequest>()
+
+            if (body.status !in WRITABLE_ATTENDANCE_STATUSES) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid attendance status")
+                return@put
+            }
+
+            val event = eventRepository.findById(eventId)
+            if (event?.checkInCompletedAt != null) {
+                call.respond(HttpStatusCode.Conflict, "Event attendance is finalized")
+                return@put
+            }
+
+            val updated = attendanceRepo.setResponseByCoach(eventId, targetUserId, body.status, body.unexcused, coachId)
             call.respond(updated.toDto())
         }
 
@@ -182,6 +230,54 @@ fun Route.attendanceRoutes() {
             val to = call.parameters["to"]?.let { Instant.parse(it) }
             val rows = attendanceRepo.getTeamAttendance(teamId, from, to)
             call.respond(rows.map { it.toDto() })
+        }
+
+        // Finalizes attendance for an event.
+        // SECURITY: requireEventAccess resolves the caller's role server-side.
+        post("/events/{id}/attendance/finalize") {
+            val eventId = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
+            val callerUserId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+
+            val event = eventRepository.findById(eventId)
+                ?: return@post call.respond(HttpStatusCode.NotFound, "Event not found")
+
+            if (event.checkInCompletedAt != null) {
+                call.respond(HttpStatusCode.BadRequest, "Event attendance is already finalized")
+                return@post
+            }
+            if (Instant.now().isBefore(event.endAt)) {
+                call.respond(HttpStatusCode.Conflict, "Cannot finalize before the event has ended")
+                return@post
+            }
+
+            when (val result = attendanceRepo.finalize(eventId, callerUserId)) {
+                is FinalizeResult.Ok -> call.respond(HttpStatusCode.OK)
+                is FinalizeResult.BlockedUnsure -> call.respond(
+                    HttpStatusCode.Conflict,
+                    FinalizeBlockedPayload(
+                        reason = "unsure",
+                        userIds = result.userIds.map { it.toString() }
+                    )
+                )
+                is FinalizeResult.BlockedNoResponse -> call.respond(
+                    HttpStatusCode.Conflict,
+                    FinalizeBlockedPayload(
+                        reason = "no-response",
+                        userIds = result.userIds.map { it.toString() }
+                    )
+                )
+            }
+        }
+
+        // Reopens a finalized event (clears check_in_completed_at).
+        // SECURITY: requireEventAccess resolves the caller's role server-side.
+        post("/events/{id}/attendance/reopen") {
+            val eventId = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
+
+            attendanceRepo.reopen(eventId)
+            call.respond(HttpStatusCode.OK)
         }
     }
 }
