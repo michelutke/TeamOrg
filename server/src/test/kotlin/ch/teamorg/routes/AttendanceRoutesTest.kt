@@ -795,7 +795,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `coach edit on done event is rejected`() = withTeamorgTestApplication {
+    fun `player rejected from coach attendance edit route (IDOR guard)`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val coachAuth = registerAndLogin("coach_done@example.com", displayName = "Coach Done")
         val playerAuth = registerAndLogin("player_done@example.com", displayName = "Player Done")
@@ -804,13 +804,9 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
-        // Event in the past (done state must be set via finalize route — Task 4)
-        // For now simulate by creating an event; the done-check is tested via the
-        // finalizeEvent endpoint once Task 4 is implemented. This placeholder test
-        // verifies the route exists and is guarded at all.
         val event = createEvent(
             coachAuth.token,
-            "Training Done",
+            "Training IDOR Guard",
             teamIds = listOf(teamId),
             startAt = "2020-01-01T10:00:00Z",
             endAt = "2020-01-01T12:00:00Z"

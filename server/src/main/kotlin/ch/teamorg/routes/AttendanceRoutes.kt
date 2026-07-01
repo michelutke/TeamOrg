@@ -4,6 +4,7 @@ import ch.teamorg.domain.repositories.AttendanceRepository
 import ch.teamorg.domain.repositories.AttendanceResponseDto
 import ch.teamorg.domain.repositories.AttendanceResponseRow
 import ch.teamorg.domain.repositories.EventRepository
+import ch.teamorg.domain.repositories.FinalizeResult
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.RawAttendanceRow
 import ch.teamorg.domain.repositories.TeamRepository
@@ -32,6 +33,9 @@ private data class SubmitResponseRequest(val status: String, val reason: String?
 
 @Serializable
 private data class CoachResponseRequest(val status: String, val unexcused: Boolean = false)
+
+@Serializable
+private data class FinalizeBlockedPayload(val reason: String, val userIds: List<String>)
 
 @Serializable
 private data class RawAttendanceDto(
@@ -214,6 +218,54 @@ fun Route.attendanceRoutes() {
             val to = call.parameters["to"]?.let { Instant.parse(it) }
             val rows = attendanceRepo.getTeamAttendance(teamId, from, to)
             call.respond(rows.map { it.toDto() })
+        }
+
+        // Finalizes attendance for an event.
+        // SECURITY: requireEventAccess resolves the caller's role server-side.
+        post("/events/{id}/attendance/finalize") {
+            val eventId = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
+            val callerUserId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+
+            val event = eventRepository.findById(eventId)
+                ?: return@post call.respond(HttpStatusCode.NotFound, "Event not found")
+
+            if (event.checkInCompletedAt != null) {
+                call.respond(HttpStatusCode.BadRequest, "Event attendance is already finalized")
+                return@post
+            }
+            if (Instant.now().isBefore(event.endAt)) {
+                call.respond(HttpStatusCode.Conflict, "Cannot finalize before the event has ended")
+                return@post
+            }
+
+            when (val result = attendanceRepo.finalize(eventId, callerUserId)) {
+                is FinalizeResult.Ok -> call.respond(HttpStatusCode.OK)
+                is FinalizeResult.BlockedUnsure -> call.respond(
+                    HttpStatusCode.Conflict,
+                    FinalizeBlockedPayload(
+                        reason = "unsure",
+                        userIds = result.userIds.map { it.toString() }
+                    )
+                )
+                is FinalizeResult.BlockedNoResponse -> call.respond(
+                    HttpStatusCode.Conflict,
+                    FinalizeBlockedPayload(
+                        reason = "no-response",
+                        userIds = result.userIds.map { it.toString() }
+                    )
+                )
+            }
+        }
+
+        // Reopens a finalized event (clears check_in_completed_at).
+        // SECURITY: requireEventAccess resolves the caller's role server-side.
+        post("/events/{id}/attendance/reopen") {
+            val eventId = UUID.fromString(call.parameters["id"])
+            if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
+
+            attendanceRepo.reopen(eventId)
+            call.respond(HttpStatusCode.OK)
         }
     }
 }

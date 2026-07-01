@@ -219,6 +219,82 @@ class AttendanceRepositoryImpl : AttendanceRepository {
             buildRawQuery(userId = null, teamId = teamId, from = from, to = to)
         }
 
+    override suspend fun finalize(eventId: UUID, byUser: UUID): FinalizeResult = transaction {
+        // Roster = all team_roles.userId across the event's teams (same as check-in roster).
+        val rosterIds = EventTeamsTable
+            .innerJoin(TeamRolesTable, { EventTeamsTable.teamId }, { TeamRolesTable.teamId })
+            .select(TeamRolesTable.userId)
+            .where { EventTeamsTable.eventId eq eventId }
+            .map { it[TeamRolesTable.userId] }
+            .toSet()
+
+        // Read existing responses for roster members
+        val responsesByUser = AttendanceResponsesTable.selectAll()
+            .where { AttendanceResponsesTable.eventId eq eventId }
+            .associate { it[AttendanceResponsesTable.userId] to it[AttendanceResponsesTable.status] }
+
+        val unsureIds = rosterIds.filter { responsesByUser[it] == "unsure" }
+        if (unsureIds.isNotEmpty()) return@transaction FinalizeResult.BlockedUnsure(unsureIds)
+
+        val event = EventsTable
+            .select(EventsTable.defaultResponse)
+            .where { EventsTable.id eq eventId }
+            .single()
+        val defaultResponse = event[EventsTable.defaultResponse]
+
+        val noResponseIds = rosterIds.filter { userId ->
+            val status = responsesByUser[userId]
+            status == null || status == "no-response"
+        }
+
+        val now = Instant.now()
+
+        when (defaultResponse) {
+            "accepted" -> {
+                for (userId in noResponseIds) {
+                    AttendanceResponsesTable.upsert(
+                        keys = arrayOf(AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId)
+                    ) {
+                        it[AttendanceResponsesTable.eventId] = eventId
+                        it[AttendanceResponsesTable.userId] = userId
+                        it[AttendanceResponsesTable.status] = "confirmed"
+                        it[AttendanceResponsesTable.manualOverride] = false
+                        it[AttendanceResponsesTable.updatedAt] = now
+                    }
+                }
+            }
+            "declined" -> {
+                for (userId in noResponseIds) {
+                    AttendanceResponsesTable.upsert(
+                        keys = arrayOf(AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId)
+                    ) {
+                        it[AttendanceResponsesTable.eventId] = eventId
+                        it[AttendanceResponsesTable.userId] = userId
+                        it[AttendanceResponsesTable.status] = "declined"
+                        it[AttendanceResponsesTable.unexcused] = false
+                        it[AttendanceResponsesTable.manualOverride] = false
+                        it[AttendanceResponsesTable.updatedAt] = now
+                    }
+                }
+            }
+            else -> { // "none"
+                if (noResponseIds.isNotEmpty()) return@transaction FinalizeResult.BlockedNoResponse(noResponseIds)
+            }
+        }
+
+        EventsTable.update({ EventsTable.id eq eventId }) {
+            it[checkInCompletedAt] = now
+        }
+
+        FinalizeResult.Ok
+    }
+
+    override suspend fun reopen(eventId: UUID): Unit = transaction {
+        EventsTable.update({ EventsTable.id eq eventId }) {
+            it[checkInCompletedAt] = null
+        }
+    }
+
     override suspend fun bulkInsertAutoDeclines(
         ruleId: UUID,
         userId: UUID,

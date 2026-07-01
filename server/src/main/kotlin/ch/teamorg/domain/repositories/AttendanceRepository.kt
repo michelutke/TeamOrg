@@ -5,6 +5,12 @@ import java.util.UUID
 import kotlinx.serialization.Serializable
 import kotlinx.datetime.Instant as KInstant
 
+sealed class FinalizeResult {
+    object Ok : FinalizeResult()
+    data class BlockedUnsure(val userIds: List<UUID>) : FinalizeResult()
+    data class BlockedNoResponse(val userIds: List<UUID>) : FinalizeResult()
+}
+
 data class AttendanceResponseRow(
     val eventId: UUID,
     val userId: UUID,
@@ -105,6 +111,19 @@ interface AttendanceRepository {
         restrictToTeamIds: Set<UUID>? = null
     ): List<RawAttendanceRow>
     suspend fun getTeamAttendance(teamId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow>
+    /**
+     * Finalizes an event's attendance.
+     * - Returns [FinalizeResult.BlockedUnsure] if any roster member has status `unsure`.
+     * - Resolves `no-response` members per the event's `default_response`:
+     *   `accepted`→`confirmed`, `declined`→`declined` (excused), `none`→collect.
+     * - Returns [FinalizeResult.BlockedNoResponse] if any unresolved `no-response` remain.
+     * - On success sets `events.check_in_completed_at = now` and returns [FinalizeResult.Ok].
+     */
+    suspend fun finalize(eventId: UUID, byUser: UUID): FinalizeResult
+
+    /** Clears `check_in_completed_at` (sets to null). */
+    suspend fun reopen(eventId: UUID)
+
     suspend fun bulkInsertAutoDeclines(ruleId: UUID, userId: UUID, eventUserPairs: List<Pair<UUID, UUID>>)
     /**
      * Resets player RSVPs for [eventId] back to 'no-response'. Only rows in
