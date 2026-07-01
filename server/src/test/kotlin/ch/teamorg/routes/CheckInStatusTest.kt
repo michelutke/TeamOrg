@@ -2,6 +2,7 @@ package ch.teamorg.routes
 
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.domain.models.Event
+import ch.teamorg.domain.models.EventWithTeams
 import ch.teamorg.test.IntegrationTestBase
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -75,9 +76,9 @@ class CheckInStatusTest : IntegrationTestBase() {
             val client = createJsonClient()
             val fetched = client.get("/events/${event.id}") {
                 header(HttpHeaders.Authorization, "Bearer ${auth.token}")
-            }.body<Event>()
+            }.body<EventWithTeams>()
 
-            assertEquals("awaiting_checkin", fetched.checkInStatus)
+            assertEquals("awaiting_checkin", fetched.event.checkInStatus)
         }
 
     @Test
@@ -94,8 +95,8 @@ class CheckInStatusTest : IntegrationTestBase() {
             val client = createJsonClient()
             val fetched = client.get("/events/${event.id}") {
                 header(HttpHeaders.Authorization, "Bearer ${auth.token}")
-            }.body<Event>()
+            }.body<EventWithTeams>()
 
-            assertEquals("open", fetched.checkInStatus)
+            assertEquals("open", fetched.event.checkInStatus)
         }
 }

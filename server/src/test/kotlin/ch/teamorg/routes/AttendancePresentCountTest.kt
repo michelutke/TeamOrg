@@ -1,7 +1,6 @@
 package ch.teamorg.routes
 
-import ch.teamorg.db.tables.AttendanceRecordsTable
-import ch.teamorg.db.tables.RecordStatus
+import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.domain.models.Event
 import ch.teamorg.domain.repositories.AttendanceRepository
 import ch.teamorg.test.IntegrationTestBase
@@ -63,14 +62,13 @@ class AttendancePresentCountTest : IntegrationTestBase() {
     }
 
     /**
-     * Seeds two events and inserts attendance records directly:
-     * - eventE: 2 present records + 1 declined
-     * - eventF: 0 records
-     * Returns (eventEId, eventFId)
+     * Seeds two events and inserts attendance responses directly:
+     * - eventE: 2 confirmed + 1 declined
+     * - eventF: no responses
+     * Presence now derives from attendance_responses where status = 'confirmed'.
      */
-    private fun seedTwoEventsWithRecords(
+    private fun seedTwoEventsWithResponses(
         eventEId: UUID,
-        eventFId: UUID,
         userAId: UUID,
         userBId: UUID,
         coachId: UUID
@@ -78,39 +76,39 @@ class AttendancePresentCountTest : IntegrationTestBase() {
         transaction {
             val now = Instant.now()
 
-            // userA: present at eventE
-            AttendanceRecordsTable.insert { row ->
-                row[AttendanceRecordsTable.eventId] = eventEId
-                row[AttendanceRecordsTable.userId] = userAId
-                row[AttendanceRecordsTable.status] = RecordStatus.present
-                row[AttendanceRecordsTable.setBy] = coachId
-                row[AttendanceRecordsTable.setAt] = now
+            // userA: confirmed at eventE
+            AttendanceResponsesTable.insert { row ->
+                row[AttendanceResponsesTable.eventId] = eventEId
+                row[AttendanceResponsesTable.userId] = userAId
+                row[AttendanceResponsesTable.status] = "confirmed"
+                row[AttendanceResponsesTable.respondedAt] = now
+                row[AttendanceResponsesTable.updatedAt] = now
             }
 
-            // userB: present at eventE
-            AttendanceRecordsTable.insert { row ->
-                row[AttendanceRecordsTable.eventId] = eventEId
-                row[AttendanceRecordsTable.userId] = userBId
-                row[AttendanceRecordsTable.status] = RecordStatus.present
-                row[AttendanceRecordsTable.setBy] = coachId
-                row[AttendanceRecordsTable.setAt] = now
+            // userB: confirmed at eventE
+            AttendanceResponsesTable.insert { row ->
+                row[AttendanceResponsesTable.eventId] = eventEId
+                row[AttendanceResponsesTable.userId] = userBId
+                row[AttendanceResponsesTable.status] = "confirmed"
+                row[AttendanceResponsesTable.respondedAt] = now
+                row[AttendanceResponsesTable.updatedAt] = now
             }
 
-            // coach: absent at eventE (should not be counted)
-            AttendanceRecordsTable.insert { row ->
-                row[AttendanceRecordsTable.eventId] = eventEId
-                row[AttendanceRecordsTable.userId] = coachId
-                row[AttendanceRecordsTable.status] = RecordStatus.absent
-                row[AttendanceRecordsTable.setBy] = coachId
-                row[AttendanceRecordsTable.setAt] = now
+            // coach: declined at eventE (should not be counted)
+            AttendanceResponsesTable.insert { row ->
+                row[AttendanceResponsesTable.eventId] = eventEId
+                row[AttendanceResponsesTable.userId] = coachId
+                row[AttendanceResponsesTable.status] = "declined"
+                row[AttendanceResponsesTable.respondedAt] = now
+                row[AttendanceResponsesTable.updatedAt] = now
             }
 
-            // eventF: no records inserted
+            // eventF: no responses inserted
         }
     }
 
     @Test
-    fun `presentCounts groups present records by event`() = withTeamorgTestApplication {
+    fun `confirmedCounts groups confirmed responses by event`() = withTeamorgTestApplication {
         val coachAuth = registerAndLogin("pc_coach@example.com", displayName = "Coach PC")
         val userAAuth = registerAndLogin("pc_usera@example.com", displayName = "User A PC")
         val userBAuth = registerAndLogin("pc_userb@example.com", displayName = "User B PC")
@@ -127,11 +125,11 @@ class AttendancePresentCountTest : IntegrationTestBase() {
         val userBId = UUID.fromString(userBAuth.userId)
         val coachId = UUID.fromString(coachAuth.userId)
 
-        seedTwoEventsWithRecords(eventEId, eventFId, userAId, userBId, coachId)
+        seedTwoEventsWithResponses(eventEId, userAId, userBId, coachId)
 
-        val counts = repo.presentCounts(listOf(eventEId, eventFId))
+        val counts = repo.confirmedCounts(listOf(eventEId, eventFId))
 
         assertEquals(2, counts[eventEId])
-        assertEquals(null, counts[eventFId]) // no present rows → not in map
+        assertEquals(null, counts[eventFId]) // no confirmed rows → not in map
     }
 }

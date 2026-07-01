@@ -88,6 +88,7 @@ class AwaitingCheckInTest : IntegrationTestBase() {
     @Test
     fun `past unfinalized event on coached team appears in awaiting-checkin`() = withTeamorgTestApplication {
         val coach = registerAndLogin("aci_coach1@example.com", displayName = "Coach1")
+        promoteToSuperAdmin(coach.userId)
         val (_, teamId) = setupClubAndTeam(coach.token, "ACI Club 1")
         val eventId = createEvent(
             token = coach.token,
@@ -109,6 +110,7 @@ class AwaitingCheckInTest : IntegrationTestBase() {
     @Test
     fun `finalized past event is absent from awaiting-checkin`() = withTeamorgTestApplication {
         val coach = registerAndLogin("aci_coach2@example.com", displayName = "Coach2")
+        promoteToSuperAdmin(coach.userId)
         val (_, teamId) = setupClubAndTeam(coach.token, "ACI Club 2")
         val eventId = createEvent(
             token = coach.token,
@@ -129,6 +131,7 @@ class AwaitingCheckInTest : IntegrationTestBase() {
     @Test
     fun `future event is absent from awaiting-checkin`() = withTeamorgTestApplication {
         val coach = registerAndLogin("aci_coach3@example.com", displayName = "Coach3")
+        promoteToSuperAdmin(coach.userId)
         val (_, teamId) = setupClubAndTeam(coach.token, "ACI Club 3")
         val eventId = createEvent(
             token = coach.token,
@@ -149,6 +152,7 @@ class AwaitingCheckInTest : IntegrationTestBase() {
     fun `event on another club's team the user does not coach is absent`() = withTeamorgTestApplication {
         // coachA creates their own club/team and a past event
         val coachA = registerAndLogin("aci_coacha@example.com", displayName = "CoachA")
+        promoteToSuperAdmin(coachA.userId)
         val (_, teamA) = setupClubAndTeam(coachA.token, "ACI Club A")
         createEvent(
             token = coachA.token,
@@ -160,6 +164,7 @@ class AwaitingCheckInTest : IntegrationTestBase() {
 
         // coachB registers but has no relation to coachA's team
         val coachB = registerAndLogin("aci_coachb@example.com", displayName = "CoachB")
+        promoteToSuperAdmin(coachB.userId)
         setupClubAndTeam(coachB.token, "ACI Club B")
 
         val client = createJsonClient()

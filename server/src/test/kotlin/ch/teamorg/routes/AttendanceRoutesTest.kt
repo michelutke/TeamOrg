@@ -12,7 +12,6 @@ import kotlinx.serialization.Serializable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @Serializable
@@ -24,19 +23,6 @@ private data class AttendanceResponsePayload(
     val userId: String,
     val status: String,
     val reason: String? = null
-)
-
-@Serializable
-private data class CheckInOverridePayload(val status: String, val note: String? = null)
-
-@Serializable
-private data class CheckInRowPayload(
-    val eventId: String,
-    val userId: String,
-    val status: String,
-    val note: String? = null,
-    val setBy: String,
-    val previousStatus: String? = null
 )
 
 @Serializable
@@ -216,82 +202,6 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         assertEquals(2, entries.size)
     }
 
-    @Test
-    fun `coach can override attendance`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val coachAuth = registerAndLogin("coach_override@example.com", displayName = "Coach")
-        val playerAuth = registerAndLogin("player_target@example.com", displayName = "Player")
-        promoteToSuperAdmin(coachAuth.userId)
-        setupClubAndTeam(coachAuth.token)
-        val event = createEvent(coachAuth.token, "Training Override")
-
-        val response = client.put("/events/${event.id}/check-in/${playerAuth.userId}") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(CheckInOverridePayload(status = "present"))
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val record = response.body<CheckInRowPayload>()
-        assertEquals("present", record.status)
-        assertEquals(playerAuth.userId, record.userId)
-    }
-
-    @Test
-    fun `non-coach cannot override attendance`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val ownerAuth = registerAndLogin("owner_checkin@example.com", displayName = "Owner")
-        val playerAuth = registerAndLogin("player_nocoach@example.com", displayName = "Player")
-        val event = createEvent(ownerAuth.token, "Training No Coach")
-
-        // playerAuth has no coach role
-        val response = client.put("/events/${event.id}/check-in/${ownerAuth.userId}") {
-            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(CheckInOverridePayload(status = "absent"))
-        }
-
-        assertEquals(HttpStatusCode.Forbidden, response.status)
-    }
-
-    @Test
-    fun `override captures previous status`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val coachAuth = registerAndLogin("coach_audit@example.com", displayName = "Coach Audit")
-        val playerAuth = registerAndLogin("player_audit@example.com", displayName = "Player Audit")
-        promoteToSuperAdmin(coachAuth.userId)
-        setupClubAndTeam(coachAuth.token)
-        val event = createEvent(coachAuth.token, "Training Audit")
-
-        // First override: present
-        client.put("/events/${event.id}/check-in/${playerAuth.userId}") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(CheckInOverridePayload(status = "present"))
-        }
-
-        // Second override: absent — should capture previous_status = present
-        val response = client.put("/events/${event.id}/check-in/${playerAuth.userId}") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(CheckInOverridePayload(status = "absent"))
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val record = response.body<CheckInRowPayload>()
-        assertEquals("absent", record.status)
-        assertEquals("present", record.previousStatus)
-    }
-
-    @Serializable
-    private data class CheckInEntryPayload(
-        val userId: String,
-        val userName: String,
-        val userAvatar: String? = null,
-        val response: AttendanceResponseDtoPayload? = null,
-        val record: AttendanceRecordDtoPayload? = null
-    )
-
     @Serializable
     private data class AttendanceResponseDtoPayload(
         val eventId: String,
@@ -303,18 +213,6 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val unexcused: Boolean = false,
         val respondedAt: String? = null,
         val updatedAt: String
-    )
-
-    @Serializable
-    private data class AttendanceRecordDtoPayload(
-        val eventId: String,
-        val userId: String,
-        val status: String,
-        val note: String? = null,
-        val setBy: String,
-        val setAt: String,
-        val previousStatus: String? = null,
-        val previousSetBy: String? = null
     )
 
     private suspend fun ApplicationTestBuilder.invitePlayerToTeam(
@@ -331,65 +229,6 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         client.post("/invites/$inviteToken/redeem") {
             header(HttpHeaders.Authorization, "Bearer $playerToken")
         }
-    }
-
-    @Test
-    fun `get check-in entries returns team members with responses`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val coachAuth = registerAndLogin("ci_coach@example.com", displayName = "Coach")
-        val player1Auth = registerAndLogin("ci_player1@example.com", displayName = "Player One")
-        val player2Auth = registerAndLogin("ci_player2@example.com", displayName = "Player Two")
-
-        promoteToSuperAdmin(coachAuth.userId)
-        val (clubId, teamId) = setupClubAndTeam(coachAuth.token)
-
-        // Create player invite and redeem for both players
-        val invite1Token = client.post("/teams/$teamId/invites") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(role = "player"))
-        }.body<InviteResponse>().token
-
-        client.post("/invites/$invite1Token/redeem") {
-            header(HttpHeaders.Authorization, "Bearer ${player1Auth.token}")
-        }
-
-        val invite2Token = client.post("/teams/$teamId/invites") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(role = "player"))
-        }.body<InviteResponse>().token
-
-        client.post("/invites/$invite2Token/redeem") {
-            header(HttpHeaders.Authorization, "Bearer ${player2Auth.token}")
-        }
-
-        // Create event linked to team
-        val event = createEvent(coachAuth.token, "Training CheckIn Entries", teamIds = listOf(teamId))
-
-        // Player 1 submits confirmed response
-        client.put("/events/${event.id}/attendance/me") {
-            header(HttpHeaders.Authorization, "Bearer ${player1Auth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(AttendanceSubmitPayload(status = "confirmed"))
-        }
-
-        val response = client.get("/events/${event.id}/check-in") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val entries = response.body<List<CheckInEntryPayload>>()
-        assertEquals(2, entries.size)
-
-        val player1Entry = entries.find { it.userId == player1Auth.userId }
-        assertNotNull(player1Entry)
-        assertEquals("Player One", player1Entry.userName)
-        assertEquals("confirmed", player1Entry.response?.status)
-
-        val player2Entry = entries.find { it.userId == player2Auth.userId }
-        assertNotNull(player2Entry)
-        assertEquals("Player Two", player2Entry.userName)
     }
 
     @Test
@@ -459,100 +298,6 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         }
 
         assertEquals(HttpStatusCode.NoContent, response.status)
-    }
-
-    @Test
-    fun `check-in entries show player responses after RSVP`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val coachAuth = registerAndLogin("ci_rsvp_coach@example.com", displayName = "Coach RSVP")
-        val playerAuth = registerAndLogin("ci_rsvp_player@example.com", displayName = "Player RSVP")
-
-        promoteToSuperAdmin(coachAuth.userId)
-        val (_, teamId) = setupClubAndTeam(coachAuth.token)
-        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
-
-        val event = createEvent(coachAuth.token, "Training RSVP", teamIds = listOf(teamId))
-
-        client.put("/events/${event.id}/attendance/me") {
-            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(AttendanceSubmitPayload(status = "confirmed"))
-        }
-
-        val response = client.get("/events/${event.id}/check-in") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val entries = response.body<List<CheckInEntryPayload>>()
-        val playerEntry = entries.find { it.userId == playerAuth.userId }
-        assertNotNull(playerEntry)
-        assertEquals("confirmed", playerEntry.response?.status)
-    }
-
-    @Test
-    fun `check-in entries include members with no response`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val coachAuth = registerAndLogin("ci_noresponse_coach@example.com", displayName = "Coach NoResp")
-        val playerAuth = registerAndLogin("ci_noresponse_player@example.com", displayName = "Player NoResp")
-
-        promoteToSuperAdmin(coachAuth.userId)
-        val (_, teamId) = setupClubAndTeam(coachAuth.token)
-        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
-
-        val event = createEvent(coachAuth.token, "Training No Response Event", teamIds = listOf(teamId))
-
-        // Player does NOT submit a response
-
-        val response = client.get("/events/${event.id}/check-in") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val entries = response.body<List<CheckInEntryPayload>>()
-        val playerEntry = entries.find { it.userId == playerAuth.userId }
-        assertNotNull(playerEntry)
-        assertEquals("Player NoResp", playerEntry.userName)
-        assertEquals(null, playerEntry.response)
-    }
-
-    @Test
-    fun `check-in entries return empty for event with no team`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val auth = registerAndLogin("ci_noteam@example.com", displayName = "No Team User")
-        promoteToSuperAdmin(auth.userId)
-        setupClubAndTeam(auth.token) // grants club_manager role
-
-        // Event created without teamIds
-        val event = createEvent(auth.token, "Training No Team")
-
-        val response = client.get("/events/${event.id}/check-in") {
-            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val entries = response.body<List<CheckInEntryPayload>>()
-        assertTrue(entries.isEmpty())
-    }
-
-    @Test
-    fun `non-coach cannot read check-in list`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val coachAuth = registerAndLogin("ci_guard_coach@example.com", displayName = "Coach Guard")
-        val playerAuth = registerAndLogin("ci_guard_player@example.com", displayName = "Player Guard")
-
-        promoteToSuperAdmin(coachAuth.userId)
-        val (_, teamId) = setupClubAndTeam(coachAuth.token)
-        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
-
-        val event = createEvent(coachAuth.token, "Training Guard", teamIds = listOf(teamId))
-
-        // playerAuth has no coach or club_manager role
-        val response = client.get("/events/${event.id}/check-in") {
-            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
-        }
-
-        assertEquals(HttpStatusCode.Forbidden, response.status)
     }
 
     // --- absence auto-decline on event creation ---
@@ -693,43 +438,6 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val playerEntry = afterEntries.find { it.userId == playerAuth.userId }
         assertNotNull(playerEntry)
         assertEquals("confirmed", playerEntry.status)
-    }
-
-    @Test
-    fun `submitting response updates check-in entry`() = withTeamorgTestApplication {
-        val client = createJsonClient()
-        val coachAuth = registerAndLogin("ci_update_coach@example.com", displayName = "Coach Update")
-        val playerAuth = registerAndLogin("ci_update_player@example.com", displayName = "Player Update")
-
-        promoteToSuperAdmin(coachAuth.userId)
-        val (_, teamId) = setupClubAndTeam(coachAuth.token)
-        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
-
-        val event = createEvent(coachAuth.token, "Training Update Entry", teamIds = listOf(teamId))
-
-        // Player submits confirmed
-        client.put("/events/${event.id}/attendance/me") {
-            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(AttendanceSubmitPayload(status = "confirmed"))
-        }
-
-        val afterConfirmed = client.get("/events/${event.id}/check-in") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }.body<List<CheckInEntryPayload>>()
-        assertEquals("confirmed", afterConfirmed.find { it.userId == playerAuth.userId }?.response?.status)
-
-        // Player changes to declined
-        client.put("/events/${event.id}/attendance/me") {
-            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
-            contentType(ContentType.Application.Json)
-            setBody(AttendanceSubmitPayload(status = "declined"))
-        }
-
-        val afterDeclined = client.get("/events/${event.id}/check-in") {
-            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }.body<List<CheckInEntryPayload>>()
-        assertEquals("declined", afterDeclined.find { it.userId == playerAuth.userId }?.response?.status)
     }
 
     // --- Task 3: coach edit, cutoff lock, unexcused ---

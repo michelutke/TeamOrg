@@ -3,6 +3,7 @@ package ch.teamorg.routes
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.Event
+import ch.teamorg.domain.models.EventWithTeams
 import ch.teamorg.domain.models.Team
 import ch.teamorg.test.IntegrationTestBase
 import io.ktor.client.call.*
@@ -168,8 +169,8 @@ class FinalizeAttendanceTest : IntegrationTestBase() {
         // check_in_completed_at must remain null
         val fetched = client.get("/events/${event.id}") {
             header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }.body<Event>()
-        assertEquals("awaiting_checkin", fetched.checkInStatus)
+        }.body<EventWithTeams>()
+        assertEquals("awaiting_checkin", fetched.event.checkInStatus)
     }
 
     // ---- (b) default_response=accepted + no-response member → finalize 200, member confirmed ---
@@ -206,8 +207,8 @@ class FinalizeAttendanceTest : IntegrationTestBase() {
         // Event should be done
         val fetched = client.get("/events/${event.id}") {
             header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }.body<Event>()
-        assertEquals("done", fetched.checkInStatus)
+        }.body<EventWithTeams>()
+        assertEquals("done", fetched.event.checkInStatus)
     }
 
     // ---- (c) default_response=none + no-response member → 409 BlockedNoResponse ---
@@ -283,8 +284,8 @@ class FinalizeAttendanceTest : IntegrationTestBase() {
         // Verify it is done first
         val doneFetched = client.get("/events/${event.id}") {
             header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }.body<Event>()
-        assertEquals("done", doneFetched.checkInStatus)
+        }.body<EventWithTeams>()
+        assertEquals("done", doneFetched.event.checkInStatus)
 
         val response = client.post("/events/${event.id}/attendance/reopen") {
             header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
@@ -294,8 +295,8 @@ class FinalizeAttendanceTest : IntegrationTestBase() {
 
         val reopenedFetched = client.get("/events/${event.id}") {
             header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
-        }.body<Event>()
-        assertEquals("awaiting_checkin", reopenedFetched.checkInStatus)
+        }.body<EventWithTeams>()
+        assertEquals("awaiting_checkin", reopenedFetched.event.checkInStatus)
     }
 
     // ---- coach edit on a done event → 409 (real finalize, not placeholder) ---
