@@ -111,6 +111,10 @@ export interface Dict {
 		patternWeekly: string;
 		patternDaily: string;
 		patternCustom: string;
+		fDefaultResponse: string;
+		defaultResponseNone: string;
+		defaultResponseAccepted: string;
+		defaultResponseDeclined: string;
 		fWeekdays: string;
 		fIntervalDays: string;
 		fSeriesEnd: string;
@@ -340,6 +344,10 @@ const de: Dict = {
 		patternWeekly: 'Wöchentlich',
 		patternDaily: 'Täglich',
 		patternCustom: 'Benutzerdefiniert',
+		fDefaultResponse: 'Standard-Rückmeldung',
+		defaultResponseNone: 'Keine Vorgabe – Trainer muss auflösen',
+		defaultResponseAccepted: 'Standard: Anwesend',
+		defaultResponseDeclined: 'Standard: Abgemeldet',
 		fWeekdays: 'Wochentage',
 		fIntervalDays: 'Intervall (Tage)',
 		fSeriesEnd: 'Serienende',
@@ -572,6 +580,10 @@ const en: Dict = {
 		patternWeekly: 'Weekly',
 		patternDaily: 'Daily',
 		patternCustom: 'Custom',
+		fDefaultResponse: 'Default response',
+		defaultResponseNone: 'No default – coach must resolve',
+		defaultResponseAccepted: 'Default: Attending',
+		defaultResponseDeclined: 'Default: Declined',
 		fWeekdays: 'Weekdays',
 		fIntervalDays: 'Interval (days)',
 		fSeriesEnd: 'Series end',
