@@ -1,2 +1,0 @@
-[     578ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://app.teamorg.ch/i/284a84b6-23d7-4d8e-8386-e8e8b3e1f888:0
-[     758ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://app.teamorg.ch/favicon.png:0
