@@ -6,6 +6,7 @@ import ch.teamorg.domain.FinalizeResult
 import ch.teamorg.domain.Notification
 import ch.teamorg.domain.NotificationSettings
 import ch.teamorg.domain.ReminderOverride
+import ch.teamorg.domain.TeamMember
 import ch.teamorg.domain.UpdateNotificationSettingsRequest
 import ch.teamorg.fake.FakeAttendanceRepository
 import ch.teamorg.fake.FakeTeamRepository
@@ -59,7 +60,10 @@ class EventDetailViewModelTest {
     private val fakeTeamRepo = FakeTeamRepository()
     private val now = Clock.System.now()
 
-    private fun makeEvent(checkInStatus: String = "open"): EventWithTeams {
+    private fun makeEvent(
+        checkInStatus: String = "open",
+        teamIds: List<String> = emptyList()
+    ): EventWithTeams {
         val event = Event(
             id = "e1",
             title = "Training",
@@ -70,10 +74,20 @@ class EventDetailViewModelTest {
             createdBy = "u-coach",
             createdAt = now,
             updatedAt = now,
-            checkInStatus = checkInStatus
+            checkInStatus = checkInStatus,
+            teamIds = teamIds
         )
         return EventWithTeams(event = event)
     }
+
+    private fun makeMember(userId: String, name: String) = TeamMember(
+        userId = userId,
+        displayName = name,
+        avatarUrl = null,
+        role = "player",
+        jerseyNumber = null,
+        position = null
+    )
 
     private fun makeViewModel(event: EventWithTeams): EventDetailViewModel {
         return EventDetailViewModel(
@@ -112,11 +126,12 @@ class EventDetailViewModelTest {
     }
 
     @Test
-    fun finalize_blocked_unsure_surfacesBlockedState() = runTest {
+    fun finalize_blocked_unsure_surfacesBlockedState_withUserIdFallback() = runTest {
         fakeAttendanceRepo.finalizeResult = FinalizeResult.Blocked(
             reason = "unsure",
             userIds = listOf("u-alice", "u-bob")
         )
+        // no roster loaded → fallback to userId
         val vm = makeViewModel(makeEvent(checkInStatus = "awaiting_checkin"))
         vm.loadEvent("e1")
 
@@ -126,7 +141,32 @@ class EventDetailViewModelTest {
         blocked shouldNotBe null
         blocked!!.reason shouldBe "Unsichere Spieler müssen zuerst als anwesend oder abwesend markiert werden."
         blocked.memberNames shouldHaveSize 2
+        blocked.memberNames[0] shouldBe "u-alice"
+        blocked.memberNames[1] shouldBe "u-bob"
         vm.state.value.isFinalizingOrReopening shouldBe false
+    }
+
+    @Test
+    fun finalize_blocked_resolvesDisplayNames_fromRoster() = runTest {
+        fakeTeamRepo.getRosterResult = Result.success(
+            listOf(
+                makeMember("u-alice", "Alice Muster"),
+                makeMember("u-bob", "Bob Trainer")
+            )
+        )
+        fakeAttendanceRepo.finalizeResult = FinalizeResult.Blocked(
+            reason = "unsure",
+            userIds = listOf("u-alice", "u-bob")
+        )
+        val vm = makeViewModel(makeEvent(checkInStatus = "awaiting_checkin", teamIds = listOf("team-1")))
+        vm.loadEvent("e1")
+
+        vm.finalize()
+
+        val blocked = vm.state.value.finalizeBlocked
+        blocked shouldNotBe null
+        blocked!!.memberNames[0] shouldBe "Alice Muster"
+        blocked.memberNames[1] shouldBe "Bob Trainer"
     }
 
     @Test
@@ -143,6 +183,18 @@ class EventDetailViewModelTest {
         val blocked = vm.state.value.finalizeBlocked
         blocked shouldNotBe null
         blocked!!.memberNames shouldHaveSize 1
+        blocked.memberNames[0] shouldBe "u-charlie"  // userId fallback (no roster)
+    }
+
+    @Test
+    fun rosterMap_populatedAfterLoad() = runTest {
+        fakeTeamRepo.getRosterResult = Result.success(
+            listOf(makeMember("u-alice", "Alice Muster"))
+        )
+        val vm = makeViewModel(makeEvent(teamIds = listOf("team-1")))
+        vm.loadEvent("e1")
+
+        vm.state.value.rosterMap["u-alice"]?.displayName shouldBe "Alice Muster"
     }
 
     @Test

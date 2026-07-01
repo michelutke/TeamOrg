@@ -24,6 +24,8 @@ import ch.teamorg.ui.theme.extendedColors
 @Composable
 fun MemberResponseRow(
     response: AttendanceResponse,
+    displayName: String,        // resolved from roster map; falls back to userId
+    avatarUrl: String?,
     isCoach: Boolean,
     coachEditable: Boolean,     // isCoach && checkInStatus != "done"
     onEditTap: () -> Unit
@@ -36,10 +38,11 @@ fun MemberResponseRow(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar circle with initials derived from userId (no display-name on AttendanceResponse)
-        val initials = response.userId
+        val initials = displayName
+            .split(" ")
+            .filter { it.isNotEmpty() }
             .take(2)
-            .uppercase()
+            .joinToString("") { it.first().uppercase() }
 
         Box(
             modifier = Modifier
@@ -62,7 +65,7 @@ fun MemberResponseRow(
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = response.userId,
+                    text = displayName,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,

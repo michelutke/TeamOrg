@@ -6,10 +6,14 @@ import ch.teamorg.domain.AttendanceResponse
 import ch.teamorg.domain.EventWithTeams
 import ch.teamorg.domain.FinalizeResult
 import ch.teamorg.domain.SubmitResponseRequest
+import ch.teamorg.domain.TeamMember
 import ch.teamorg.repository.AttendanceRepository
 import ch.teamorg.repository.EventRepository
 import ch.teamorg.repository.NotificationRepository
 import ch.teamorg.repository.TeamRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -35,6 +39,7 @@ data class EventDetailState(
     val responseDeadline: Instant? = null,
     val deadlinePassed: Boolean = false,
     val attendanceResponses: List<AttendanceResponse> = emptyList(),
+    val rosterMap: Map<String, TeamMember> = emptyMap(),   // userId → TeamMember for name/avatar
     val reminderLeadMinutes: Int? = null,
     val isLoadingReminder: Boolean = false,
     val isFinalizingOrReopening: Boolean = false,
@@ -68,10 +73,28 @@ class EventDetailViewModel(
                     checkCoachRole()
                     loadAttendance(eventId)
                     loadReminderOverride(eventId)
+                    loadRosterMap(ewt.event.teamIds)
                 }
                 .onFailure { e ->
                     _state.update { it.copy(error = e.message, isLoading = false) }
                 }
+        }
+    }
+
+    private fun loadRosterMap(teamIds: List<String>) {
+        viewModelScope.launch {
+            val map = mutableMapOf<String, TeamMember>()
+            coroutineScope {
+                teamIds.map { teamId ->
+                    async { teamRepository.getTeamRoster(teamId) }
+                }.awaitAll().forEach { result ->
+                    result.onSuccess { members ->
+                        members.forEach { member -> map[member.userId] = member }
+                    }
+                    // ignore failures — best-effort, like web's try/catch
+                }
+            }
+            _state.update { it.copy(rosterMap = map) }
         }
     }
 
@@ -133,8 +156,10 @@ class EventDetailViewModel(
                     loadEvent(eventId)
                 }
                 is FinalizeResult.Blocked -> {
-                    // AttendanceResponse has no display name; use userId as fallback label
-                    val memberNames = result.userIds
+                    val roster = _state.value.rosterMap
+                    val memberNames = result.userIds.map { uid ->
+                        roster[uid]?.displayName ?: uid
+                    }
                     val blockedMessage = when (result.reason) {
                         "unsure" -> "Unsichere Spieler müssen zuerst als anwesend oder abwesend markiert werden."
                         "no-response" -> "Spieler ohne Antwort müssen zuerst als anwesend oder abwesend markiert werden."

@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.teamorg.domain.AttendanceResponse
+import ch.teamorg.domain.TeamMember
 import ch.teamorg.ui.theme.extendedColors
 
 @Composable
@@ -20,6 +21,7 @@ fun MemberResponseList(
     responses: List<AttendanceResponse>,
     isCoach: Boolean,
     checkInStatus: String,
+    rosterMap: Map<String, TeamMember>,
     onEditTap: (AttendanceResponse) -> Unit
 ) {
     if (responses.isEmpty()) {
@@ -35,46 +37,38 @@ fun MemberResponseList(
     val ext = MaterialTheme.extendedColors
     val coachEditable = isCoach && checkInStatus != "done"
 
+    @Composable
+    fun RowFor(response: AttendanceResponse) {
+        val member = rosterMap[response.userId]
+        MemberResponseRow(
+            response = response,
+            displayName = member?.displayName ?: response.userId,
+            avatarUrl = member?.avatarUrl,
+            isCoach = isCoach,
+            coachEditable = coachEditable,
+            onEditTap = { onEditTap(response) }
+        )
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (confirmed.isNotEmpty()) {
             ResponseSectionCard(label = "GOING", count = confirmed.size, color = ext.going) {
-                confirmed.forEach { response ->
-                    MemberResponseRow(
-                        response = response,
-                        isCoach = isCoach,
-                        coachEditable = coachEditable,
-                        onEditTap = { onEditTap(response) }
-                    )
-                }
+                confirmed.forEach { RowFor(it) }
             }
         }
 
         if (maybe.isNotEmpty()) {
             ResponseSectionCard(label = "UNSURE", count = maybe.size, color = ext.unsure) {
-                maybe.forEach { response ->
-                    MemberResponseRow(
-                        response = response,
-                        isCoach = isCoach,
-                        coachEditable = coachEditable,
-                        onEditTap = { onEditTap(response) }
-                    )
-                }
+                maybe.forEach { RowFor(it) }
             }
         }
 
         if (declined.isNotEmpty()) {
             ResponseSectionCard(label = "DECLINED", count = declined.size, color = ext.declined) {
-                declined.forEach { response ->
-                    MemberResponseRow(
-                        response = response,
-                        isCoach = isCoach,
-                        coachEditable = coachEditable,
-                        onEditTap = { onEditTap(response) }
-                    )
-                }
+                declined.forEach { RowFor(it) }
             }
         }
 
@@ -84,14 +78,7 @@ fun MemberResponseList(
                 count = noResponse.size,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             ) {
-                noResponse.forEach { response ->
-                    MemberResponseRow(
-                        response = response,
-                        isCoach = isCoach,
-                        coachEditable = coachEditable,
-                        onEditTap = { onEditTap(response) }
-                    )
-                }
+                noResponse.forEach { RowFor(it) }
             }
         }
 

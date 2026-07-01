@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.AttendanceResponse
 import ch.teamorg.domain.EventWithTeams
+import ch.teamorg.domain.TeamMember
 import ch.teamorg.ui.attendance.AttendanceRsvpButtons
 import ch.teamorg.ui.attendance.BegrundungSheet
 import ch.teamorg.ui.attendance.MemberResponseList
@@ -186,6 +187,7 @@ fun EventDetailScreen(
                 responseDeadline = state.responseDeadline,
                 deadlinePassed = state.deadlinePassed,
                 attendanceResponses = state.attendanceResponses,
+                rosterMap = state.rosterMap,
                 isCoach = state.isCoach,
                 checkInStatus = checkInStatus,
                 rsvpLocked = rsvpLocked,
@@ -369,6 +371,7 @@ private fun EventDetailBody(
     responseDeadline: Instant?,
     deadlinePassed: Boolean,
     attendanceResponses: List<AttendanceResponse>,
+    rosterMap: Map<String, TeamMember>,
     isCoach: Boolean,
     checkInStatus: String,
     rsvpLocked: Boolean,
@@ -556,6 +559,7 @@ private fun EventDetailBody(
             responses = attendanceResponses,
             isCoach = isCoach,
             checkInStatus = checkInStatus,
+            rosterMap = rosterMap,
             onEditTap = onEditResponseTap
         )
     }
