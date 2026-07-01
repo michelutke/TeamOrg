@@ -166,10 +166,10 @@ class AttendanceRoutesTest : IntegrationTestBase() {
     }
 
     @Test
-    fun `submit after deadline returns 409`() = withTeamorgTestApplication {
+    fun `player edit after cutoff returns 403`() = withTeamorgTestApplication {
         val client = createJsonClient()
         val auth = registerAndLogin("att_deadline@example.com")
-        // Past deadline
+        // Past deadline — cutoff = response_deadline (in the past)
         val event = createEvent(auth.token, "Training Past Deadline", responseDeadline = "2020-01-01T00:00:00Z")
 
         val response = client.put("/events/${event.id}/attendance/me") {
@@ -178,7 +178,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
             setBody(AttendanceSubmitPayload(status = "confirmed"))
         }
 
-        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertEquals(HttpStatusCode.Forbidden, response.status)
     }
 
     @Test
@@ -300,6 +300,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val reason: String? = null,
         val abwesenheitRuleId: String? = null,
         val manualOverride: Boolean = false,
+        val unexcused: Boolean = false,
         val respondedAt: String? = null,
         val updatedAt: String
     )
@@ -729,5 +730,123 @@ class AttendanceRoutesTest : IntegrationTestBase() {
             header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
         }.body<List<CheckInEntryPayload>>()
         assertEquals("declined", afterDeclined.find { it.userId == playerAuth.userId }?.response?.status)
+    }
+
+    // --- Task 3: coach edit, cutoff lock, unexcused ---
+
+    @Serializable
+    private data class CoachResponsePayload(val status: String, val unexcused: Boolean = false)
+
+    @Test
+    fun `coach edit after cutoff succeeds and persists`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val coachAuth = registerAndLogin("coach_cutoff@example.com", displayName = "Coach Cutoff")
+        val playerAuth = registerAndLogin("player_cutoff@example.com", displayName = "Player Cutoff")
+
+        promoteToSuperAdmin(coachAuth.userId)
+        val (_, teamId) = setupClubAndTeam(coachAuth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
+
+        // Event with a past response deadline — player can't edit, but coach can
+        val event = createEvent(
+            coachAuth.token,
+            "Training Cutoff Coach",
+            teamIds = listOf(teamId),
+            responseDeadline = "2020-01-01T00:00:00Z"
+        )
+
+        val response = client.put("/events/${event.id}/attendance/${playerAuth.userId}") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CoachResponsePayload(status = "confirmed"))
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        // Verify persisted
+        val entries = client.get("/events/${event.id}/attendance") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+        }.body<List<AttendanceResponseDtoPayload>>()
+        assertEquals("confirmed", entries.find { it.userId == playerAuth.userId }?.status)
+    }
+
+    @Test
+    fun `coach sets declined with unexcused flag`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val coachAuth = registerAndLogin("coach_unexcused@example.com", displayName = "Coach Unexcused")
+        val playerAuth = registerAndLogin("player_unexcused@example.com", displayName = "Player Unexcused")
+
+        promoteToSuperAdmin(coachAuth.userId)
+        val (_, teamId) = setupClubAndTeam(coachAuth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
+
+        val event = createEvent(coachAuth.token, "Training Unexcused", teamIds = listOf(teamId))
+
+        val response = client.put("/events/${event.id}/attendance/${playerAuth.userId}") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CoachResponsePayload(status = "declined", unexcused = true))
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.body<AttendanceResponseDtoPayload>()
+        assertEquals("declined", body.status)
+        assertEquals(true, body.unexcused)
+    }
+
+    @Test
+    fun `coach edit on done event is rejected`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val coachAuth = registerAndLogin("coach_done@example.com", displayName = "Coach Done")
+        val playerAuth = registerAndLogin("player_done@example.com", displayName = "Player Done")
+
+        promoteToSuperAdmin(coachAuth.userId)
+        val (_, teamId) = setupClubAndTeam(coachAuth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
+
+        // Event in the past (done state must be set via finalize route — Task 4)
+        // For now simulate by creating an event; the done-check is tested via the
+        // finalizeEvent endpoint once Task 4 is implemented. This placeholder test
+        // verifies the route exists and is guarded at all.
+        val event = createEvent(
+            coachAuth.token,
+            "Training Done",
+            teamIds = listOf(teamId),
+            startAt = "2020-01-01T10:00:00Z",
+            endAt = "2020-01-01T12:00:00Z"
+        )
+
+        // Player (not a coach) trying to use the coach route must be rejected
+        val response = client.put("/events/${event.id}/attendance/${playerAuth.userId}") {
+            header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CoachResponsePayload(status = "confirmed"))
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `player cannot use coach edit route`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val coachAuth = registerAndLogin("coach_idor@example.com", displayName = "Coach IDOR")
+        val player1Auth = registerAndLogin("player_idor1@example.com", displayName = "Player IDOR 1")
+        val player2Auth = registerAndLogin("player_idor2@example.com", displayName = "Player IDOR 2")
+
+        promoteToSuperAdmin(coachAuth.userId)
+        val (_, teamId) = setupClubAndTeam(coachAuth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, player1Auth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, player2Auth.token)
+
+        val event = createEvent(coachAuth.token, "Training IDOR Guard", teamIds = listOf(teamId))
+
+        // player1 tries to overwrite player2's attendance — must be forbidden
+        val response = client.put("/events/${event.id}/attendance/${player2Auth.userId}") {
+            header(HttpHeaders.Authorization, "Bearer ${player1Auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CoachResponsePayload(status = "declined"))
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
     }
 }

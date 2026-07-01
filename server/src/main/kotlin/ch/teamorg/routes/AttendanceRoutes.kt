@@ -31,6 +31,9 @@ private val attnLogger = LoggerFactory.getLogger("AttendanceRoutes")
 private data class SubmitResponseRequest(val status: String, val reason: String? = null)
 
 @Serializable
+private data class CoachResponseRequest(val status: String, val unexcused: Boolean = false)
+
+@Serializable
 private data class RawAttendanceDto(
     val eventId: String,
     val userId: String,
@@ -46,6 +49,7 @@ private fun AttendanceResponseRow.toDto() = AttendanceResponseDto(
     reason = reason,
     abwesenheitRuleId = abwesenheitRuleId?.toString(),
     manualOverride = manualOverride,
+    unexcused = unexcused,
     respondedAt = respondedAt?.let { KInstant.fromEpochMilliseconds(it.toEpochMilli()) },
     updatedAt = KInstant.fromEpochMilliseconds(updatedAt.toEpochMilli())
 )
@@ -96,8 +100,15 @@ fun Route.attendanceRoutes() {
                 return@put
             }
 
-            if (attendanceRepo.isDeadlinePassed(eventId)) {
-                call.respond(HttpStatusCode.Conflict, "Response deadline has passed")
+            // Reject if the event is done (finalized)
+            val event = eventRepository.findById(eventId)
+            if (event?.checkInCompletedAt != null) {
+                call.respond(HttpStatusCode.Forbidden, "Event attendance is finalized")
+                return@put
+            }
+
+            if (attendanceRepo.isPastCutoff(eventId)) {
+                call.respond(HttpStatusCode.Forbidden, "Zeit abgelaufen")
                 return@put
             }
 
@@ -105,10 +116,10 @@ fun Route.attendanceRoutes() {
 
             call.application.launch(Dispatchers.IO) {
                 try {
-                    val event = eventRepository.findById(eventId) ?: return@launch
+                    val notifEvent = event ?: return@launch
                     val playerName = "A player"
                     val epoch = java.time.Instant.now().epochSecond / 3600
-                    for (teamId in event.teamIds) {
+                    for (teamId in notifEvent.teamIds) {
                         val coachIds = notificationRepo.getCoachIdsForTeam(teamId)
                         for (coachId in coachIds) {
                             val settings = notificationRepo.getSettings(coachId, teamId)
@@ -118,7 +129,7 @@ fun Route.attendanceRoutes() {
                                     userId = coachId,
                                     type = "response",
                                     title = "RSVP: $playerName",
-                                    body = "$playerName ${body.status} for ${event.title}",
+                                    body = "$playerName ${body.status} for ${notifEvent.title}",
                                     entityId = eventId,
                                     entityType = "event",
                                     idempotencyKey = "response:${coachId}:${eventId}:${userId}:${body.status}:$epoch"
@@ -132,6 +143,27 @@ fun Route.attendanceRoutes() {
                 }
             }
 
+            call.respond(updated.toDto())
+        }
+
+        // Coach/club_manager edits any member's attendance response.
+        // SECURITY: requireEventAccess resolves the caller's role server-side from the event's
+        // teams — no client-supplied role is trusted. A plain player cannot reach this route.
+        put("/events/{id}/attendance/{userId}") {
+            val eventId = UUID.fromString(call.parameters["id"])
+            val targetUserId = UUID.fromString(call.parameters["userId"])
+            if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@put
+
+            val coachId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+            val body = call.receive<CoachResponseRequest>()
+
+            val event = eventRepository.findById(eventId)
+            if (event?.checkInCompletedAt != null) {
+                call.respond(HttpStatusCode.Conflict, "Event attendance is finalized")
+                return@put
+            }
+
+            val updated = attendanceRepo.setResponseByCoach(eventId, targetUserId, body.status, body.unexcused, coachId)
             call.respond(updated.toDto())
         }
 

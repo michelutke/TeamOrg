@@ -54,13 +54,43 @@ class AttendanceRepositoryImpl : AttendanceRepository {
             .single()
     }
 
-    override suspend fun isDeadlinePassed(eventId: UUID): Boolean = transaction {
-        val deadline = EventsTable.select(EventsTable.responseDeadline)
+    override suspend fun isPastCutoff(eventId: UUID): Boolean = transaction {
+        val row = EventsTable
+            .select(EventsTable.responseDeadline, EventsTable.startAt)
             .where { EventsTable.id eq eventId }
-            .map { it[EventsTable.responseDeadline] }
-            .singleOrNull()
-            ?: return@transaction false
-        deadline < Instant.now()
+            .singleOrNull() ?: return@transaction false
+        val cutoff = row[EventsTable.responseDeadline] ?: row[EventsTable.startAt]
+        !Instant.now().isBefore(cutoff)
+    }
+
+    override suspend fun setResponseByCoach(
+        eventId: UUID,
+        targetUserId: UUID,
+        status: String,
+        unexcused: Boolean,
+        setBy: UUID
+    ): AttendanceResponseRow = transaction {
+        val now = Instant.now()
+        // unexcused is only meaningful for declined; force false for any other status
+        val effectiveUnexcused = status == "declined" && unexcused
+        AttendanceResponsesTable.upsert(
+            keys = arrayOf(AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId)
+        ) {
+            it[AttendanceResponsesTable.eventId] = eventId
+            it[AttendanceResponsesTable.userId] = targetUserId
+            it[AttendanceResponsesTable.status] = status
+            it[AttendanceResponsesTable.unexcused] = effectiveUnexcused
+            it[AttendanceResponsesTable.manualOverride] = true
+            it[AttendanceResponsesTable.respondedAt] = now
+            it[AttendanceResponsesTable.updatedAt] = now
+        }
+        AttendanceResponsesTable.selectAll()
+            .where {
+                (AttendanceResponsesTable.eventId eq eventId) and
+                (AttendanceResponsesTable.userId eq targetUserId)
+            }
+            .map(::rowToResponse)
+            .single()
     }
 
     override suspend fun getCheckIn(eventId: UUID): List<CheckInRow> = transaction {
@@ -317,6 +347,7 @@ class AttendanceRepositoryImpl : AttendanceRepository {
         reason = row[AttendanceResponsesTable.reason],
         abwesenheitRuleId = row[AttendanceResponsesTable.abwesenheitRuleId],
         manualOverride = row[AttendanceResponsesTable.manualOverride],
+        unexcused = row[AttendanceResponsesTable.unexcused],
         respondedAt = row[AttendanceResponsesTable.respondedAt],
         updatedAt = row[AttendanceResponsesTable.updatedAt]
     )

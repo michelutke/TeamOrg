@@ -12,6 +12,7 @@ data class AttendanceResponseRow(
     val reason: String?,
     val abwesenheitRuleId: UUID?,
     val manualOverride: Boolean,
+    val unexcused: Boolean,
     val respondedAt: Instant?,
     val updatedAt: Instant
 )
@@ -43,6 +44,7 @@ data class AttendanceResponseDto(
     val reason: String? = null,
     val abwesenheitRuleId: String? = null,
     val manualOverride: Boolean = false,
+    val unexcused: Boolean = false,
     val respondedAt: KInstant? = null,
     val updatedAt: KInstant
 )
@@ -72,7 +74,22 @@ interface AttendanceRepository {
     suspend fun getEventAttendance(eventId: UUID): List<AttendanceResponseRow>
     suspend fun getMyResponse(eventId: UUID, userId: UUID): AttendanceResponseRow?
     suspend fun upsertResponse(eventId: UUID, userId: UUID, status: String, reason: String?): AttendanceResponseRow
-    suspend fun isDeadlinePassed(eventId: UUID): Boolean
+    /**
+     * Returns true when now >= (response_deadline ?? start_at). Replaces the old isDeadlinePassed
+     * which only checked response_deadline and treated a missing deadline as "not passed".
+     */
+    suspend fun isPastCutoff(eventId: UUID): Boolean
+    /**
+     * Coach-initiated upsert. Sets manual_override = true. unexcused is forced false for any
+     * non-declined status; only meaningful when status == "declined".
+     */
+    suspend fun setResponseByCoach(
+        eventId: UUID,
+        targetUserId: UUID,
+        status: String,
+        unexcused: Boolean,
+        setBy: UUID
+    ): AttendanceResponseRow
     suspend fun getCheckIn(eventId: UUID): List<CheckInRow>
     suspend fun getCheckInEntries(eventId: UUID): List<CheckInEntryResponse>
     suspend fun upsertCheckIn(eventId: UUID, userId: UUID, status: String, note: String?, setBy: UUID): CheckInRow
