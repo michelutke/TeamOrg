@@ -30,7 +30,10 @@ data class Event(
     val externalSource: String? = null,
     val externalStatus: String? = null,
     val needsReview: Boolean = false,
-    val presentCount: Int = 0
+    val presentCount: Int = 0,
+    @Serializable(with = InstantSerializer::class) val checkInCompletedAt: Instant? = null,
+    val defaultResponse: String = "none",
+    val checkInStatus: String = "open"
 )
 
 @Serializable
