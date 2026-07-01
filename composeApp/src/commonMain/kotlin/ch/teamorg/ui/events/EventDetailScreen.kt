@@ -205,7 +205,7 @@ fun EventDetailScreen(
                 onEditResponseTap = { response ->
                     coachEditTarget = response
                     coachEditStatus = coachEditDefault(response.status)
-                    coachEditUnexcused = false
+                    coachEditUnexcused = response.unexcused
                 },
                 onFinalize = { viewModel.finalize() },
                 onReopen = { viewModel.reopen() }
