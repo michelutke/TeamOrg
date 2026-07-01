@@ -50,6 +50,7 @@ class EventRepositoryImpl : EventRepository {
             it[EventsTable.seriesId] = seriesId
             it[EventsTable.seriesSequence] = seriesSequence
             it[EventsTable.responseDeadline] = request.responseDeadline
+            it[EventsTable.defaultResponse] = request.defaultResponse
             it[EventsTable.createdBy] = createdBy
         } get EventsTable.id
 
@@ -219,6 +220,7 @@ class EventRepositoryImpl : EventRepository {
             if (request.location != null) stmt[EventsTable.location] = request.location
             if (request.description != null) stmt[EventsTable.description] = request.description
             if (request.minAttendees != null) stmt[EventsTable.minAttendees] = request.minAttendees
+            if (request.defaultResponse != null) stmt[EventsTable.defaultResponse] = request.defaultResponse
             stmt[EventsTable.updatedAt] = Instant.now()
         }
         if (updated == 0) return@transaction null
@@ -302,7 +304,8 @@ class EventRepositoryImpl : EventRepository {
                 minAttendees = source.minAttendees,
                 teamIds = teamIds,
                 subgroupIds = subgroupIds,
-                recurring = null
+                recurring = null,
+                defaultResponse = source.defaultResponse
             ),
             createdBy = createdBy,
             seriesId = null,
@@ -332,6 +335,7 @@ class EventRepositoryImpl : EventRepository {
             it[EventSeriesTable.templateLocation] = request.location
             it[EventSeriesTable.templateDescription] = request.description
             it[EventSeriesTable.templateMinAttendees] = request.minAttendees
+            it[EventSeriesTable.templateDefaultResponse] = request.defaultResponse
             it[EventSeriesTable.createdBy] = createdBy
         } get EventSeriesTable.id
 
@@ -353,6 +357,7 @@ class EventRepositoryImpl : EventRepository {
             if (request.location != null) stmt[EventSeriesTable.templateLocation] = request.location
             if (request.description != null) stmt[EventSeriesTable.templateDescription] = request.description
             if (request.minAttendees != null) stmt[EventSeriesTable.templateMinAttendees] = request.minAttendees
+            if (request.defaultResponse != null) stmt[EventSeriesTable.templateDefaultResponse] = request.defaultResponse
         }
         Unit
     }
@@ -419,6 +424,7 @@ class EventRepositoryImpl : EventRepository {
                     it[EventsTable.minAttendees] = series.templateMinAttendees
                     it[EventsTable.seriesId] = series.id
                     it[EventsTable.seriesSequence] = actualSeq
+                    it[EventsTable.defaultResponse] = series.templateDefaultResponse
                     it[EventsTable.createdBy] = series.createdBy
                 } get EventsTable.id
 
@@ -505,6 +511,7 @@ class EventRepositoryImpl : EventRepository {
             if (request.location != null) stmt[EventsTable.location] = request.location
             if (request.description != null) stmt[EventsTable.description] = request.description
             if (request.minAttendees != null) stmt[EventsTable.minAttendees] = request.minAttendees
+            if (request.defaultResponse != null) stmt[EventsTable.defaultResponse] = request.defaultResponse
             stmt[EventsTable.updatedAt] = now
         }
     }
@@ -541,6 +548,7 @@ class EventRepositoryImpl : EventRepository {
             it[EventsTable.externalSyncedAt] = now
             it[EventsTable.externalStatus] = "synced"
             it[EventsTable.needsReview] = false
+            it[EventsTable.defaultResponse] = "none"
             it[EventsTable.createdBy] = createdBy
         } get EventsTable.id
 
@@ -860,6 +868,7 @@ class EventRepositoryImpl : EventRepository {
         templateLocation = row[EventSeriesTable.templateLocation],
         templateDescription = row[EventSeriesTable.templateDescription],
         templateMinAttendees = row[EventSeriesTable.templateMinAttendees],
+        templateDefaultResponse = row[EventSeriesTable.templateDefaultResponse],
         createdBy = row[EventSeriesTable.createdBy],
         createdAt = row[EventSeriesTable.createdAt]
     )

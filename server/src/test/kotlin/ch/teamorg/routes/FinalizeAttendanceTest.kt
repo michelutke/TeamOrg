@@ -28,7 +28,8 @@ private data class CreateEventPayloadFin(
     val startAt: String,
     val endAt: String,
     val responseDeadline: String? = null,
-    val teamIds: List<String> = emptyList()
+    val teamIds: List<String> = emptyList(),
+    val defaultResponse: String? = null
 )
 
 @Serializable
@@ -84,7 +85,8 @@ class FinalizeAttendanceTest : IntegrationTestBase() {
     private suspend fun ApplicationTestBuilder.createPastEvent(
         token: String,
         teamIds: List<String>,
-        title: String = "Past Event"
+        title: String = "Past Event",
+        defaultResponse: String? = null
     ): Event {
         val client = createJsonClient()
         return client.post("/events") {
@@ -96,7 +98,8 @@ class FinalizeAttendanceTest : IntegrationTestBase() {
                 startAt = "2020-01-01T10:00:00Z",
                 endAt = "2020-01-01T12:00:00Z",
                 responseDeadline = "2020-01-01T09:00:00Z",
-                teamIds = teamIds
+                teamIds = teamIds,
+                defaultResponse = defaultResponse
             ))
         }.body<Event>()
     }
@@ -349,5 +352,66 @@ class FinalizeAttendanceTest : IntegrationTestBase() {
         }
 
         assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    // ---- Rec#4: defaultResponse persisted via the CREATE API (no raw SQL) drives finalize ----
+
+    @Test
+    fun `defaultResponse=accepted set via create API resolves no-response to confirmed on finalize`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val coachAuth = registerAndLogin("fin_api_acc_coach@example.com", displayName = "Coach ApiAcc")
+        val playerAuth = registerAndLogin("fin_api_acc_player@example.com", displayName = "Player ApiAcc")
+
+        promoteToSuperAdmin(coachAuth.userId)
+        val (_, teamId) = setupClubAndTeam(coachAuth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
+
+        // default_response is set through the create route only — the column must be wired end-to-end.
+        val event = createPastEvent(coachAuth.token, listOf(teamId), defaultResponse = "accepted")
+        assertEquals("accepted", event.defaultResponse)
+
+        val response = client.post("/events/${event.id}/attendance/finalize") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val entries = client.get("/events/${event.id}/attendance") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+        }.body<List<AttendanceResponsePayloadFin>>()
+        val playerEntry = entries.find { it.userId == playerAuth.userId }
+        assertNotNull(playerEntry)
+        assertEquals("confirmed", playerEntry.status)
+
+        val fetched = client.get("/events/${event.id}") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+        }.body<EventWithTeams>()
+        assertEquals("done", fetched.event.checkInStatus)
+    }
+
+    @Test
+    fun `defaultResponse=none set via create API blocks finalize on a no-response member`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val coachAuth = registerAndLogin("fin_api_none_coach@example.com", displayName = "Coach ApiNone")
+        val playerAuth = registerAndLogin("fin_api_none_player@example.com", displayName = "Player ApiNone")
+
+        promoteToSuperAdmin(coachAuth.userId)
+        val (_, teamId) = setupClubAndTeam(coachAuth.token)
+        invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
+
+        val event = createPastEvent(coachAuth.token, listOf(teamId), defaultResponse = "none")
+        assertEquals("none", event.defaultResponse)
+
+        val response = client.post("/events/${event.id}/attendance/finalize") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+        }
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        val body = response.body<FinalizeBlockedResponse>()
+        assertEquals("no-response", body.reason)
+        assertTrue(body.userIds.contains(playerAuth.userId))
+
+        val fetched = client.get("/events/${event.id}") {
+            header(HttpHeaders.Authorization, "Bearer ${coachAuth.token}")
+        }.body<EventWithTeams>()
+        assertEquals("awaiting_checkin", fetched.event.checkInStatus)
     }
 }
