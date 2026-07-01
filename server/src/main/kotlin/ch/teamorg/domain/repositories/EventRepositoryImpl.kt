@@ -734,8 +734,16 @@ class EventRepositoryImpl : EventRepository {
         return event.copy(teamIds = teamIds, subgroupIds = subgroupIds)
     }
 
-    /** TODO(Task-N): re-implement once attendance_records table is replaced by check-in records. */
-    private fun presentCountFor(eventIds: List<UUID>): Map<UUID, Int> = emptyMap()
+    /** Returns confirmed-response counts per event, used for the presence chip on event cards. */
+    private fun presentCountFor(eventIds: List<UUID>): Map<UUID, Int> {
+        if (eventIds.isEmpty()) return emptyMap()
+        val cnt = AttendanceResponsesTable.eventId.count()
+        return AttendanceResponsesTable
+            .select(AttendanceResponsesTable.eventId, cnt)
+            .where { (AttendanceResponsesTable.eventId inList eventIds) and (AttendanceResponsesTable.status eq "confirmed") }
+            .groupBy(AttendanceResponsesTable.eventId)
+            .associate { it[AttendanceResponsesTable.eventId] to it[cnt].toInt() }
+    }
 
     private fun rowToEvent(row: ResultRow): Event {
         val startAt = row[EventsTable.startAt]

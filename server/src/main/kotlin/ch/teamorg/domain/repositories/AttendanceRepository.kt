@@ -23,17 +23,6 @@ data class AttendanceResponseRow(
     val updatedAt: Instant
 )
 
-data class CheckInRow(
-    val eventId: UUID,
-    val userId: UUID,
-    val status: String,
-    val note: String?,
-    val setBy: UUID,
-    val setAt: Instant,
-    val previousStatus: String?,
-    val previousSetBy: UUID?
-)
-
 data class RawAttendanceRow(
     val eventId: UUID,
     val userId: UUID,
@@ -67,15 +56,6 @@ data class AttendanceRecordDto(
     val previousSetBy: String? = null
 )
 
-@Serializable
-data class CheckInEntryResponse(
-    val userId: String,
-    val userName: String,
-    val userAvatar: String? = null,
-    val response: AttendanceResponseDto? = null,
-    val record: AttendanceRecordDto? = null
-)
-
 interface AttendanceRepository {
     suspend fun getEventAttendance(eventId: UUID): List<AttendanceResponseRow>
     suspend fun getMyResponse(eventId: UUID, userId: UUID): AttendanceResponseRow?
@@ -96,9 +76,6 @@ interface AttendanceRepository {
         unexcused: Boolean,
         setBy: UUID
     ): AttendanceResponseRow
-    suspend fun getCheckIn(eventId: UUID): List<CheckInRow>
-    suspend fun getCheckInEntries(eventId: UUID): List<CheckInEntryResponse>
-    suspend fun upsertCheckIn(eventId: UUID, userId: UUID, status: String, note: String?, setBy: UUID): CheckInRow
     /**
      * Raw attendance rows for [userId]. When [restrictToTeamIds] is non-null, only rows for events
      * targeting one of those teams are returned (used to scope a coach to the teams they share with
@@ -132,8 +109,8 @@ interface AttendanceRepository {
      */
     suspend fun resetResponsesForEvent(eventId: UUID): Int
     /**
-     * Returns a map from event id to the count of [ch.teamorg.db.tables.RecordStatus.present]
-     * records for each event in [eventIds]. Events with no present rows are absent from the map.
+     * Returns a map from event id to the count of `confirmed` responses for each event in
+     * [eventIds]. Events with no confirmed responses are absent from the map.
      */
-    suspend fun presentCounts(eventIds: List<UUID>): Map<UUID, Int>
+    suspend fun confirmedCounts(eventIds: List<UUID>): Map<UUID, Int>
 }

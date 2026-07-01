@@ -4,7 +4,6 @@ import ch.teamorg.routes.abwesenheitRoutes
 import ch.teamorg.routes.adminRoutes
 import ch.teamorg.routes.attendanceRoutes
 import ch.teamorg.routes.authRoutes
-import ch.teamorg.routes.checkInRoutes
 import ch.teamorg.routes.clubRoutes
 import ch.teamorg.routes.contactRoutes
 import ch.teamorg.routes.eventRoutes
@@ -33,7 +32,6 @@ fun Application.configureRouting() {
         subGroupRoutes()
         attendanceRoutes()
         abwesenheitRoutes()
-        checkInRoutes()
         notificationRoutes()
         adminRoutes()
         impersonationRoutes()
