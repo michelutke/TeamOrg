@@ -6,6 +6,8 @@ import { getMessages, resolveLocale } from '$lib/i18n';
 import type { EventWithTeams, AttendanceResponse } from '$lib/server/events';
 import type { Actions, PageServerLoad } from './$types';
 
+const API_BASE = process.env.API_URL || 'http://localhost:8080';
+
 interface Member {
 	userId: string;
 	displayName: string;
@@ -85,7 +87,8 @@ export const actions: Actions = {
 			await apiPut(`/events/${params.id}/attendance/me`, locals.token!, { status, reason });
 			return { saved: true };
 		} catch (e) {
-			if (e instanceof ApiError && e.status === 409) return fail(409, { error: m.deadlinePassed });
+			if (e instanceof ApiError && (e.status === 409 || e.status === 403))
+				return fail(e.status, { error: m.deadlinePassed });
 			if (e instanceof ApiError) return fail(e.status, { error: 'Fehler' });
 			throw e;
 		}
@@ -162,6 +165,56 @@ export const actions: Actions = {
 		}
 		// Land on the copy's edit form so the manager can adjust the date/time.
 		throw redirect(303, `/app/events/${newId}/edit`);
+	},
+
+	setMemberStatus: async ({ request, locals, params }) => {
+		requireUser(locals);
+		const form = await request.formData();
+		const userId = form.get('userId') as string;
+		const status = form.get('status') as string;
+		const unexcused = form.get('unexcused') === 'true';
+
+		try {
+			await apiPut(`/events/${params.id}/attendance/${userId}`, locals.token!, {
+				status,
+				unexcused
+			});
+			return { memberSaved: true };
+		} catch (e) {
+			if (e instanceof ApiError) return fail(e.status, { manageError: manageErr(e) });
+			throw e;
+		}
+	},
+
+	finalize: async ({ locals, params }) => {
+		requireUser(locals);
+		const token = locals.token!;
+		const res = await fetch(`${API_BASE}/events/${params.id}/attendance/finalize`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({})
+		});
+		if (res.ok) return { finalized: true };
+		if (res.status === 409) {
+			try {
+				const body = (await res.json()) as { reason: string; userIds: string[] };
+				return fail(409, { finalizeBlocked: body });
+			} catch {
+				return fail(409, { manageError: 'CheckIn konnte nicht abgeschlossen werden.' });
+			}
+		}
+		return fail(res.status, { manageError: 'Aktion fehlgeschlagen' });
+	},
+
+	reopen: async ({ locals, params }) => {
+		requireUser(locals);
+		try {
+			await apiPost(`/events/${params.id}/attendance/reopen`, locals.token!, {});
+			return { reopened: true };
+		} catch (e) {
+			if (e instanceof ApiError) return fail(e.status, { manageError: manageErr(e) });
+			throw e;
+		}
 	}
 };
 
