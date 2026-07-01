@@ -242,6 +242,17 @@ class EventDetailViewModelTest {
         fakeAttendanceRepo.lastSetMemberUnexcused shouldBe true
     }
 
+    @Test
+    fun setMemberResponse_failure_surfacesError() = runTest {
+        fakeAttendanceRepo.setMemberResponseResult = Result.failure(RuntimeException("409 Conflict"))
+        val vm = makeViewModel(makeEvent())
+        vm.loadEvent("e1")
+
+        vm.setMemberResponse("u-alice", "confirmed", unexcused = false)
+
+        vm.state.value.error shouldBe "409 Conflict"
+    }
+
     // endregion
 
     // region — rsvp lock gating (state shape)

@@ -143,6 +143,7 @@ class EventDetailViewModel(
         viewModelScope.launch {
             attendanceRepository.setMemberResponse(eventId, userId, status, unexcused)
                 .onSuccess { loadAttendance(eventId) }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }
     }
 
