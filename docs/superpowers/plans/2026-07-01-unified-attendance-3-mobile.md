@@ -1,5 +1,7 @@
 # Unified Attendance — Plan 3: Mobile (composeApp + shared)
 
+> **Status: COMPLETED** — all tasks executed & reviewed; shipped via PRs #41/#42. As-built doc: [docs/unified-attendance.md](../../unified-attendance.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax. Do Plan 1 (server) first; Plan 2 (web) can run in parallel. This consumes the server API.
 
 **Goal:** Bring the unified attendance model to the KMP mobile app: event detail shows lockable player buttons + a coach edit sheet (with "Nicht entschuldigt") + "CheckIn abschliessen"/reopen; the event list gets an awaiting-check-in filter; create/edit gets `defaultResponse`; the separate mobile check-in screen is removed.

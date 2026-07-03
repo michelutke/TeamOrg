@@ -2,6 +2,12 @@
 
 Status: **implemented** (V14, 2026-06-26) · Scope: backend (Ktor) + admin web
 
+> **Partially superseded (V15, 2026-07-01):** all `attendance_records` references below are
+> historical — that table was dropped by [unified attendance](unified-attendance.md).
+> NDS **export** now reads confirmed `attendance_responses`; **import** (`attendanceMode=keep`)
+> writes responses (attended→`confirmed`, else→`declined`) and auto-finalizes past events.
+> Member matching, event creation, and the AWK/Teilnehmende file formats are unchanged.
+
 ## Person-file imports (added 2026-06-27 — resolves the PERSONENNUMMER gap)
 
 Two further NDS exports **do** carry the J+S PERSONENNUMMER, so it no longer has to be entered
