@@ -6,6 +6,7 @@ import ch.teamorg.domain.models.EventWithTeams
 import ch.teamorg.test.IntegrationTestBase
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.Serializable
@@ -15,6 +16,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @Serializable
 private data class CreateEventPayloadCIS(
@@ -98,5 +100,35 @@ class CheckInStatusTest : IntegrationTestBase() {
             }.body<EventWithTeams>()
 
             assertEquals("open", fetched.event.checkInStatus)
+        }
+
+    @Test
+    fun `defaulted lifecycle fields are present on the wire, not just after Kotlin decode`() =
+        withTeamorgTestApplication {
+            // Regression: with encodeDefaults=false, checkInStatus="open" (the default) was
+            // OMITTED from the JSON. Kotlin clients re-applied the default on decode (so
+            // .body<…>() based tests passed), but the web admin reads raw JSON and treated
+            // the missing field as "not open", locking RSVP on every open event.
+            val auth = registerAndLogin("cis_wire@example.com", displayName = "CIS Wire")
+            val event = createEvent(
+                token = auth.token,
+                startAt = "2099-01-01T10:00:00Z",
+                endAt = "2099-01-01T12:00:00Z",
+                title = "Wire CIS Event"
+            )
+
+            val client = createJsonClient()
+            val raw = client.get("/events/${event.id}") {
+                header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            }.bodyAsText()
+
+            assertTrue(
+                Regex("\"checkInStatus\"\\s*:\\s*\"open\"").containsMatchIn(raw),
+                "raw event JSON must carry checkInStatus even at its default value"
+            )
+            assertTrue(
+                Regex("\"defaultResponse\"\\s*:\\s*\"none\"").containsMatchIn(raw),
+                "raw event JSON must carry defaultResponse even at its default value"
+            )
         }
 }
