@@ -381,6 +381,7 @@
 								<button
 									type="button"
 									onclick={() => openEdit(r)}
+									aria-label="Anwesenheit bearbeiten: {r.displayName}"
 									class="rounded-full bg-surface-container-high px-3 py-1 text-[12px] font-medium text-on-surface hover:opacity-90"
 								>
 									<Pencil size={12} />
