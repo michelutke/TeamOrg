@@ -22,6 +22,10 @@
 		gruppengroesse: string | null;
 		activities: ParsedActivity[];
 		members: ParsedMember[];
+		// Set by the parse endpoint when this Angebot is already linked to a club team:
+		// the import then updates that team instead of creating a new one.
+		linkedTeamId?: string | null;
+		linkedTeamName?: string | null;
 	}
 	interface ImportResult {
 		teamId: string;
@@ -67,7 +71,11 @@
 	const payload = $derived(
 		parsed
 			? JSON.stringify({
-					createTeamName: teamName.trim() || parsed.kursName || `NDS ${parsed.angebotId}`,
+					// Re-import: the Angebot is already linked to a club team → update that team.
+					// First import: create a new team from the course name.
+					...(parsed.linkedTeamId
+						? { teamId: parsed.linkedTeamId }
+						: { createTeamName: teamName.trim() || parsed.kursName || `NDS ${parsed.angebotId}` }),
 					nutzergruppe: nutzergruppe || null,
 					parsed,
 					persons,
@@ -221,31 +229,54 @@
 				</div>
 
 				<div class="mt-4 flex flex-col gap-3">
-					<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
-						Team-Name
-						<input
-							bind:value={teamName}
-							placeholder={parsed.kursName ?? ''}
-							class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
-						/>
-					</label>
+					{#if parsed.linkedTeamId}
+						<div class="rounded-xl bg-primary-container px-4 py-3 text-[13px] text-on-primary-container">
+							Dieses Angebot ist bereits mit dem Team
+							<strong>{parsed.linkedTeamName}</strong> verknüpft — der Import aktualisiert
+							dieses Team (bestehende Rückmeldungen bleiben erhalten).
+						</div>
+					{:else}
+						<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
+							Team-Name
+							<input
+								bind:value={teamName}
+								placeholder={parsed.kursName ?? ''}
+								class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
+							/>
+						</label>
+					{/if}
 					<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
 						Nutzergruppe (für Dauer-Prüfung beim Export)
 						<button type="button" onclick={() => (showNgHelp = !showNgHelp)} class="text-[12px] text-primary underline">Was ist das?</button>
 						{#if showNgHelp}
-							<p class="text-[12px] text-on-surface-variant">
-								Die J+S-Nutzergruppe deines Angebots bestimmt die erlaubten Trainingsdauern. Beim NDS-Export wird die Dauer dagegen geprüft und bei Bedarf auf den nächsten erlaubten Wert gerundet. Im Zweifel die in der NDS registrierte Nutzergruppe wählen.
-							</p>
+							<div class="rounded-xl bg-surface-container-high px-3 py-2 text-[12px] text-on-surface-variant">
+								<p>
+									Die J+S-Nutzergruppe (NG) beschreibt, wer dein Angebot durchführt, und bestimmt
+									die erlaubten Trainingsdauern. Beim NDS-Export wird die Dauer dagegen geprüft und
+									bei Bedarf auf den nächsten erlaubten Wert gerundet. Wähle die Nutzergruppe, unter
+									der das Angebot in der NDS registriert ist.
+								</p>
+								<ul class="mt-2 flex list-disc flex-col gap-1 pl-4">
+									<li><strong>NG 1 — Sportverein:</strong> Kurse/Trainings von Sportvereinen (oder ähnlichen Organisationen) mit Kindern und Jugendlichen. Der Normalfall für Vereinsteams; Trainings 60/75/90 Min.</li>
+									<li><strong>NG 2 — Wetterabhängige Sportarten:</strong> wie NG 1, aber Sportarten, deren Durchführung von Wind, Wasser oder Schnee abhängt (z. B. Segeln, Ski). Flexiblere Dauern, Wettkämpfe erfassbar.</li>
+									<li><strong>NG 4 — Kanton / Gemeinde / Verband:</strong> Kurse und Lager von Kantonen, Gemeinden oder nationalen Sportverbänden (z. B. kantonale Kadertrainings).</li>
+									<li><strong>NG 5 — Freiwilliger Schulsport:</strong> Angebote von Schulen ausserhalb des Pflichtunterrichts.</li>
+								</ul>
+								<p class="mt-2">
+									(NG 3 — Lager von Jugendverbänden wie Pfadi/Cevi — wird hier nicht unterstützt,
+									da sie nicht über Anwesenheitslisten pro Team abgerechnet werden.)
+								</p>
+							</div>
 						{/if}
 						<select
 							bind:value={nutzergruppe}
 							class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
 						>
 							<option value="">— unbekannt —</option>
-							<option value="NG1">NG 1</option>
-							<option value="NG2">NG 2</option>
-							<option value="NG4">NG 4</option>
-							<option value="NG5">NG 5</option>
+							<option value="NG1">NG 1 — Sportverein</option>
+							<option value="NG2">NG 2 — wetterabhängige Sportart</option>
+							<option value="NG4">NG 4 — Kanton/Gemeinde/Verband</option>
+							<option value="NG5">NG 5 — freiwilliger Schulsport</option>
 						</select>
 					</label>
 					<label class="flex items-center gap-2 text-[14px] text-on-surface">
@@ -287,7 +318,7 @@
 						} else if (r.type === 'failure') {
 							errorMsg =
 								r.data?.ndsError === 'angebotLinked'
-									? 'Dieses Angebot ist bereits mit einem anderen Team verknüpft.'
+									? 'Dieses Angebot ist bereits mit einem Team verknüpft. Datei neu einlesen — der Import aktualisiert dann automatisch das verknüpfte Team.'
 									: 'Import fehlgeschlagen.';
 						} else {
 							await update();
