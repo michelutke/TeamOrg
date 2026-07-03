@@ -65,11 +65,15 @@ test.describe('Awaiting check-in event (coach)', () => {
 		const chip = page.getByText('Check-in offen', { exact: true }).first();
 		if ((await chip.count()) === 0) return false;
 		await chip.click();
-		// Event rows are links into /app/events/{id}. Pick the first one under the list.
-		const firstEvent = page.locator('a[href*="/app/events/"]').first();
-		if ((await firstEvent.count()) === 0) return false;
-		await firstEvent.click();
-		await expect(page).toHaveURL(/\/app\/events\/[^/]+$/);
+		// Event rows link to /app/events/{uuid}. Exclude the "/app/events/new" create
+		// link (which also contains "/app/events/") and nav links — match a UUID only.
+		const hrefs = await page
+			.locator('a[href*="/app/events/"]')
+			.evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
+		const eventHref = hrefs.find((h) => /\/app\/events\/[0-9a-f-]{36}$/i.test(h));
+		if (!eventHref) return false;
+		await page.locator(`a[href="${eventHref}"]`).first().click();
+		await expect(page).toHaveURL(/\/app\/events\/[0-9a-f-]{36}$/i);
 		return true;
 	}
 
@@ -85,9 +89,9 @@ test.describe('Awaiting check-in event (coach)', () => {
 		const opened = await openFirstAwaiting(page);
 		if (!opened) test.skip(true, 'No awaiting-check-in event available on this instance.');
 
-		// Open the per-member edit popup (edit affordance on a response row).
+		// Open the per-member edit popup (icon button labelled "Anwesenheit bearbeiten: <name>").
 		const editTrigger = page
-			.getByRole('button', { name: /bearbeiten|edit|ändern/i })
+			.getByRole('button', { name: /Anwesenheit bearbeiten/i })
 			.first();
 		if ((await editTrigger.count()) === 0) {
 			test.skip(true, 'No member rows to edit on this event.');
