@@ -24,6 +24,8 @@ export interface AppEvent {
 	checkInStatus: string;
 	checkInCompletedAt: string | null;
 	defaultResponse: string;
+	seriesId: string | null;
+	seriesSequence: number | null;
 }
 
 export interface EventWithTeams {
