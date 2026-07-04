@@ -53,6 +53,9 @@ Presence counts (`presentCount` on event payloads) now count **confirmed respons
 NDS export emits confirmed responses; NDS import writes confirmed (attended) / declined
 (not attended) and auto-finalizes past imported events. Coaches with ≥1 awaiting event
 get a push reminder at most every 2 days (`ReminderSchedulerJob`, idempotency-key bucketed).
+The required post-V15 **re-import** is covered in
+[nds-import-export-design.md → Re-import & Nutzergruppen](nds-import-export-design.md#re-import--nutzergruppen-added-2026-07-03-pr-44)
+(the dialog targets the already-linked team; fixed in PR #44).
 
 ### Clients
 

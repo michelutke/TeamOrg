@@ -34,7 +34,8 @@ composeApp  iosApp
 ```
 
 Feature docs live in [docs/](docs/) — e.g. [unified attendance](docs/unified-attendance.md),
-[NDS import/export](docs/nds-import-export-design.md), [deployment](docs/deployment.md).
+[recurring events](docs/recurring-events.md), [NDS import/export](docs/nds-import-export-design.md),
+[deployment](docs/deployment.md).
 
 ## Local Development
 

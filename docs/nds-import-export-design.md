@@ -8,6 +8,40 @@ Status: **implemented** (V14, 2026-06-26) · Scope: backend (Ktor) + admin web
 > writes responses (attended→`confirmed`, else→`declined`) and auto-finalizes past events.
 > Member matching, event creation, and the AWK/Teilnehmende file formats are unchanged.
 
+## Re-import & Nutzergruppen (added 2026-07-03, PR #44)
+
+Re-importing an Anwesenheitsliste is the designed way to refresh attendance (required once
+after V15). Behavior:
+
+- **Parse** (`POST /clubs/{clubId}/nds/parse`) now returns `linkedTeamId`/`linkedTeamName`
+  when the Angebot is already linked to a team of the same club (link = `teams.nds_angebot_id`,
+  one team per Angebot). Links belonging to another club are not disclosed.
+- The **import dialog** then targets that team (`teamId` in the request) and shows
+  „Angebot ist bereits mit Team X verknüpft — der Import aktualisiert dieses Team" instead of
+  the team-name field. Only an unlinked Angebot creates a new team (`createTeamName`).
+- The one-team-per-Angebot **conflict check runs before team creation**. (Previously it ran
+  after, so every rejected re-import attempt left an orphan empty team — observed 8× on prod,
+  since archived.) The 409 names the linked team.
+- Re-import semantics: attendance rows are written with `insertIgnore`, so existing responses
+  (incl. real player RSVPs) are never overwritten; past events are auto-finalized; the event
+  set is idempotent (matched by date + activity symbol).
+
+### Nutzergruppen (NG) — what the groups are
+
+The NG describes **who runs the J+S Angebot** and drives the DAUER validation (§0.4). The
+import dialog explains these (source: J+S coach guide / V-BASPO-JS):
+
+| NG | Wer | Typischer Fall |
+|----|-----|----------------|
+| **NG 1** | Sportvereine (o. ä. Organisationen): Kurse/Trainings mit Kindern & Jugendlichen | Vereinsteam — der Normalfall (Trainings 60/75/90 Min) |
+| **NG 2** | wie NG 1, aber wetterabhängige Sportarten (Wind/Wasser/Schnee: Segeln, Ski, …) | flexiblere Dauern, Wettkämpfe erfassbar |
+| **NG 4** | Kantone, Gemeinden, nationale Sportverbände (Kurse/Lager) | kantonale Kadertrainings |
+| **NG 5** | Schulen ausserhalb des Pflichtunterrichts | freiwilliger Schulsport |
+
+NG 3 (Lager von Jugendverbänden wie Pfadi/Cevi) is intentionally not offered — those are not
+billed via per-team Anwesenheitslisten. The NG affects **only export duration validation**;
+pick the group the Angebot is registered under in the NDS.
+
 ## Person-file imports (added 2026-06-27 — resolves the PERSONENNUMMER gap)
 
 Two further NDS exports **do** carry the J+S PERSONENNUMMER, so it no longer has to be entered
