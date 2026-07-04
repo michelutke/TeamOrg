@@ -4,6 +4,7 @@ import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
+import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.deriveCheckInStatus
 import ch.teamorg.domain.models.NdsMember
@@ -550,5 +551,68 @@ class NdsRoutesTest : IntegrationTestBase() {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
             }.body<NdsPreflightReport>()
             assertTrue(report.ok, "no manual person-number entry needed; issues=${report.issues}")
+        }
+
+    @Test
+    fun `re-import with createTeamName is rejected without creating an orphan team`() =
+        withTeamorgTestApplication {
+            val mgr = register("nds_reimport_conflict@example.com"); promoteToSuperAdmin(mgr.userId)
+            val clubId = createClub(mgr.token, "ReimportConflictClub")
+            val angebot = "753813-conflict"
+            val bytes = NdsTestFixtures.anwesenheitslisteBytes(angebot)
+            val parsed = parseFile(mgr.token, clubId, bytes).body<ParsedAnwesenheitsliste>()
+            val first = createJsonClient().post("/clubs/$clubId/nds/import") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+                contentType(ContentType.Application.Json)
+                setBody(NdsImportRequest(createTeamName = "NDS Team", parsed = parsed, importEvents = false))
+            }
+            assertEquals(HttpStatusCode.OK, first.status)
+
+            val teamsBefore = transaction {
+                TeamsTable.selectAll().where { TeamsTable.clubId eq UUID.fromString(clubId) }.count()
+            }
+            // Regression: the conflict used to be checked AFTER team creation, leaving an
+            // orphan empty team behind for every rejected re-import attempt.
+            val second = createJsonClient().post("/clubs/$clubId/nds/import") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+                contentType(ContentType.Application.Json)
+                setBody(NdsImportRequest(createTeamName = "NDS Team again", parsed = parsed, importEvents = false))
+            }
+            assertEquals(HttpStatusCode.Conflict, second.status)
+            val teamsAfter = transaction {
+                TeamsTable.selectAll().where { TeamsTable.clubId eq UUID.fromString(clubId) }.count()
+            }
+            assertEquals(teamsBefore, teamsAfter, "rejected re-import must not create a team")
+        }
+
+    @Test
+    fun `parse exposes the linked team and re-import into it succeeds`() =
+        withTeamorgTestApplication {
+            val mgr = register("nds_reimport_ok@example.com"); promoteToSuperAdmin(mgr.userId)
+            val clubId = createClub(mgr.token, "ReimportOkClub")
+            val angebot = "753813-relink"
+            val bytes = NdsTestFixtures.anwesenheitslisteBytes(angebot)
+            val parsed = parseFile(mgr.token, clubId, bytes).body<ParsedAnwesenheitsliste>()
+            assertEquals(null, parsed.linkedTeamId, "unlinked Angebot must not report a linked team")
+            val first: NdsImportResponse = createJsonClient().post("/clubs/$clubId/nds/import") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+                contentType(ContentType.Application.Json)
+                setBody(NdsImportRequest(createTeamName = "NDS Team", parsed = parsed, importEvents = true, attendanceMode = "keep"))
+            }.body()
+
+            // Second parse now reports the linked team (same club) …
+            val reparsed = parseFile(mgr.token, clubId, bytes).body<ParsedAnwesenheitsliste>()
+            assertEquals(first.teamId, reparsed.linkedTeamId)
+            assertEquals("NDS Team", reparsed.linkedTeamName)
+
+            // … and importing with that teamId succeeds (the re-import path).
+            val second = createJsonClient().post("/clubs/$clubId/nds/import") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+                contentType(ContentType.Application.Json)
+                setBody(NdsImportRequest(teamId = reparsed.linkedTeamId, parsed = reparsed, importEvents = true, attendanceMode = "keep"))
+            }
+            assertEquals(HttpStatusCode.OK, second.status)
+            val res: NdsImportResponse = second.body()
+            assertEquals(first.teamId, res.teamId)
         }
 }
