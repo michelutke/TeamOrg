@@ -31,6 +31,9 @@
 		action?: string;
 		error?: string | null;
 		initial?: Partial<EventFormValues>;
+		// Edit mode for an event that belongs to a series: offers the apply-to-series
+		// scope choice (this_only | this_and_future | all).
+		seriesEdit?: boolean;
 	}
 
 	let {
@@ -40,8 +43,11 @@
 		submitLabel,
 		action = '',
 		error = null,
-		initial = {}
+		initial = {},
+		seriesEdit = false
 	}: Props = $props();
+
+	let scope = $state('this_only');
 
 	// datetime-local <-> ISO. The visible inputs (no name) hold local values; hidden
 	// inputs carry the ISO strings the API expects, derived reactively.
@@ -266,6 +272,33 @@
 			</label>
 		{/if}
 	</fieldset>
+
+	{#if seriesEdit}
+		<!-- Series scope: non-date fields (Titel, Typ, Ort, Beschreibung, Min. Teilnehmer,
+		     Standard-Antwort) propagate to future series events; Datum & Zeit always apply
+		     only to this event. Matches the mobile scope sheet. -->
+		<fieldset class="flex flex-col gap-2 rounded-2xl bg-surface-container-low p-4">
+			<legend class="px-1 text-[12px] font-medium text-primary">Dieser Termin ist Teil einer Serie</legend>
+			<label class="flex items-center gap-2 text-[14px] text-on-surface">
+				<input type="radio" name="scope" value="this_only" bind:group={scope} class="accent-primary" />
+				Nur dieser Termin
+			</label>
+			<label class="flex items-center gap-2 text-[14px] text-on-surface">
+				<input type="radio" name="scope" value="this_and_future" bind:group={scope} class="accent-primary" />
+				Dieser und alle zukünftigen Termine
+			</label>
+			<label class="flex items-center gap-2 text-[14px] text-on-surface">
+				<input type="radio" name="scope" value="all" bind:group={scope} class="accent-primary" />
+				Alle Termine der Serie
+			</label>
+			{#if scope !== 'this_only'}
+				<p class="text-[12px] text-on-surface-variant">
+					Titel, Typ, Ort, Beschreibung, Min. Teilnehmer und Standard-Antwort werden auf
+					zukünftige Termine der Serie übernommen — Datum &amp; Zeit gelten nur für diesen Termin.
+				</p>
+			{/if}
+		</fieldset>
+	{/if}
 
 	{#if error}
 		<p class="text-[13px] font-medium text-error">{error}</p>

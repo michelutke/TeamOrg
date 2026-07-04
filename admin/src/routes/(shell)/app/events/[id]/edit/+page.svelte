@@ -20,6 +20,7 @@
 	heading={data.m.eventForm.editTitle}
 	submitLabel={data.m.common.save}
 	error={form?.error}
+	seriesEdit={data.event.seriesId != null}
 	initial={{
 		title: data.event.title,
 		type: data.event.type,

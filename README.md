@@ -10,6 +10,7 @@ Sports team management platform. Create clubs, manage teams, invite members, and
 | Shared | Kotlin Multiplatform · Ktor Client · SQLDelight 2 · Kotlinx Serialization |
 | Android | Compose Multiplatform 1.10.1 · Navigation3 · Coil3 · Koin |
 | iOS | SwiftUI · shared KMP framework |
+| Web admin | SvelteKit 2 · Svelte 5 · Tailwind 4 (`admin/`) · Playwright E2E |
 
 Kotlin 2.3.10 · JVM 21 · Android API 34–36
 
@@ -18,8 +19,12 @@ Kotlin 2.3.10 · JVM 21 · Android API 34–36
 ```
 Server (Ktor + PostgreSQL)
         │  HTTP/REST + JWT
-        ▼
-Shared (KMP) — domain, repositories, Ktor client, SQLDelight cache
+   ┌────┴─────────────┐
+   ▼                  ▼
+Shared (KMP)        admin (SvelteKit)
+domain, repos,      web app — SSR proxy
+Ktor client,        to the server API
+SQLDelight cache
         │
    ┌────┴────┐
    ▼         ▼
@@ -27,6 +32,9 @@ composeApp  iosApp
 (Android/   (SwiftUI,
  Desktop)    native)
 ```
+
+Feature docs live in [docs/](docs/) — e.g. [unified attendance](docs/unified-attendance.md),
+[NDS import/export](docs/nds-import-export-design.md), [deployment](docs/deployment.md).
 
 ## Local Development
 
@@ -44,6 +52,11 @@ composeApp  iosApp
 | `DATABASE_URL` | PostgreSQL JDBC URL, e.g. `jdbc:postgresql://localhost:5432/teamorg` |
 | `JWT_SECRET` | Secret string for signing JWT tokens |
 | `API_BASE_URL` | Server base URL used by clients (default: `https://api.teamorg.app`) |
+| `API_URL` | Server base URL the **admin web app** proxies to (default: `http://localhost:8080`) |
+| `invite.base-url` (server config) | Base URL for generated invite links (default: `https://teamorg.ch`, whose `/i/*` landing forwards to the app) |
+
+E2E test variables (`E2E_BASE_URL`, `E2E_EMAIL`, …) are documented in
+[admin/e2e/README.md](admin/e2e/README.md).
 
 ### Run
 
@@ -59,12 +72,15 @@ composeApp  iosApp
 
 # iOS — open in Xcode
 open iosApp/iosApp.xcworkspace
+
+# Web admin (SvelteKit dev server on :5173, proxies to API_URL)
+cd admin && npm install && npm run dev
 ```
 
 ## Running Tests
 
 ```bash
-# Server (H2 in-memory DB, no PostgreSQL needed)
+# Server integration tests (testcontainers — Docker must be running)
 ./gradlew :server:test
 
 # Shared KMP
@@ -72,6 +88,15 @@ open iosApp/iosApp.xcworkspace
 
 # Android unit tests
 ./gradlew :composeApp:testDebugUnitTest
+
+# Mobile ViewModel tests (iOS simulator target)
+./gradlew :composeApp:iosSimulatorArm64Test
+
+# Web admin type/lint check
+cd admin && npm run check
+
+# Web admin E2E (Playwright, needs a running instance — see admin/e2e/README.md)
+cd admin && npm run test:e2e
 
 # iOS UI tests (requires a simulator UDID)
 xcodebuild test \

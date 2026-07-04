@@ -1,5 +1,7 @@
 # Unified Attendance — Design Spec
 
+> **Status: SHIPPED** (PRs #41, #42 — merged to `main` 2026-07-01/03). This is the design-time spec; see [docs/unified-attendance.md](../../unified-attendance.md) for the as-built reference including implementation deviations.
+
 **Date:** 2026-07-01
 **Supersedes:** the two-model attendance system (RSVP `attendance_responses` + separate check-in `attendance_records`) and the dedicated check-in screens.
 **Scope:** app-wide (all teams/events), across server (Ktor), web admin (SvelteKit), and mobile (Compose/KMP).

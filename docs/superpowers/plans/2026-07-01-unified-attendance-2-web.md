@@ -1,5 +1,7 @@
 # Unified Attendance — Plan 2: Web (admin)
 
+> **Status: COMPLETED** — all tasks executed & reviewed; shipped via PRs #41/#42. As-built doc: [docs/unified-attendance.md](../../unified-attendance.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax. Do Plan 1 (server) first — this consumes its API.
 
 **Goal:** Move attendance to a single view in the SvelteKit admin: event detail shows player buttons that lock at the cutoff, a coach edit popup (with "Nicht entschuldigt"), and "CheckIn abschliessen" / reopen; the event list gets an "Awaiting check-in" coach filter; event create/edit gets a `defaultResponse` field; the separate check-in page is removed.

@@ -1,5 +1,7 @@
 # Unified Attendance — Plan 1: Server
 
+> **Status: COMPLETED** — all tasks executed & reviewed; shipped via PRs #41/#42. As-built doc: [docs/unified-attendance.md](../../unified-attendance.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Make `attendance_responses` the single attendance model on the server: add a finalize/reopen lifecycle, coach editing with an `unexcused` flag, a per-event `default_response`, drop `attendance_records` + check-in routes, re-point NDS export/import at responses, and add an awaiting-check-in reminder.

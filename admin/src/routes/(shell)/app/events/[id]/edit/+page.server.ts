@@ -43,8 +43,13 @@ export const actions: Actions = {
 			return fail(400, { error: 'Pflichtfelder fehlen' });
 		}
 
+		const rawScope = (form.get('scope') as string) || 'this_only';
+		const scope = ['this_only', 'this_and_future', 'all'].includes(rawScope)
+			? rawScope
+			: 'this_only';
+
 		const body = {
-			scope: 'this_only',
+			scope,
 			title: (form.get('title') as string).trim(),
 			type: form.get('type') as string,
 			startAt: form.get('startAt') as string,

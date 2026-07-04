@@ -7,6 +7,12 @@ is reached only via super-admin *impersonation*). This doc extends that to
 
 Read alongside `docs/invite-flow-contract.md` (role model + invite scope).
 
+> **Note (2026-07-03):** references below to the check-in model (`GET/PUT /events/{id}/check-in`,
+> the `/app/teams/[teamId]/checkin/[eventId]` screen) are outdated — check-in was replaced by
+> the [unified attendance](unified-attendance.md) lifecycle (coach edit + finalize on the event
+> detail). Much of this draft has since shipped (web login for coaches/players, event detail
+> RSVP + coach editing, events list, team pages).
+
 ## 0. Current state (what exists today)
 
 - Single SvelteKit app under `admin/`. One login (`/admin/login`) that today
