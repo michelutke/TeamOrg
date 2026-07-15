@@ -178,3 +178,56 @@ Series generation + all 3 scope edits (PR #45); unified-attendance finalize + de
 
 ### Test data left on prod (QA Testclub A — club id 2fe8659a-9659-4052-96ea-423f4c968c21)
 Teams: QA Damen 1, QA Herren 1 RENAMED, QA NDS Damen 3L (16 imported members, 100 events). Users: qa.manager.a, qa.coach.a, qa.player.a1/a2/a3 (@example.com). Superadmin can "Delete club permanently" (type-to-confirm) to remove teams/events; user accounts persist unless separately removed. **Not auto-deleted — left for review.**
+
+---
+
+## S7 — Attendance depth (follow-up session)
+
+- ✅ **default=none finalize block**: coach finalize with unresolved no-response members → dialog "CheckIn kann nicht abgeschlossen werden … müssen zuerst manuell eingetragen werden." Blocks correctly.
+- 🐞 **MED — default=none + nobody responded = finalize dead-end.** The block dialog is OK-only (doesn't list who / no inline resolve). On the event detail the response list is "—" (no rows) because no one responded, so there are **no per-member "Anwesenheit bearbeiten" controls to mark them**, and past-event self-response is locked ("Anmeldeschluss ist vorbei"). Net: a past `default=none` event with no prior responses can never be finalized through the web UI. (Fix: render the full roster with coach-edit controls even when no response rows exist, or list+resolve members inside the block dialog.)
+- ✅ **Coach per-member edit popup** ("Status bearbeiten"): Anwesend / Abgemeldet + "Nicht entschuldigt" (unexcused) checkbox + Speichern. Marking Balmer present updated counts (0→1 Zusagen); "Nicht entschuldigt" persisted (checked on reopen). unexcused is internal — not shown in the roster row (per spec).
+- ✅ **unsure finalize block** — verified by code (`finalize()` returns `BlockedUnsure` for any `unsure` roster member). A live end-to-end test was impractical: see deadline finding below.
+- ⚠️ **No response-deadline field in the web event form.** Cutoff therefore = event start. An event created to start ~2 min out was already past cutoff ("Anmeldeschluss ist vorbei") at test time, so players can't RSVP to imminent events and there's no way to set a later deadline from the web. (Far-future events RSVP fine — verified in S4.)
+- ⚠️ **minAttendees is write-only in the web UI.** Set to 5 on a 3-member team and persisted (confirmed via edit form), but no warning, badge, or display appears on the event detail or events list when confirmed < min. Either mobile-only or unwired in web.
+
+---
+
+## S8 — Invite & onboarding edges
+
+- ✅ **Invalid/garbage token** `/i/not-a-real-token` → clean "Einladung ungültig oder abgelaufen. Bitte fordere beim Verein eine neue an."
+- ✅ **Email-mismatch**: an email-locked co-manager invite opened while logged in as a different account (player-a1) → blocked with "Diese Einladung wurde an eine andere Adresse gesendet. Melde dich mit dem eingeladenen Konto an." Good.
+- ✅ **Multi-team player**: added player-a1 to a 2nd team via the members page ("+ Team hinzufügen" → Team+Rolle → Speichern). player-a1's home now lists both QA Damen 1 and QA Herren 1.
+- ✅ **Second co-manager**: manager-a invited qa.manager.b (co-manager); after registering, manager-b has full `/manage` access — sees all 3 teams, has New-team/write controls, no 403. Equal-powers collaboration confirmed.
+- ⚠️ **Already-redeemed invite still renders the join form** (doesn't say "already used"). The guard is at submit time (email_taken → 409), not view time. Minor: a used personal invite could show a misleading "join" screen.
+
+---
+
+## S9 — Event lifecycle extras
+
+- ✅ **Duplicate event** ("Duplizieren") → creates a new independent event with copied fields (title "QA Match vs Bern"), opens it in edit; saved as a separate id.
+- ✅ **Time-change propagation**: coach changed a series occurrence start 18:00→19:30 (scope "nur dieser Termin"); player-a1's view of that event immediately showed "21. Juli um 19:30".
+- ✅ **Archive team**: archiving QA Herren 1 removed it from the active teams list (confirm dialog "Archive team").
+- ⚠️ **No un-archive / archived-teams view in the manager UI.** After archiving, there is no toggle, tab, or list to see or restore archived teams from `/manage`. Archive is effectively one-way in the web.
+- 🐞 **MED — Subgroups can be created but members can't be assigned (web).** "Add subgroup" creates a subgroup (Rename/Delete work), but the roster table columns are Name/Role/Jersey/Position/Actions — there is **no subgroup-assignment control**, and clicking the subgroup does nothing. Subgroups stay at "0 members", so the advertised "target events at part of the team" cannot be used from the web at all.
+- ℹ️ **Reconcile** not exercised live — it uses the same `apiPost`-empty-body path as cancel/uncancel/reopen, so on current prod it would 500 (see S1 bug, now fixed on the branch).
+
+---
+
+## S10 — Account & club lifecycle
+
+- 🐞 **MED — No password management in the web at all.**
+  - `/app/profile` is **read-only**: shows Name + E-Mail as static text plus a language toggle; there is no display-name edit and no change-password control.
+  - The login page has **no "forgot password" / reset** link.
+  - Net: a web user cannot change their password, and one who forgets it has no recovery path on the web. (Presumably mobile-only — confirm.)
+- ✅ **Language DE/EN persists** across navigation + reload via the `lang` cookie (verified EN survived a reload, toggled back to DE).
+- ✅ **Inbox** populates: coach-a's inbox showed "RSVP: … confirmed for QA Training ALLSCOPE" after player-a1's accept.
+- ⚠️ **Notifications are anonymised to "A player".** The RSVP notification body reads "A player confirmed for …" (hardcoded `playerName = "A player"` in `AttendanceRoutes.kt`) — the coach can't tell *which* player responded. Low, but undermines the feature's usefulness.
+- ⚠️ **Club deactivation has no functional effect on members.** After superadmin deactivates the club, manager/coach/player all retain full access — teams still listed, `/manage` still loads with Edit / Invite co-manager / New team controls, no "inactive" banner. Deactivation only flips a flag in the superadmin listing (dialog says "keeps all data"). If deactivation is meant to suspend access, this is a gap; if it's a soft archive, at least show an "inactive" indicator. Reactivate works.
+
+## Summary — round 2 (S7–S10) issues
+
+- 🐞 MED — default=none + no responses = **finalize dead-end** (no member-marking UI). [S7]
+- 🐞 MED — **subgroups can't get members** in web (no assignment UI) → unusable for event targeting. [S9]
+- 🐞 MED — **no web password management** (read-only profile, no forgot-password). [S10]
+- ⚠️ no response-deadline field (cutoff=start; can't RSVP to imminent events) [S7]; minAttendees write-only [S7]; no un-archive for teams [S9]; RSVP notifications say "A player" [S10]; club deactivation is a no-op for members [S10]; already-redeemed invite still shows join form [S8].
+- ✅ Verified working: default=none block, coach per-member edit + unexcused, duplicate event, time-change propagation, archive, invalid-token + email-mismatch handling, multi-team player, second co-manager, language persistence, inbox.
