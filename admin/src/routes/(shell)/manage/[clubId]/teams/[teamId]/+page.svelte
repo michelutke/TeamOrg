@@ -21,6 +21,11 @@
 		return 'bg-surface-container-high text-on-surface-variant';
 	}
 
+	function availableForSubgroup(subGroupId: string) {
+		const memberIds = new Set((data.subGroupMembers[subGroupId] ?? []).map((m) => m.userId));
+		return data.members.filter((m) => !memberIds.has(m.userId));
+	}
+
 	const inputClasses =
 		'w-full rounded-2xl border-none bg-surface-container-high px-[18px] py-3 text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary';
 	const labelClasses = 'mb-1 block text-[12px] font-medium text-on-surface-variant';
@@ -174,38 +179,79 @@
 		{#if data.subGroups.length > 0}
 			<div class="mb-4 flex flex-col gap-2">
 				{#each data.subGroups as sg (sg.id)}
-					<div class="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3">
-						{#if renameTargetId === sg.id}
-							<form method="POST" action="?/renameSubGroup" class="flex flex-1 items-center gap-2">
-								<input type="hidden" name="subGroupId" value={sg.id} />
-								<input name="name" value={sg.name} class={inputClasses} />
-								<button type="submit" class="{filledBtn} whitespace-nowrap">{data.m.common.save}</button>
-								<button
-									type="button"
-									onclick={() => (renameTargetId = null)}
-									class="{outlinedBtn} whitespace-nowrap">{data.m.common.cancel}</button
-								>
-							</form>
-						{:else}
-							<div>
-								<span class="text-[14px] font-medium text-on-surface">{sg.name}</span>
-								<span class="ml-2 text-[12px] text-on-surface-variant">
-									{sg.memberCount} {sg.memberCount === 1 ? data.m.manage.memberSingular : data.m.teams.members}
-								</span>
-							</div>
-							<div class="flex shrink-0 gap-2">
-								<button
-									type="button"
-									onclick={() => (renameTargetId = sg.id)}
-									class="rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
-									>{data.m.manage.rename}</button
-								>
-								<button
-									type="button"
-									onclick={() => (deleteSubGroupTarget = { id: sg.id, name: sg.name })}
-									class="rounded-full border-none bg-transparent px-4 py-1.5 text-[12px] font-bold text-error hover:bg-error-container/50"
-									>{data.m.manage.delete}</button
-								>
+					<div class="flex flex-col gap-2 rounded-2xl bg-white px-4 py-3">
+						<div class="flex items-center justify-between gap-3">
+							{#if renameTargetId === sg.id}
+								<form method="POST" action="?/renameSubGroup" class="flex flex-1 items-center gap-2">
+									<input type="hidden" name="subGroupId" value={sg.id} />
+									<input name="name" value={sg.name} class={inputClasses} />
+									<button type="submit" class="{filledBtn} whitespace-nowrap">{data.m.common.save}</button>
+									<button
+										type="button"
+										onclick={() => (renameTargetId = null)}
+										class="{outlinedBtn} whitespace-nowrap">{data.m.common.cancel}</button
+									>
+								</form>
+							{:else}
+								<div>
+									<span class="text-[14px] font-medium text-on-surface">{sg.name}</span>
+									<span class="ml-2 text-[12px] text-on-surface-variant">
+										{sg.memberCount} {sg.memberCount === 1 ? data.m.manage.memberSingular : data.m.teams.members}
+									</span>
+								</div>
+								<div class="flex shrink-0 gap-2">
+									<button
+										type="button"
+										onclick={() => (renameTargetId = sg.id)}
+										class="rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
+										>{data.m.manage.rename}</button
+									>
+									<button
+										type="button"
+										onclick={() => (deleteSubGroupTarget = { id: sg.id, name: sg.name })}
+										class="rounded-full border-none bg-transparent px-4 py-1.5 text-[12px] font-bold text-error hover:bg-error-container/50"
+										>{data.m.manage.delete}</button
+									>
+								</div>
+							{/if}
+						</div>
+
+						{#if renameTargetId !== sg.id}
+							<div class="flex flex-col gap-1.5 pl-1">
+								{#each data.subGroupMembers[sg.id] ?? [] as sm (sm.userId)}
+									<div class="flex items-center justify-between gap-2 text-[13px] text-on-surface">
+										<span>{sm.displayName}</span>
+										<form method="POST" action="?/removeSubgroupMember">
+											<input type="hidden" name="subGroupId" value={sg.id} />
+											<input type="hidden" name="userId" value={sm.userId} />
+											<button
+												type="submit"
+												aria-label={data.m.manage.remove}
+												class="cursor-pointer rounded-full border-none bg-transparent px-2 text-[14px] font-bold text-error hover:opacity-70"
+												>×</button
+											>
+										</form>
+									</div>
+								{/each}
+								{#if availableForSubgroup(sg.id).length > 0}
+									<form method="POST" action="?/addSubgroupMember" class="flex items-center gap-2 pt-1">
+										<input type="hidden" name="subGroupId" value={sg.id} />
+										<select
+											name="userId"
+											class="cursor-pointer rounded-2xl border-none bg-surface-container-high px-3 py-2 text-[13px] text-on-surface outline-none"
+										>
+											<option value="">{data.m.manage.subgroupSelectMemberPlaceholder}</option>
+											{#each availableForSubgroup(sg.id) as member (member.userId)}
+												<option value={member.userId}>{member.displayName}</option>
+											{/each}
+										</select>
+										<button
+											type="submit"
+											class="whitespace-nowrap rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
+											>{data.m.manage.subgroupAddMemberLabel}</button
+										>
+									</form>
+								{/if}
 							</div>
 						{/if}
 					</div>

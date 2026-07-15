@@ -17,8 +17,10 @@
 	let showNdsImport = $state(false);
 	let migrateSource = $state<{ id: string; name: string } | null>(null);
 
-	const activeTeams = $derived(data.teams.filter((t) => !t.deprecated));
-	const deprecatedTeams = $derived(data.teams.filter((t) => t.deprecated));
+	const archivedTeams = $derived(data.teams.filter((t) => t.archivedAt != null));
+	const nonArchivedTeams = $derived(data.teams.filter((t) => t.archivedAt == null));
+	const activeTeams = $derived(nonArchivedTeams.filter((t) => !t.deprecated));
+	const deprecatedTeams = $derived(nonArchivedTeams.filter((t) => t.deprecated));
 	const migrateTargets = $derived(activeTeams.map((t) => ({ id: t.id, name: t.name })));
 
 	const inputClasses =
@@ -153,6 +155,31 @@
 					</div>
 				</div>
 			{/each}
+		</div>
+	{/if}
+
+	{#if archivedTeams.length > 0}
+		<div class="flex flex-col gap-4">
+			<h2 class="text-[17px] font-bold text-on-surface">{data.m.manage.archivedTeamsTitle}</h2>
+			<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				{#each archivedTeams as team}
+					<div class="flex flex-col gap-2 rounded-[28px] bg-surface-container-low px-6 py-6 opacity-80">
+						<h2 class="text-[18px] font-bold text-on-surface">{team.name}</h2>
+						<p class="text-[14px] text-on-surface-variant">
+							{team.memberCount} {data.m.teams.members}{team.description ? ` · ${team.description}` : ''}
+						</p>
+						<div class="mt-1">
+							<form method="POST" action="?/unarchive">
+								<input type="hidden" name="teamId" value={team.id} />
+								<button
+									type="submit"
+									class="cursor-pointer border-none bg-transparent p-0 text-[14px] font-bold text-primary hover:underline"
+								>{data.m.manage.unarchive}</button>
+							</form>
+						</div>
+					</div>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </div>

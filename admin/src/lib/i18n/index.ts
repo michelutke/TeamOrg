@@ -104,6 +104,7 @@ export interface Dict {
 		fLocation: string;
 		fDescription: string;
 		fMinAttendees: string;
+		fResponseDeadline: string;
 		selectTeams: string;
 		required: string;
 		recurringSection: string;
@@ -161,6 +162,16 @@ export interface Dict {
 		language: string;
 		name: string;
 		email: string;
+		changePasswordTitle: string;
+		currentPasswordLabel: string;
+		newPasswordLabel: string;
+		confirmPasswordLabel: string;
+		changePasswordButton: string;
+		passwordChanged: string;
+		passwordMismatch: string;
+		passwordTooShort: string;
+		passwordWrongCurrent: string;
+		passwordChangeFailed: string;
 	};
 	invite: {
 		eyebrow: string;
@@ -185,6 +196,8 @@ export interface Dict {
 		invalidBody: string;
 		emailTaken: string;
 		failed: string;
+		alreadyRedeemedTitle: string;
+		alreadyRedeemedBody: string;
 	};
 	swissvolley: {
 		importButton: string;
@@ -288,6 +301,8 @@ export interface Dict {
 		addSubgroup: string;
 		subgroupNameLabel: string;
 		subgroupNamePlaceholder: string;
+		subgroupSelectMemberPlaceholder: string;
+		subgroupAddMemberLabel: string;
 		noMembersYet: string;
 		actionsLabel: string;
 		makeCoach: string;
@@ -316,6 +331,8 @@ export interface Dict {
 		loadMore: string;
 		shownCountMiddle: string;
 		shownCountSuffix: string;
+		archivedTeamsTitle: string;
+		unarchive: string;
 	};
 }
 
@@ -412,6 +429,7 @@ const de: Dict = {
 		fLocation: 'Ort',
 		fDescription: 'Beschreibung',
 		fMinAttendees: 'Mindestteilnehmer',
+		fResponseDeadline: 'Anmeldeschluss (optional)',
 		selectTeams: 'Mindestens ein Team wählen',
 		required: 'Pflichtfeld',
 		recurringSection: 'Wiederholung',
@@ -469,7 +487,17 @@ const de: Dict = {
 		account: 'Konto',
 		language: 'Sprache',
 		name: 'Name',
-		email: 'E-Mail'
+		email: 'E-Mail',
+		changePasswordTitle: 'Passwort ändern',
+		currentPasswordLabel: 'Aktuelles Passwort',
+		newPasswordLabel: 'Neues Passwort',
+		confirmPasswordLabel: 'Neues Passwort bestätigen',
+		changePasswordButton: 'Passwort ändern',
+		passwordChanged: 'Passwort geändert.',
+		passwordMismatch: 'Die Passwörter stimmen nicht überein.',
+		passwordTooShort: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
+		passwordWrongCurrent: 'Das aktuelle Passwort ist falsch.',
+		passwordChangeFailed: 'Passwort konnte nicht geändert werden. Bitte versuche es erneut.'
 	},
 	invite: {
 		eyebrow: 'EINLADUNG',
@@ -494,7 +522,9 @@ const de: Dict = {
 		invalidTitle: 'Einladung ungültig oder abgelaufen',
 		invalidBody: 'Diese Einladung ist nicht mehr gültig. Bitte fordere beim Verein eine neue an.',
 		emailTaken: 'Für diese E-Mail existiert bereits ein Konto. Bitte melde dich an.',
-		failed: 'Beitritt fehlgeschlagen. Bitte versuche es erneut.'
+		failed: 'Beitritt fehlgeschlagen. Bitte versuche es erneut.',
+		alreadyRedeemedTitle: 'Einladung bereits verwendet',
+		alreadyRedeemedBody: 'Diese Einladung wurde bereits verwendet.'
 	},
 	swissvolley: {
 		importButton: 'Aus SwissVolley importieren',
@@ -601,6 +631,8 @@ const de: Dict = {
 		addSubgroup: 'Untergruppe hinzufügen',
 		subgroupNameLabel: 'Name der Untergruppe',
 		subgroupNamePlaceholder: 'z.B. Stammspieler',
+		subgroupSelectMemberPlaceholder: 'Mitglied wählen…',
+		subgroupAddMemberLabel: 'Hinzufügen',
 		noMembersYet: 'Noch keine Mitglieder. Erstelle einen Einladungslink, um Mitglieder hinzuzufügen.',
 		actionsLabel: 'Aktionen',
 		makeCoach: 'Zum Trainer machen',
@@ -628,7 +660,9 @@ const de: Dict = {
 		loadingShort: 'Lädt…',
 		loadMore: 'Mehr laden',
 		shownCountMiddle: 'von',
-		shownCountSuffix: 'angezeigt'
+		shownCountSuffix: 'angezeigt',
+		archivedTeamsTitle: 'Archivierte Teams',
+		unarchive: 'Wiederherstellen'
 	}
 };
 
@@ -725,6 +759,7 @@ const en: Dict = {
 		fLocation: 'Location',
 		fDescription: 'Description',
 		fMinAttendees: 'Min. attendees',
+		fResponseDeadline: 'Response deadline (optional)',
 		selectTeams: 'Select at least one team',
 		required: 'Required',
 		recurringSection: 'Recurrence',
@@ -782,7 +817,17 @@ const en: Dict = {
 		account: 'Account',
 		language: 'Language',
 		name: 'Name',
-		email: 'Email'
+		email: 'Email',
+		changePasswordTitle: 'Change password',
+		currentPasswordLabel: 'Current password',
+		newPasswordLabel: 'New password',
+		confirmPasswordLabel: 'Confirm new password',
+		changePasswordButton: 'Change password',
+		passwordChanged: 'Password changed.',
+		passwordMismatch: 'Passwords do not match.',
+		passwordTooShort: 'The password must be at least 8 characters long.',
+		passwordWrongCurrent: 'The current password is incorrect.',
+		passwordChangeFailed: 'Could not change password. Please try again.'
 	},
 	invite: {
 		eyebrow: 'INVITATION',
@@ -807,7 +852,9 @@ const en: Dict = {
 		invalidTitle: 'Invitation invalid or expired',
 		invalidBody: 'This invitation is no longer valid. Please ask the club for a new one.',
 		emailTaken: 'An account already exists for this email. Please sign in.',
-		failed: 'Could not join. Please try again.'
+		failed: 'Could not join. Please try again.',
+		alreadyRedeemedTitle: 'Invitation already used',
+		alreadyRedeemedBody: 'This invite has already been used.'
 	},
 	swissvolley: {
 		importButton: 'Import from SwissVolley',
@@ -914,6 +961,8 @@ const en: Dict = {
 		addSubgroup: 'Add subgroup',
 		subgroupNameLabel: 'Subgroup name',
 		subgroupNamePlaceholder: 'e.g. Starters',
+		subgroupSelectMemberPlaceholder: 'Select member…',
+		subgroupAddMemberLabel: 'Add',
 		noMembersYet: 'No members yet. Generate an invite link to add members.',
 		actionsLabel: 'Actions',
 		makeCoach: 'Make Coach',
@@ -941,7 +990,9 @@ const en: Dict = {
 		loadingShort: 'Loading…',
 		loadMore: 'Load more',
 		shownCountMiddle: 'of',
-		shownCountSuffix: 'shown'
+		shownCountSuffix: 'shown',
+		archivedTeamsTitle: 'Archived teams',
+		unarchive: 'Restore'
 	}
 };
 

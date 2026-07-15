@@ -83,7 +83,9 @@
 			{/if}
 
 			<!-- State-specific action -->
-			{#if data.state === 'redeemable'}
+			{#if data.state === 'redeemed'}
+				<p class="mt-7 text-[14px] text-on-surface-variant">{i.alreadyRedeemedBody}</p>
+			{:else if data.state === 'redeemable'}
 				<form method="POST" action="?/redeem" use:enhance class="mt-7">
 					<button
 						type="submit"
