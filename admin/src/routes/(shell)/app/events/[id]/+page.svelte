@@ -361,6 +361,12 @@
 			</div>
 		</div>
 
+		{#if data.event.minAttendees && counts.confirmed < data.event.minAttendees}
+			<p class="mb-3 text-[12px] font-medium text-error">
+				{data.m.rsvp.minAttendeesWarning} ({counts.confirmed}/{data.event.minAttendees})
+			</p>
+		{/if}
+
 		{#if data.responses.length === 0}
 			<p class="text-[13px] text-on-surface-variant">—</p>
 		{:else}

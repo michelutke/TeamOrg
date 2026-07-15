@@ -90,6 +90,7 @@ export interface Dict {
 		saved: string;
 		responses: string;
 		deadlinePassed: string;
+		minAttendeesWarning: string;
 	};
 	eventForm: {
 		newTitle: string;
@@ -396,7 +397,8 @@ const de: Dict = {
 		save: 'Speichern',
 		saved: 'Gespeichert',
 		responses: 'Rückmeldungen',
-		deadlinePassed: 'Die Antwortfrist ist abgelaufen.'
+		deadlinePassed: 'Die Antwortfrist ist abgelaufen.',
+		minAttendeesWarning: 'Mindestteilnehmer nicht erreicht'
 	},
 	eventForm: {
 		newTitle: 'Neuer Termin',
@@ -708,7 +710,8 @@ const en: Dict = {
 		save: 'Save',
 		saved: 'Saved',
 		responses: 'Responses',
-		deadlinePassed: 'The response deadline has passed.'
+		deadlinePassed: 'The response deadline has passed.',
+		minAttendeesWarning: 'Minimum attendees not reached'
 	},
 	eventForm: {
 		newTitle: 'New event',
