@@ -17,7 +17,10 @@ interface TeamMember {
 interface AttendanceRow {
 	eventId: string;
 	userId: string;
-	status: string;
+	// The /teams/{id}/attendance endpoint serialises the response status as `responseStatus`
+	// (RawAttendanceDto), NOT `status`. Reading `status` here silently yielded undefined, so every
+	// imported/confirmed response was miscounted as "no reply".
+	responseStatus: string | null;
 }
 
 interface EventAttendance {
@@ -46,7 +49,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const byEvent = new Map<string, Map<string, string>>();
 	for (const r of rows) {
 		if (!byEvent.has(r.eventId)) byEvent.set(r.eventId, new Map());
-		byEvent.get(r.eventId)!.set(r.userId, r.status);
+		if (r.responseStatus) byEvent.get(r.eventId)!.set(r.userId, r.responseStatus);
 	}
 
 	const memberCount = members.length;

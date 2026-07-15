@@ -165,8 +165,9 @@ fun Route.ndsRoutes() {
                 else -> return@post call.respond(HttpStatusCode.BadRequest, "teamId oder createTeamName erforderlich")
             }
 
-            // The Angebot may only be linked to a single team.
-            val existingForAngebot = ndsRepository.findTeamIdByAngebot(parsed.angebotId)
+            // The Angebot may only be linked to a single team within this club (scoped per-club so
+            // another club's link never blocks this import).
+            val existingForAngebot = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
             if (existingForAngebot != null && existingForAngebot != teamId) {
                 return@post call.respond(
                     HttpStatusCode.Conflict,

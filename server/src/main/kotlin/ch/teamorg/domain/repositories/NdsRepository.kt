@@ -43,7 +43,9 @@ data class ExportAttendance(
 )
 
 interface NdsRepository {
-    suspend fun findTeamIdByAngebot(angebotId: String): UUID?
+    /** The team (if any) in [clubId] already linked to this Angebot. Scoped per-club so importing
+     *  an Angebot into one club never blocks importing it into another. */
+    suspend fun findTeamIdByAngebot(angebotId: String, clubId: UUID): UUID?
     suspend fun linkTeam(teamId: UUID, angebotId: String, kursName: String?, hauptsportart: String?, nutzergruppe: String?)
     suspend fun getTeamNds(teamId: UUID): TeamNdsInfo?
     /** Upsert all parsed members for a team, creating a provisional user + team role for new ones. */
@@ -72,8 +74,9 @@ interface NdsRepository {
 
 class NdsRepositoryImpl : NdsRepository {
 
-    override suspend fun findTeamIdByAngebot(angebotId: String): UUID? = transaction {
-        TeamsTable.select(TeamsTable.id).where { TeamsTable.ndsAngebotId eq angebotId }
+    override suspend fun findTeamIdByAngebot(angebotId: String, clubId: UUID): UUID? = transaction {
+        TeamsTable.select(TeamsTable.id)
+            .where { (TeamsTable.ndsAngebotId eq angebotId) and (TeamsTable.clubId eq clubId) }
             .map { it[TeamsTable.id] }
             .singleOrNull()
     }

@@ -1,4 +1,3 @@
-import { ApiError } from '$lib/server/guards';
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -12,7 +11,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		headers: { Authorization: `Bearer ${locals.token}` }
 	});
 	if (res.status === 409) throw error(409, 'Export blockiert: bitte zuerst die Pre-Flight-Fehler beheben.');
-	if (!res.ok) throw new ApiError(res.status, 'Export fehlgeschlagen');
+	if (res.status === 403) throw error(403, 'Kein Zugriff auf dieses Team.');
+	if (!res.ok) throw error(res.status, 'Export fehlgeschlagen');
 
 	const body = await res.arrayBuffer();
 	return new Response(body, {
