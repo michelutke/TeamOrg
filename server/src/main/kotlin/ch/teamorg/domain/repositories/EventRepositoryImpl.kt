@@ -221,6 +221,7 @@ class EventRepositoryImpl : EventRepository {
             if (request.description != null) stmt[EventsTable.description] = request.description
             if (request.minAttendees != null) stmt[EventsTable.minAttendees] = request.minAttendees
             if (request.defaultResponse != null) stmt[EventsTable.defaultResponse] = request.defaultResponse
+            if (request.responseDeadline != null) stmt[EventsTable.responseDeadline] = request.responseDeadline
             stmt[EventsTable.updatedAt] = Instant.now()
         }
         if (updated == 0) return@transaction null

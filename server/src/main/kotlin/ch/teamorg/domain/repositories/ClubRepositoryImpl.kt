@@ -53,7 +53,7 @@ class ClubRepositoryImpl : ClubRepository {
             .single()
     }
 
-    override suspend fun listTeams(clubId: UUID): List<Team> = transaction {
+    override suspend fun listTeams(clubId: UUID, includeArchived: Boolean): List<Team> = transaction {
         val memberCounts = TeamRolesTable
             .select(TeamRolesTable.teamId, TeamRolesTable.teamId.count())
             .groupBy(TeamRolesTable.teamId)
@@ -82,7 +82,7 @@ class ClubRepositoryImpl : ClubRepository {
                 val deprecated = teamId in teamsWithLinks && teamId !in teamsWithActiveLink
                 rowToTeam(row, memberCounts[teamId] ?: 0, deprecated)
             }
-            .filter { it.archivedAt == null }
+            .filter { includeArchived || it.archivedAt == null }
     }
 
     override suspend fun listUsers(clubId: UUID, limit: Int, offset: Int): List<ClubUser> = transaction {

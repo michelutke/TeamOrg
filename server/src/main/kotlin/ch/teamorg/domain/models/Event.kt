@@ -144,6 +144,7 @@ data class EditEventRequest(
     val teamIds: List<@Serializable(with = UUIDSerializer::class) UUID>?,
     val subgroupIds: List<@Serializable(with = UUIDSerializer::class) UUID>?,
     val defaultResponse: String? = null,
+    @Serializable(with = InstantSerializer::class) val responseDeadline: Instant? = null,
 )
 
 enum class RecurringScope { this_only, this_and_future, all }

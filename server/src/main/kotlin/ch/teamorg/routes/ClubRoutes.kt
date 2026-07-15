@@ -135,7 +135,8 @@ fun Route.clubRoutes() {
                 get("/teams") {
                     val clubId = UUID.fromString(call.parameters["clubId"])
                     if (!call.requireClubMember(clubId, clubRepository)) return@get
-                    val teams = clubRepository.listTeams(clubId)
+                    val includeArchived = call.request.queryParameters["includeArchived"]?.toBoolean() ?: false
+                    val teams = clubRepository.listTeams(clubId, includeArchived)
                     call.respond(teams)
                 }
 

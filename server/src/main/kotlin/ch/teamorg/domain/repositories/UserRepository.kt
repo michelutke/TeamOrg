@@ -13,6 +13,8 @@ interface UserRepository {
     fun create(email: String, passwordHash: String, displayName: String): User
     fun existsByEmail(email: String): Boolean
     fun getPasswordHash(email: String): String?
+    fun getPasswordHashById(userId: UUID): String?
+    fun updatePasswordHash(userId: UUID, passwordHash: String)
     fun updateAvatarUrl(userId: UUID, avatarUrl: String?): User
     fun findAll(page: Int, pageSize: Int): List<User>
     fun countAll(): Long
@@ -56,6 +58,18 @@ class UserRepositoryImpl : UserRepository {
         UsersTable.select(UsersTable.passwordHash).where { UsersTable.email eq email }
             .map { it[UsersTable.passwordHash] }
             .singleOrNull()
+    }
+
+    override fun getPasswordHashById(userId: UUID): String? = transaction {
+        UsersTable.select(UsersTable.passwordHash).where { UsersTable.id eq userId }
+            .map { it[UsersTable.passwordHash] }
+            .singleOrNull()
+    }
+
+    override fun updatePasswordHash(userId: UUID, passwordHash: String): Unit = transaction {
+        UsersTable.update({ UsersTable.id eq userId }) {
+            it[UsersTable.passwordHash] = passwordHash
+        }
     }
 
     override fun updateAvatarUrl(userId: UUID, avatarUrl: String?): User = transaction {

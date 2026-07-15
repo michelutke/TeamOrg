@@ -37,6 +37,9 @@ data class LoginRequest(val email: String, val password: String)
 @Serializable
 data class AuthResponse(val token: String, val userId: String, val displayName: String, val avatarUrl: String?)
 
+@Serializable
+data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
+
 fun Route.authRoutes() {
     val userRepository by inject<UserRepository>()
     val teamRepository by inject<TeamRepository>()
@@ -98,6 +101,23 @@ fun Route.authRoutes() {
             post("/logout") {
                 // Stateless JWT logout - 200 OK
                 call.respond(HttpStatusCode.OK)
+            }
+
+            post("/change-password") {
+                val request = call.receive<ChangePasswordRequest>()
+                if (request.newPassword.length < 8) {
+                    return@post call.respond(HttpStatusCode.BadRequest, "Password must be at least 8 characters")
+                }
+                call.authenticateUser(userRepository) { user ->
+                    val userId = UUID.fromString(user.id)
+                    val currentHash = userRepository.getPasswordHashById(userId)
+                    if (currentHash == null || !BCrypt.checkpw(request.currentPassword, currentHash)) {
+                        return@authenticateUser call.respond(HttpStatusCode.Unauthorized, "Current password is incorrect")
+                    }
+                    val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
+                    userRepository.updatePasswordHash(userId, newHash)
+                    call.respond(HttpStatusCode.OK)
+                }
             }
 
             get("/me") {
