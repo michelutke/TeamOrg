@@ -231,3 +231,19 @@ Teams: QA Damen 1, QA Herren 1 RENAMED, QA NDS Damen 3L (16 imported members, 10
 - 🐞 MED — **no web password management** (read-only profile, no forgot-password). [S10]
 - ⚠️ no response-deadline field (cutoff=start; can't RSVP to imminent events) [S7]; minAttendees write-only [S7]; no un-archive for teams [S9]; RSVP notifications say "A player" [S10]; club deactivation is a no-op for members [S10]; already-redeemed invite still shows join form [S8].
 - ✅ Verified working: default=none block, coach per-member edit + unexcused, duplicate event, time-change propagation, archive, invalid-token + email-mismatch handling, multi-team player, second co-manager, language persistence, inbox.
+
+---
+
+## Fix status — round 2 (S7–S10), branch `fix/exploratory-e2e-findings`
+
+- **Finalize dead-end (MED)** — FIXED. Event detail now renders the full team roster (synthetic "no-response" rows), so a coach can resolve no-response members via the per-member edit control; `default=none` finalize is no longer a dead-end.
+- **Subgroups can't get members (MED)** — FIXED. Added backend `GET /teams/{id}/subgroups/{sgId}/members` (only add/delete existed) + a manage-team UI to assign/remove members.
+- **No web password management (MED)** — PARTIALLY FIXED. Added `POST /auth/change-password` + a change-password form on the (previously read-only) profile page. **Forgot-password/reset is DEFERRED** — it needs a reset-token table + transactional email + a reset page, and the app has no email-based auth flows today; wants a product/infra decision.
+- **No response-deadline field** — FIXED. Optional "Anmeldeschluss" on event create + edit; backend now accepts `responseDeadline`.
+- **minAttendees write-only** — FIXED. Warning shown on the event detail when confirmed < min.
+- **No un-archive for teams** — FIXED. `POST /teams/{id}/unarchive` + `listTeams(includeArchived)`; manage-teams shows an archived section with restore.
+- **RSVP notification says "A player"** — FIXED. Uses the responder's real display name.
+- **Already-redeemed invite shows join form** — FIXED. `/i/{token}` now shows an "already used" notice when the invite is redeemed (backend already exposed `alreadyRedeemed`).
+- **Club deactivation is a no-op for members** — DEFERRED (product decision). Should deactivation suspend member/manager access, or remain a soft archive? Not changed; needs a call on intended semantics before enforcing.
+
+Verification: `admin` `npm run check` → 0 errors; `:server:compileKotlin` → BUILD SUCCESSFUL. Server integration tests need Docker (unavailable here) — run `:server:test` locally. Fixes are on the branch, NOT deployed to prod.
