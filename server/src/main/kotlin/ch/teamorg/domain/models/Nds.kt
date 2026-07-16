@@ -35,7 +35,12 @@ data class ParsedAnwesenheitsliste(
     val gruppengroesse: String? = null,
     val kursstatus: String? = null,
     val activities: List<ParsedActivity> = emptyList(),
-    val members: List<ParsedMember> = emptyList()
+    val members: List<ParsedMember> = emptyList(),
+    // Populated on the PARSE RESPONSE when the Angebot is already linked to a team of the
+    // same club, so the import dialog re-imports into that team instead of creating a new
+    // one. Ignored on import (the request carries an explicit teamId instead).
+    val linkedTeamId: String? = null,
+    val linkedTeamName: String? = null
 )
 
 /**

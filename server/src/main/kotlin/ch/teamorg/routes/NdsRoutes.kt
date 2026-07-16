@@ -103,10 +103,22 @@ fun Route.ndsRoutes() {
                 part.dispose()
             }
 
+            val result = parsed
             when {
                 parseError != null -> call.respond(HttpStatusCode.UnprocessableEntity, parseError)
-                parsed == null -> call.respond(HttpStatusCode.BadRequest, "Keine Datei hochgeladen")
-                else -> call.respond(parsed)
+                result == null -> call.respond(HttpStatusCode.BadRequest, "Keine Datei hochgeladen")
+                else -> {
+                    // Surface an existing Angebot→team link (same club only) so the import
+                    // dialog re-imports into that team instead of creating a new one.
+                    val linkedTeam = ndsRepository.findTeamIdByAngebot(result.angebotId)
+                        ?.takeIf { teamRepository.getClubId(it) == clubId }
+                        ?.let { teamRepository.findById(it) }
+                    call.respond(
+                        if (linkedTeam != null)
+                            result.copy(linkedTeamId = linkedTeam.id, linkedTeamName = linkedTeam.name)
+                        else result
+                    )
+                }
             }
         }
 
@@ -160,6 +172,17 @@ fun Route.ndsRoutes() {
                     tid
                 }
                 !request.createTeamName.isNullOrBlank() -> {
+                    // The Angebot may only be linked to a single team — check BEFORE creating,
+                    // otherwise every rejected re-import attempt leaves an orphan empty team.
+                    val existing = ndsRepository.findTeamIdByAngebot(parsed.angebotId)
+                    if (existing != null) {
+                        val name = teamRepository.findById(existing)?.name ?: "einem anderen Team"
+                        return@post call.respond(
+                            HttpStatusCode.Conflict,
+                            "Angebot ${parsed.angebotId} ist bereits mit «$name» verknüpft — " +
+                                "der Import aktualisiert dieses Team (Datei erneut hochladen)."
+                        )
+                    }
                     UUID.fromString(teamRepository.create(clubId, request.createTeamName.trim(), null).id)
                 }
                 else -> return@post call.respond(HttpStatusCode.BadRequest, "teamId oder createTeamName erforderlich")
