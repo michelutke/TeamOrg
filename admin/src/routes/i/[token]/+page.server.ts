@@ -46,6 +46,16 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 		return { lang, m, token: params.token, invite: null, state: 'invalid' as const };
 	}
 
+	if (invite.alreadyRedeemed) {
+		return {
+			lang,
+			m,
+			token: params.token,
+			invite: { ...invite, invitedEmail: null },
+			state: 'redeemed' as const
+		};
+	}
+
 	if (locals.user) {
 		const state = emailMatches(invite, locals.user.email) ? ('redeemable' as const) : ('mismatch' as const);
 		return {

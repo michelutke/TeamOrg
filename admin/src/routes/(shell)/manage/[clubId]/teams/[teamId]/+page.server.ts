@@ -35,6 +35,12 @@ interface SubGroup {
 	memberCount: number;
 }
 
+interface SubGroupMember {
+	userId: string;
+	displayName: string;
+	avatarUrl: string | null;
+}
+
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const team = await apiGet<Team>(`/teams/${params.teamId}`, locals.token!);
 
@@ -49,7 +55,17 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		() => [] as SubGroup[]
 	);
 
-	return { team, members, subGroups, clubId: params.clubId };
+	const subGroupMembers: Record<string, SubGroupMember[]> = {};
+	await Promise.all(
+		subGroups.map(async (sg) => {
+			subGroupMembers[sg.id] = await apiGet<SubGroupMember[]>(
+				`/teams/${params.teamId}/subgroups/${sg.id}/members`,
+				locals.token!
+			).catch(() => [] as SubGroupMember[]);
+		})
+	);
+
+	return { team, members, subGroups, subGroupMembers, clubId: params.clubId };
 };
 
 export const actions: Actions = {
@@ -182,6 +198,43 @@ export const actions: Actions = {
 			if (err instanceof ApiError && err.status === 403)
 				return fail(403, { error: 'Not authorized to manage subgroups' });
 			return fail(500, { error: 'Failed to delete subgroup' });
+		}
+	},
+
+	addSubgroupMember: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const subGroupId = data.get('subGroupId') as string;
+		const userId = data.get('userId') as string;
+		if (!subGroupId || !userId) return fail(400, { error: 'Member required' });
+		try {
+			await apiPost(`/teams/${params.teamId}/subgroups/${subGroupId}/members`, locals.token!, {
+				userId
+			});
+			return { success: true, action: 'subgroup_member_added' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to manage subgroups' });
+			return fail(500, { error: 'Failed to add member' });
+		}
+	},
+
+	removeSubgroupMember: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const subGroupId = data.get('subGroupId') as string;
+		const userId = data.get('userId') as string;
+		if (!subGroupId || !userId) return fail(400, { error: 'Member required' });
+		try {
+			await apiDelete(
+				`/teams/${params.teamId}/subgroups/${subGroupId}/members/${userId}`,
+				locals.token!
+			);
+			return { success: true, action: 'subgroup_member_removed' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to manage subgroups' });
+			return fail(500, { error: 'Failed to remove member' });
 		}
 	}
 };

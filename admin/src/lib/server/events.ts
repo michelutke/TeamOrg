@@ -13,6 +13,7 @@ export interface AppEvent {
 	location: string | null;
 	description: string | null;
 	minAttendees: number | null;
+	responseDeadline: string | null;
 	status: string;
 	cancelledAt: string | null;
 	teamIds: string[];

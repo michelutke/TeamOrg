@@ -2,6 +2,7 @@ package ch.teamorg.routes
 
 import ch.teamorg.db.tables.SubGroupMembersTable
 import ch.teamorg.db.tables.SubGroupsTable
+import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
@@ -32,6 +33,23 @@ data class AddSubGroupMemberRequest(val userId: String)
 
 @Serializable
 data class SubGroupResponse(val id: String, val teamId: String, val name: String, val memberCount: Long)
+
+@Serializable
+data class SubGroupMemberResponse(val userId: String, val displayName: String, val avatarUrl: String?)
+
+/** Reads the users belonging to a subgroup, joined against UsersTable for display fields. */
+private suspend fun subGroupMembers(subGroupId: UUID): List<SubGroupMemberResponse> = newSuspendedTransaction {
+    (SubGroupMembersTable innerJoin UsersTable)
+        .selectAll()
+        .where { SubGroupMembersTable.subGroupId eq subGroupId }
+        .map { row ->
+            SubGroupMemberResponse(
+                userId = row[UsersTable.id].toString(),
+                displayName = row[UsersTable.displayName],
+                avatarUrl = row[UsersTable.avatarUrl]
+            )
+        }
+}
 
 /** Returns the team a subgroup belongs to, or null if the subgroup does not exist. */
 private suspend fun subGroupTeamId(subGroupId: UUID): UUID? = newSuspendedTransaction {
@@ -123,6 +141,14 @@ fun Route.subGroupRoutes() {
                         SubGroupsTable.deleteWhere { SubGroupsTable.id eq subGroupId }
                     }
                     call.respond(HttpStatusCode.NoContent)
+                }
+
+                get("/members") {
+                    val teamId = UUID.fromString(call.parameters["teamId"])
+                    val subGroupId = UUID.fromString(call.parameters["subGroupId"])
+                    if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@get
+                    if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@get
+                    call.respond(subGroupMembers(subGroupId))
                 }
 
                 post("/members") {

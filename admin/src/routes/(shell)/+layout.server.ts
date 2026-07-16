@@ -40,6 +40,7 @@ export const load: LayoutServerLoad = async ({ locals, url, cookies }) => {
 	return {
 		lang,
 		m: getMessages(lang),
+		impersonation: locals.impersonation || null,
 		user: {
 			id: user.id,
 			displayName: user.displayName,

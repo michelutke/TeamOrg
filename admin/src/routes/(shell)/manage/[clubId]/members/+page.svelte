@@ -67,36 +67,36 @@
 </script>
 
 <svelte:head>
-	<title>Mitglieder — TeamOrg</title>
+	<title>{data.m.manage.membersPageTitle} — TeamOrg</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">
 	<!-- Page header -->
 	<div class="flex items-center justify-between">
 		<div class="flex flex-col gap-1">
-			<h1 class="font-display text-[30px] font-extrabold text-on-surface">Mitglieder verwalten</h1>
-			<p class="text-[13px] text-on-surface-variant">{shown.length} von {users.length} angezeigt</p>
+			<h1 class="font-display text-[30px] font-extrabold text-on-surface">{data.m.manage.manageMembersTitle}</h1>
+			<p class="text-[13px] text-on-surface-variant">{shown.length} {data.m.manage.shownCountMiddle} {users.length} {data.m.manage.shownCountSuffix}</p>
 		</div>
 	</div>
 
 	<!-- Invite by email card -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
-		<h2 class="mb-3 font-display text-[18px] font-bold text-on-surface">Per E-Mail einladen</h2>
+		<h2 class="mb-3 font-display text-[18px] font-bold text-on-surface">{data.m.manage.inviteByEmailTitle}</h2>
 		{#if hasTeams}
 			<form method="POST" action="?/inviteByEmail" use:enhance={mutationEnhance} class="flex flex-wrap items-end gap-3">
 				<div class="min-w-[180px] flex-1">
-					<label for="invite-email" class={labelClasses}>E-Mail</label>
+					<label for="invite-email" class={labelClasses}>{data.m.login.email}</label>
 					<input
 						id="invite-email"
 						name="email"
 						type="email"
 						required
-						placeholder="person@example.com"
+						placeholder={data.m.manage.emailPlaceholderPerson}
 						class={inputClasses}
 					/>
 				</div>
 				<div class="min-w-[140px]">
-					<label for="invite-team" class={labelClasses}>Team</label>
+					<label for="invite-team" class={labelClasses}>{data.m.manage.teamLabel}</label>
 					<select id="invite-team" name="teamId" required class={inputClasses}>
 						{#each data.teams as t}
 							<option value={t.id}>{t.name}</option>
@@ -104,18 +104,18 @@
 					</select>
 				</div>
 				<div class="min-w-[120px]">
-					<label for="invite-role" class={labelClasses}>Rolle</label>
+					<label for="invite-role" class={labelClasses}>{data.m.invite.roleLabel}</label>
 					<select id="invite-role" name="role" class={inputClasses}>
 						{#each ROLES as r}
 							<option value={r}>{r}</option>
 						{/each}
 					</select>
 				</div>
-				<button type="submit" class={filledBtn}>Einladen</button>
+				<button type="submit" class={filledBtn}>{data.m.manage.inviteButton}</button>
 			</form>
 		{:else}
 			<p class="text-[14px] text-on-surface-variant">
-				Erst ein Team anlegen, bevor Mitglieder eingeladen werden können.
+				{data.m.manage.noTeamsForInvite}
 			</p>
 		{/if}
 	</div>
@@ -124,7 +124,7 @@
 	<div>
 		<input
 			bind:value={filter}
-			placeholder="Filtern…"
+			placeholder={data.m.manage.filterPlaceholder}
 			class="w-full max-w-sm rounded-2xl border-none bg-surface-container-high px-[18px] py-3 text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary"
 		/>
 	</div>
@@ -133,7 +133,7 @@
 	{#if shown.length === 0}
 		<div class="rounded-3xl bg-surface-container-low px-6 py-12 text-center">
 			<p class="text-[14px] text-on-surface-variant">
-				{filter.trim() ? 'Keine Übereinstimmung.' : 'Keine Mitglieder gefunden.'}
+				{filter.trim() ? data.m.manage.noMatch : data.m.manage.noMembersFound}
 			</p>
 		</div>
 	{:else}
@@ -175,7 +175,7 @@
 								<button
 									type="submit"
 									class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-4 py-2 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container"
-								>Speichern</button>
+								>{data.m.common.save}</button>
 							</form>
 							<!-- Remove -->
 							<form method="POST" action="?/removeMember" use:enhance={mutationEnhance} class="ml-auto">
@@ -184,7 +184,7 @@
 								<button
 									type="submit"
 									class="cursor-pointer rounded-full border border-error bg-transparent px-4 py-2 text-[12px] font-medium text-error hover:bg-error-container"
-								>Entfernen</button>
+								>{data.m.manage.remove}</button>
 							</form>
 						</div>
 					{/each}
@@ -194,21 +194,21 @@
 						<form method="POST" action="?/addMember" use:enhance={mutationEnhance} class="mt-3 flex flex-wrap items-end gap-2">
 							<input type="hidden" name="userId" value={u.userId} />
 							<div class="min-w-[140px]">
-								<select name="teamId" aria-label="Team" class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
+								<select name="teamId" aria-label={data.m.manage.teamLabel} class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
 									{#each data.teams as t}
 										<option value={t.id}>{t.name}</option>
 									{/each}
 								</select>
 							</div>
 							<div class="min-w-[110px]">
-								<select name="role" aria-label="Rolle" class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
+								<select name="role" aria-label={data.m.invite.roleLabel} class="w-full rounded-2xl border-none bg-surface-container-high px-4 py-2 text-[13px] text-on-surface focus:ring-2 focus:ring-primary">
 									{#each ROLES as r}
 										<option value={r}>{r}</option>
 									{/each}
 								</select>
 							</div>
 							<button type="submit" class="cursor-pointer rounded-full border-none bg-primary px-4 py-2 text-[13px] font-bold text-on-primary hover:opacity-90">
-								+ Team hinzufügen
+								{data.m.manage.addTeamButton}
 							</button>
 						</form>
 					{/if}
@@ -226,7 +226,7 @@
 				disabled={loading}
 				class={outlinedBtn}
 			>
-				{loading ? 'Lädt…' : 'Mehr laden'}
+				{loading ? data.m.manage.loadingShort : data.m.manage.loadMore}
 			</button>
 		</div>
 	{/if}

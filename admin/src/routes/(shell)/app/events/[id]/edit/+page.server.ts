@@ -58,6 +58,7 @@ export const actions: Actions = {
 			location: (form.get('location') as string)?.trim() || null,
 			description: (form.get('description') as string)?.trim() || null,
 			minAttendees: minRaw ? Number(minRaw) : null,
+			responseDeadline: (form.get('responseDeadline') as string) || null,
 			defaultResponse: (form.get('defaultResponse') as string) || 'none',
 			teamIds
 		};

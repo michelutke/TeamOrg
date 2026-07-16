@@ -8,6 +8,7 @@
 		location: string | null;
 		description: string | null;
 		minAttendees: number | null;
+		responseDeadline?: string | null;
 		defaultResponse?: string | null;
 		teamIds: string[];
 		recurring?: {
@@ -66,6 +67,7 @@
 	let startLocal = $state(toLocal(initial.startAt));
 	let endLocal = $state(toLocal(initial.endAt));
 	let meetupLocal = $state(toLocal(initial.meetupAt));
+	let responseDeadlineLocal = $state(toLocal(initial.responseDeadline));
 	let location = $state(initial.location ?? '');
 	let description = $state(initial.description ?? '');
 	let minAttendees = $state(initial.minAttendees != null ? String(initial.minAttendees) : '');
@@ -162,6 +164,12 @@
 		<span class="text-[12px] font-medium text-primary">{m.eventForm.fMeetup}</span>
 		<input type="datetime-local" bind:value={meetupLocal} class={inputCls} />
 		<input type="hidden" name="meetupAt" value={toISO(meetupLocal)} />
+	</label>
+
+	<label class="flex flex-col gap-1">
+		<span class="text-[12px] font-medium text-primary">{m.eventForm.fResponseDeadline}</span>
+		<input type="datetime-local" bind:value={responseDeadlineLocal} class={inputCls} />
+		<input type="hidden" name="responseDeadline" value={toISO(responseDeadlineLocal)} />
 	</label>
 
 	<label class="flex flex-col gap-1">

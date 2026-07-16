@@ -8,6 +8,7 @@ import ch.teamorg.domain.repositories.FinalizeResult
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.RawAttendanceRow
 import ch.teamorg.domain.repositories.TeamRepository
+import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.requireEventAccess
 import ch.teamorg.middleware.requireTeamRole
 import ch.teamorg.infra.NotificationDispatcher
@@ -74,6 +75,7 @@ fun Route.attendanceRoutes() {
     val notificationRepo by inject<NotificationRepository>()
     val eventRepository by inject<EventRepository>()
     val teamRepository by inject<TeamRepository>()
+    val userRepository by inject<UserRepository>()
 
     authenticate("jwt") {
         get("/events/{id}/attendance") {
@@ -128,7 +130,7 @@ fun Route.attendanceRoutes() {
             call.application.launch(Dispatchers.IO) {
                 try {
                     val notifEvent = event ?: return@launch
-                    val playerName = "A player"
+                    val playerName = userRepository.findById(userId)?.displayName ?: "A player"
                     val epoch = java.time.Instant.now().epochSecond / 3600
                     for (teamId in notifEvent.teamIds) {
                         val coachIds = notificationRepo.getCoachIdsForTeam(teamId)

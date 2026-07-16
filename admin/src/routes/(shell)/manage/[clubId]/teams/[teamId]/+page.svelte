@@ -21,6 +21,11 @@
 		return 'bg-surface-container-high text-on-surface-variant';
 	}
 
+	function availableForSubgroup(subGroupId: string) {
+		const memberIds = new Set((data.subGroupMembers[subGroupId] ?? []).map((m) => m.userId));
+		return data.members.filter((m) => !memberIds.has(m.userId));
+	}
+
 	const inputClasses =
 		'w-full rounded-2xl border-none bg-surface-container-high px-[18px] py-3 text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary';
 	const labelClasses = 'mb-1 block text-[12px] font-medium text-on-surface-variant';
@@ -42,7 +47,7 @@
 		<a
 			href="/manage/{data.clubId}/teams"
 			class="text-on-surface-variant no-underline hover:text-primary"
-		>‹ Back to Teams</a>
+		>{data.m.manage.backToTeams}</a>
 	</nav>
 
 	<!-- Team info card -->
@@ -54,17 +59,17 @@
 					<a
 						href="/manage/{data.clubId}/teams/{data.team.id}/attendance"
 						class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-5 py-2.5 text-[14px] font-bold text-on-surface-variant no-underline hover:bg-surface-container-high"
-					>Attendance</a>
+					>{data.m.manage.attendance}</a>
 					<button
 						type="button"
 						onclick={() => (showEditForm = true)}
 						class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-5 py-2.5 text-[14px] font-bold text-on-surface-variant hover:bg-surface-container-high"
-					>Edit</button>
+					>{data.m.common.edit}</button>
 					<button
 						type="button"
 						onclick={() => (showArchiveModal = true)}
 						class="cursor-pointer rounded-full border border-error bg-transparent px-5 py-2.5 text-[14px] font-bold text-error hover:bg-error-container"
-					>Archive</button>
+					>{data.m.manage.archive}</button>
 				</div>
 			{/if}
 		</div>
@@ -73,48 +78,47 @@
 			<form method="POST" action="?/updateTeam">
 				<div class="mb-4 grid grid-cols-2 gap-4">
 					<div>
-						<label for="edit-name" class={labelClasses}>Name</label>
+						<label for="edit-name" class={labelClasses}>{data.m.profile.name}</label>
 						<input id="edit-name" name="name" type="text" value={data.team.name} class={inputClasses} />
 					</div>
 					<div>
-						<label for="edit-desc" class={labelClasses}>Description</label>
+						<label for="edit-desc" class={labelClasses}>{data.m.events.description}</label>
 						<input id="edit-desc" name="description" type="text" value={data.team.description || ''} class={inputClasses} />
 					</div>
 				</div>
 				<div class="flex gap-3">
-					<button type="submit" class={filledBtn}>Save Changes</button>
-					<button type="button" onclick={() => (showEditForm = false)} class={outlinedBtn}>Cancel</button>
+					<button type="submit" class={filledBtn}>{data.m.common.save}</button>
+					<button type="button" onclick={() => (showEditForm = false)} class={outlinedBtn}>{data.m.common.cancel}</button>
 				</div>
 			</form>
 		{:else}
 			<p class="text-[14px] text-on-surface-variant">
-				{data.team.memberCount} members{data.team.description ? ` · ${data.team.description}` : ''}
+				{data.team.memberCount} {data.m.teams.members}{data.team.description ? ` · ${data.team.description}` : ''}
 			</p>
 		{/if}
 	</div>
 
 	<!-- Invite section -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
-		<h2 class="mb-1 font-display text-[20px] font-bold text-on-surface">Invite members</h2>
+		<h2 class="mb-1 font-display text-[20px] font-bold text-on-surface">{data.m.manage.inviteMembersTitle}</h2>
 		<p class="mb-4 text-[13px] text-on-surface-variant">
-			Add an email to invite one person privately — only that address can join (best for
-			coaches). Leave it empty for a shareable link anyone can use.
+			{data.m.manage.inviteMembersBody}
 		</p>
 
 		{#if form?.action === 'invite_sent' && form.expiresAt}
 			<div class="mb-4 rounded-2xl bg-white p-4">
 				<p class="mb-2 text-[12px] font-bold text-success">
-					Invite emailed to {form.email}
+					{data.m.manage.inviteEmailedToPrefix} {form.email}
 				</p>
 				<p class="text-[12px] text-on-surface-variant">
-					Only {form.email} can use this invite. Expires: {new Date(
+					{data.m.manage.inviteOnlyEmailPrefix} {form.email} {data.m.manage.inviteOnlyEmailSuffix} {data.m.manage.expiresLabel} {new Date(
 						form.expiresAt
 					).toLocaleString('en-GB')}
 				</p>
 			</div>
 		{:else if form?.action === 'invite_created' && form.inviteUrl}
 			<div class="mb-4 rounded-2xl bg-white p-4">
-				<p class="mb-2 text-[12px] font-bold text-success">Shareable invite link generated!</p>
+				<p class="mb-2 text-[12px] font-bold text-success">{data.m.manage.shareableInviteGenerated}</p>
 				<input
 					type="text"
 					readonly
@@ -123,90 +127,131 @@
 					class="{inputClasses} cursor-text"
 				/>
 				<p class="mt-2 text-[12px] text-on-surface-variant">
-					Expires: {new Date(form.expiresAt).toLocaleString('en-GB')}
+					{data.m.manage.expiresLabel} {new Date(form.expiresAt).toLocaleString('en-GB')}
 				</p>
 			</div>
 		{/if}
 
 		{#if !showInviteForm}
 			<button type="button" onclick={() => (showInviteForm = true)} class={filledBtn}>
-				Invite a member
+				{data.m.manage.inviteMember}
 			</button>
 		{:else}
 			<form method="POST" action="?/createInvite" class="flex flex-wrap items-end gap-3">
 				<div>
-					<label for="invite-role" class={labelClasses}>Role</label>
+					<label for="invite-role" class={labelClasses}>{data.m.invite.roleLabel}</label>
 					<select
 						id="invite-role"
 						name="role"
 						class="cursor-pointer rounded-2xl border-none bg-surface-container-high px-4 py-3 text-[14px] text-on-surface outline-none"
 					>
-						<option value="player">Player</option>
-						<option value="coach">Coach</option>
+						<option value="player">{data.m.roles.player}</option>
+						<option value="coach">{data.m.roles.coach}</option>
 					</select>
 				</div>
 				<div class="min-w-[240px] flex-1">
-					<label for="invite-email" class={labelClasses}>Email (optional)</label>
+					<label for="invite-email" class={labelClasses}>{data.m.manage.emailOptionalLabel}</label>
 					<input
 						id="invite-email"
 						name="email"
 						type="email"
-						placeholder="person@example.com"
+						placeholder={data.m.manage.emailPlaceholderPerson}
 						class={inputClasses}
 					/>
 				</div>
-				<button type="submit" class="{filledBtn} whitespace-nowrap">Create invite</button>
+				<button type="submit" class="{filledBtn} whitespace-nowrap">{data.m.manage.createInvite}</button>
 				<button
 					type="button"
 					onclick={() => (showInviteForm = false)}
 					class="{outlinedBtn} whitespace-nowrap"
-				>Cancel</button>
+				>{data.m.common.cancel}</button>
 			</form>
 		{/if}
 	</div>
 
 	<!-- Subgroups -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
-		<h2 class="mb-1 font-display text-[20px] font-bold text-on-surface">Subgroups</h2>
+		<h2 class="mb-1 font-display text-[20px] font-bold text-on-surface">{data.m.manage.subgroupsTitle}</h2>
 		<p class="mb-4 text-[13px] text-on-surface-variant">
-			Organise the roster into subgroups (e.g. starters, U18) to target events at part of the team.
+			{data.m.manage.subgroupsBody}
 		</p>
 
 		{#if data.subGroups.length > 0}
 			<div class="mb-4 flex flex-col gap-2">
 				{#each data.subGroups as sg (sg.id)}
-					<div class="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3">
-						{#if renameTargetId === sg.id}
-							<form method="POST" action="?/renameSubGroup" class="flex flex-1 items-center gap-2">
-								<input type="hidden" name="subGroupId" value={sg.id} />
-								<input name="name" value={sg.name} class={inputClasses} />
-								<button type="submit" class="{filledBtn} whitespace-nowrap">Save</button>
-								<button
-									type="button"
-									onclick={() => (renameTargetId = null)}
-									class="{outlinedBtn} whitespace-nowrap">Cancel</button
-								>
-							</form>
-						{:else}
-							<div>
-								<span class="text-[14px] font-medium text-on-surface">{sg.name}</span>
-								<span class="ml-2 text-[12px] text-on-surface-variant">
-									{sg.memberCount} member{sg.memberCount === 1 ? '' : 's'}
-								</span>
-							</div>
-							<div class="flex shrink-0 gap-2">
-								<button
-									type="button"
-									onclick={() => (renameTargetId = sg.id)}
-									class="rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
-									>Rename</button
-								>
-								<button
-									type="button"
-									onclick={() => (deleteSubGroupTarget = { id: sg.id, name: sg.name })}
-									class="rounded-full border-none bg-transparent px-4 py-1.5 text-[12px] font-bold text-error hover:bg-error-container/50"
-									>Delete</button
-								>
+					<div class="flex flex-col gap-2 rounded-2xl bg-white px-4 py-3">
+						<div class="flex items-center justify-between gap-3">
+							{#if renameTargetId === sg.id}
+								<form method="POST" action="?/renameSubGroup" class="flex flex-1 items-center gap-2">
+									<input type="hidden" name="subGroupId" value={sg.id} />
+									<input name="name" value={sg.name} class={inputClasses} />
+									<button type="submit" class="{filledBtn} whitespace-nowrap">{data.m.common.save}</button>
+									<button
+										type="button"
+										onclick={() => (renameTargetId = null)}
+										class="{outlinedBtn} whitespace-nowrap">{data.m.common.cancel}</button
+									>
+								</form>
+							{:else}
+								<div>
+									<span class="text-[14px] font-medium text-on-surface">{sg.name}</span>
+									<span class="ml-2 text-[12px] text-on-surface-variant">
+										{sg.memberCount} {sg.memberCount === 1 ? data.m.manage.memberSingular : data.m.teams.members}
+									</span>
+								</div>
+								<div class="flex shrink-0 gap-2">
+									<button
+										type="button"
+										onclick={() => (renameTargetId = sg.id)}
+										class="rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
+										>{data.m.manage.rename}</button
+									>
+									<button
+										type="button"
+										onclick={() => (deleteSubGroupTarget = { id: sg.id, name: sg.name })}
+										class="rounded-full border-none bg-transparent px-4 py-1.5 text-[12px] font-bold text-error hover:bg-error-container/50"
+										>{data.m.manage.delete}</button
+									>
+								</div>
+							{/if}
+						</div>
+
+						{#if renameTargetId !== sg.id}
+							<div class="flex flex-col gap-1.5 pl-1">
+								{#each data.subGroupMembers[sg.id] ?? [] as sm (sm.userId)}
+									<div class="flex items-center justify-between gap-2 text-[13px] text-on-surface">
+										<span>{sm.displayName}</span>
+										<form method="POST" action="?/removeSubgroupMember">
+											<input type="hidden" name="subGroupId" value={sg.id} />
+											<input type="hidden" name="userId" value={sm.userId} />
+											<button
+												type="submit"
+												aria-label={data.m.manage.remove}
+												class="cursor-pointer rounded-full border-none bg-transparent px-2 text-[14px] font-bold text-error hover:opacity-70"
+												>×</button
+											>
+										</form>
+									</div>
+								{/each}
+								{#if availableForSubgroup(sg.id).length > 0}
+									<form method="POST" action="?/addSubgroupMember" class="flex items-center gap-2 pt-1">
+										<input type="hidden" name="subGroupId" value={sg.id} />
+										<select
+											name="userId"
+											class="cursor-pointer rounded-2xl border-none bg-surface-container-high px-3 py-2 text-[13px] text-on-surface outline-none"
+										>
+											<option value="">{data.m.manage.subgroupSelectMemberPlaceholder}</option>
+											{#each availableForSubgroup(sg.id) as member (member.userId)}
+												<option value={member.userId}>{member.displayName}</option>
+											{/each}
+										</select>
+										<button
+											type="submit"
+											class="whitespace-nowrap rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
+											>{data.m.manage.subgroupAddMemberLabel}</button
+										>
+									</form>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -216,19 +261,19 @@
 
 		{#if !showSubGroupForm}
 			<button type="button" onclick={() => (showSubGroupForm = true)} class={filledBtn}>
-				Add subgroup
+				{data.m.manage.addSubgroup}
 			</button>
 		{:else}
 			<form method="POST" action="?/createSubGroup" class="flex flex-wrap items-end gap-3">
 				<div class="min-w-[240px] flex-1">
-					<label for="sg-name" class={labelClasses}>Subgroup name</label>
-					<input id="sg-name" name="name" placeholder="e.g. Starters" class={inputClasses} />
+					<label for="sg-name" class={labelClasses}>{data.m.manage.subgroupNameLabel}</label>
+					<input id="sg-name" name="name" placeholder={data.m.manage.subgroupNamePlaceholder} class={inputClasses} />
 				</div>
-				<button type="submit" class="{filledBtn} whitespace-nowrap">Create</button>
+				<button type="submit" class="{filledBtn} whitespace-nowrap">{data.m.common.create}</button>
 				<button
 					type="button"
 					onclick={() => (showSubGroupForm = false)}
-					class="{outlinedBtn} whitespace-nowrap">Cancel</button
+					class="{outlinedBtn} whitespace-nowrap">{data.m.common.cancel}</button
 				>
 			</form>
 		{/if}
@@ -237,24 +282,24 @@
 	<!-- Members table -->
 	<div class="overflow-hidden rounded-3xl bg-surface-container-low py-1">
 		<div class="px-6 pb-1.5 pt-3">
-			<h2 class="text-[13px] font-bold text-on-surface">Members</h2>
+			<h2 class="text-[13px] font-bold text-on-surface">{data.m.teams.members}</h2>
 		</div>
 
 		{#if data.members.length === 0}
 			<div class="border-t border-outline-variant bg-white px-6 py-8 text-center">
 				<p class="text-[14px] text-on-surface-variant">
-					No members yet. Generate an invite link to add members.
+					{data.m.manage.noMembersYet}
 				</p>
 			</div>
 		{:else}
 			<table class="w-full border-collapse">
 				<thead>
 					<tr>
-						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Name</th>
-						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Role</th>
-						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Jersey</th>
-						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">Position</th>
-						<th scope="col" class="px-6 py-3.5 text-right text-[12px] font-bold text-on-surface-variant">Actions</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">{data.m.profile.name}</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">{data.m.invite.roleLabel}</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">{data.m.member.jersey}</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-[12px] font-bold text-on-surface-variant">{data.m.member.position}</th>
+						<th scope="col" class="px-6 py-3.5 text-right text-[12px] font-bold text-on-surface-variant">{data.m.manage.actionsLabel}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -276,13 +321,13 @@
 										<button
 											type="submit"
 											class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-4 py-1.5 text-[12px] font-bold text-on-surface-variant hover:bg-surface-container-high"
-										>Make {member.role === 'coach' ? 'Player' : 'Coach'}</button>
+										>{member.role === 'coach' ? data.m.manage.makePlayer : data.m.manage.makeCoach}</button>
 									</form>
 									<button
 										type="button"
 										onclick={() => (removeMemberTarget = { userId: member.userId, name: member.displayName })}
 										class="cursor-pointer rounded-full border-none bg-transparent px-4 py-1.5 text-[12px] font-bold text-error hover:bg-error-container/50"
-									>Remove</button>
+									>{data.m.manage.remove}</button>
 								</div>
 							</td>
 						</tr>
@@ -302,18 +347,18 @@
 		aria-labelledby="archive-title"
 	>
 		<div class={modalCard}>
-			<h3 id="archive-title" class="mb-3 font-display text-[22px] font-extrabold text-on-surface">Archive team</h3>
+			<h3 id="archive-title" class="mb-3 font-display text-[22px] font-extrabold text-on-surface">{data.m.manage.archiveTeamTitle}</h3>
 			<p class="mb-6 text-[14px] text-on-surface-variant">
-				Archive {data.team.name}? Members will no longer see this team. This can be reversed later.
+				{data.m.manage.archiveConfirmPrefix}{data.team.name}{data.m.manage.archiveConfirmSuffix}
 			</p>
 			<div class="flex gap-3">
 				<form method="POST" action="?/archive">
 					<button
 						type="submit"
 						class="cursor-pointer rounded-full border-none bg-error px-6 py-3 text-[14px] font-bold text-on-error hover:opacity-90"
-					>Archive</button>
+					>{data.m.manage.archive}</button>
 				</form>
-				<button type="button" onclick={() => (showArchiveModal = false)} class={outlinedBtn}>Cancel</button>
+				<button type="button" onclick={() => (showArchiveModal = false)} class={outlinedBtn}>{data.m.common.cancel}</button>
 			</div>
 		</div>
 	</div>
@@ -328,9 +373,9 @@
 		aria-labelledby="remove-member-title"
 	>
 		<div class={modalCard}>
-			<h3 id="remove-member-title" class="mb-3 font-display text-[22px] font-extrabold text-on-surface">Remove member</h3>
+			<h3 id="remove-member-title" class="mb-3 font-display text-[22px] font-extrabold text-on-surface">{data.m.manage.removeMemberTitle}</h3>
 			<p class="mb-6 text-[14px] text-on-surface-variant">
-				Remove {removeMemberTarget.name} from {data.team.name}? They will lose access immediately.
+				{data.m.manage.removeConfirmPrefix}{removeMemberTarget.name}{data.m.manage.removeConfirmMiddle}{data.team.name}{data.m.manage.removeConfirmSuffix}
 			</p>
 			<div class="flex gap-3">
 				<form method="POST" action="?/removeMember">
@@ -338,9 +383,9 @@
 					<button
 						type="submit"
 						class="cursor-pointer rounded-full border-none bg-error px-6 py-3 text-[14px] font-bold text-on-error hover:opacity-90"
-					>Remove</button>
+					>{data.m.manage.remove}</button>
 				</form>
-				<button type="button" onclick={() => (removeMemberTarget = null)} class={outlinedBtn}>Cancel</button>
+				<button type="button" onclick={() => (removeMemberTarget = null)} class={outlinedBtn}>{data.m.common.cancel}</button>
 			</div>
 		</div>
 	</div>
@@ -356,10 +401,10 @@
 	>
 		<div class={modalCard}>
 			<h3 id="delete-subgroup-title" class="mb-3 font-display text-[22px] font-extrabold text-on-surface">
-				Delete subgroup
+				{data.m.manage.deleteSubgroupTitle}
 			</h3>
 			<p class="mb-6 text-[14px] text-on-surface-variant">
-				Delete subgroup {deleteSubGroupTarget.name}? Members stay on the team; only the grouping is removed.
+				{data.m.manage.deleteSubgroupConfirmPrefix}{deleteSubGroupTarget.name}{data.m.manage.deleteSubgroupConfirmSuffix}
 			</p>
 			<div class="flex gap-3">
 				<form method="POST" action="?/deleteSubGroup">
@@ -367,9 +412,9 @@
 					<button
 						type="submit"
 						class="cursor-pointer rounded-full border-none bg-error px-6 py-3 text-[14px] font-bold text-on-error hover:opacity-90"
-					>Delete</button>
+					>{data.m.manage.delete}</button>
 				</form>
-				<button type="button" onclick={() => (deleteSubGroupTarget = null)} class={outlinedBtn}>Cancel</button>
+				<button type="button" onclick={() => (deleteSubGroupTarget = null)} class={outlinedBtn}>{data.m.common.cancel}</button>
 			</div>
 		</div>
 	</div>

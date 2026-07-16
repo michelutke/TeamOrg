@@ -39,7 +39,10 @@ interface MigrateResult {
 }
 
 export const load: PageServerLoad = async ({ params, locals, cookies }) => {
-	const teams = await apiGet<Team[]>(`/clubs/${params.clubId}/teams`, locals.token!);
+	const teams = await apiGet<Team[]>(
+		`/clubs/${params.clubId}/teams?includeArchived=true`,
+		locals.token!
+	);
 
 	let swissVolleyConnected = false;
 	try {
@@ -145,6 +148,21 @@ export const actions: Actions = {
 			if (err instanceof ApiError && err.status === 409)
 				return fail(409, { importError: 'importNoKey' });
 			return fail(500, { importError: 'importFailed' });
+		}
+	},
+
+	unarchive: async ({ request, params, locals }) => {
+		assertClubAccess(locals, params.clubId);
+		const data = await request.formData();
+		const teamId = data.get('teamId') as string;
+		if (!teamId) return fail(400, { error: 'Team required' });
+		try {
+			await apiPost(`/teams/${teamId}/unarchive`, locals.token!);
+			return { success: true, action: 'team_unarchived' };
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 403)
+				return fail(403, { error: 'Not authorized to unarchive this team' });
+			return fail(500, { error: 'Failed to unarchive team' });
 		}
 	}
 };

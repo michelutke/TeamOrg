@@ -62,6 +62,17 @@ class TeamRepositoryImpl : TeamRepository {
             .single()
     }
 
+    override suspend fun unarchive(id: UUID): Team = transaction {
+        TeamsTable.update({ TeamsTable.id eq id }) {
+            it[TeamsTable.archivedAt] = null
+            it[TeamsTable.updatedAt] = java.time.Instant.now()
+        }
+
+        TeamsTable.selectAll().where { TeamsTable.id eq id }
+            .map { rowToTeam(it, countMembers(id)) }
+            .single()
+    }
+
     override suspend fun migrateTeam(sourceTeamId: UUID, targetTeamId: UUID): Int = transaction {
         // 1. Copy team_roles source -> target. insertIgnore => ON CONFLICT (user_id, team_id, role)
         //    DO NOTHING, so jersey_number/position are preserved only on newly-inserted rows.

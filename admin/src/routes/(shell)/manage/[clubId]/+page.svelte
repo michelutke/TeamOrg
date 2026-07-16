@@ -57,36 +57,36 @@
 				type="button"
 				onclick={() => (showEditForm = true)}
 				class="cursor-pointer rounded-full border border-on-primary-container bg-white px-6 py-3 text-[14px] font-bold text-on-primary-container hover:bg-surface"
-			>Edit</button>
+			>{data.m.common.edit}</button>
 		{/if}
 	</div>
 
 	<!-- Edit form -->
 	{#if showEditForm}
 		<div class="rounded-3xl bg-surface-container-low p-6">
-			<h2 class="mb-4 text-[17px] font-bold text-on-surface">Edit club</h2>
+			<h2 class="mb-4 text-[17px] font-bold text-on-surface">{data.m.manage.editClubTitle}</h2>
 			<form method="POST" action="?/edit">
 				<div class="mb-4 grid grid-cols-2 gap-4">
 					<div>
-						<label for="edit-name" class={labelClasses}>Name</label>
+						<label for="edit-name" class={labelClasses}>{data.m.profile.name}</label>
 						<input id="edit-name" name="name" type="text" value={data.club.name} class={inputClasses} />
 					</div>
 					<div>
-						<label for="edit-location" class={labelClasses}>Location</label>
+						<label for="edit-location" class={labelClasses}>{data.m.manage.locationLabel}</label>
 						<input id="edit-location" name="location" type="text" value={data.club.location || ''} class={inputClasses} />
 					</div>
 				</div>
 				<div class="flex gap-3">
-					<button type="submit" class={filledBtn}>Save Changes</button>
-					<button type="button" onclick={() => (showEditForm = false)} class={outlinedBtn}>Cancel</button>
+					<button type="submit" class={filledBtn}>{data.m.common.save}</button>
+					<button type="button" onclick={() => (showEditForm = false)} class={outlinedBtn}>{data.m.common.cancel}</button>
 				</div>
 			</form>
 
 			<div class="mt-6 border-t border-outline-variant pt-6">
-				<h3 class="mb-1 text-[15px] font-bold text-on-surface">Club logo</h3>
-				<p class="mb-3 text-[13px] text-on-surface-variant">JPG, PNG or WebP, up to 2MB.</p>
+				<h3 class="mb-1 text-[15px] font-bold text-on-surface">{data.m.manage.logoTitle}</h3>
+				<p class="mb-3 text-[13px] text-on-surface-variant">{data.m.manage.logoHint}</p>
 				{#if form?.action === 'logo_uploaded'}
-					<p class="mb-3 text-[13px] font-medium text-success">Logo updated.</p>
+					<p class="mb-3 text-[13px] font-medium text-success">{data.m.manage.logoUpdated}</p>
 				{:else if form?.logoError}
 					<p class="mb-3 text-[13px] font-medium text-error">{form.logoError}</p>
 				{/if}
@@ -103,7 +103,7 @@
 						required
 						class="text-[13px] text-on-surface-variant"
 					/>
-					<button type="submit" class={filledBtn}>Upload logo</button>
+					<button type="submit" class={filledBtn}>{data.m.manage.uploadLogo}</button>
 				</form>
 			</div>
 		</div>
@@ -111,14 +111,14 @@
 
 	<!-- Invite co-manager -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
-		<h2 class="mb-4 font-display text-[20px] font-bold text-on-surface">Co-managers</h2>
+		<h2 class="mb-4 font-display text-[20px] font-bold text-on-surface">{data.m.manage.coManagersTitle}</h2>
 		<p class="mb-4 text-[14px] text-on-surface-variant">
-			Invite another person to co-manage this club.
+			{data.m.manage.coManagersBody}
 		</p>
 
 		{#if form?.action === 'invite_sent' && form.inviteUrl}
 			<div class="mb-4 rounded-2xl bg-white p-4">
-				<p class="mb-2 text-[12px] font-bold text-success">Invite link generated!</p>
+				<p class="mb-2 text-[12px] font-bold text-success">{data.m.manage.inviteLinkGenerated}</p>
 				<input
 					type="text"
 					readonly
@@ -127,14 +127,14 @@
 					class="{inputClasses} cursor-text"
 				/>
 				<p class="mt-2 text-[12px] text-on-surface-variant">
-					Expires: {new Date(form.expiresAt).toLocaleString('en-GB')}
+					{data.m.manage.expiresLabel} {new Date(form.expiresAt).toLocaleString('en-GB')}
 				</p>
 			</div>
 		{/if}
 
 		{#if !showInviteForm}
 			<button type="button" onclick={() => (showInviteForm = true)} class={filledBtn}>
-				Invite co-manager
+				{data.m.manage.inviteCoManager}
 			</button>
 		{:else}
 			<form method="POST" action="?/inviteCoManager" class="flex items-end gap-3">
@@ -142,48 +142,48 @@
 					{#if form?.error}
 						<p class="mb-1 text-[12px] font-medium text-error">{form.error}</p>
 					{:else}
-						<label for="co-manager-email" class={labelClasses}>Email</label>
+						<label for="co-manager-email" class={labelClasses}>{data.m.login.email}</label>
 					{/if}
 					<input
 						id="co-manager-email"
 						name="email"
 						type="email"
-						placeholder="colleague@example.com"
+						placeholder={data.m.manage.emailPlaceholderColleague}
 						required
 						class={inputClasses}
 					/>
 				</div>
-				<button type="submit" class="{filledBtn} whitespace-nowrap">Send invite</button>
+				<button type="submit" class="{filledBtn} whitespace-nowrap">{data.m.manage.sendInvite}</button>
 				<button
 					type="button"
 					onclick={() => (showInviteForm = false)}
 					class="{outlinedBtn} whitespace-nowrap"
-				>Cancel</button>
+				>{data.m.common.cancel}</button>
 			</form>
 		{/if}
 	</div>
 
 	<!-- Quick link to teams -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
-		<h2 class="mb-3 font-display text-[20px] font-bold text-on-surface">Teams</h2>
-		<p class="mb-4 text-[14px] text-on-surface-variant">Manage rosters, invite members, update team info.</p>
+		<h2 class="mb-3 font-display text-[20px] font-bold text-on-surface">{data.m.teams.title}</h2>
+		<p class="mb-4 text-[14px] text-on-surface-variant">{data.m.manage.teamsQuickLinkBody}</p>
 		<a
 			href="/manage/{data.clubId}/teams"
 			class="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary no-underline hover:opacity-90"
 		>
-			View Teams ›
+			{data.m.manage.viewTeamsLink} ›
 		</a>
 	</div>
 
 	<!-- Quick link to members -->
 	<div class="rounded-3xl bg-surface-container-low p-6">
-		<h2 class="mb-3 font-display text-[20px] font-bold text-on-surface">Mitglieder</h2>
-		<p class="mb-4 text-[14px] text-on-surface-variant">Alle Club-Mitglieder anzeigen, zu Teams hinzufügen oder entfernen.</p>
+		<h2 class="mb-3 font-display text-[20px] font-bold text-on-surface">{data.m.teams.members}</h2>
+		<p class="mb-4 text-[14px] text-on-surface-variant">{data.m.manage.membersQuickLinkBody}</p>
 		<a
 			href="/manage/{data.clubId}/members"
 			class="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary no-underline hover:opacity-90"
 		>
-			Mitglieder verwalten ›
+			{data.m.manage.manageMembersTitle} ›
 		</a>
 	</div>
 </div>

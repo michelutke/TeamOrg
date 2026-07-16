@@ -15,6 +15,7 @@ interface TeamRepository {
         appearanceColor: String? = null
     ): Team
     suspend fun archive(id: UUID): Team
+    suspend fun unarchive(id: UUID): Team
     /**
      * Migrate a deprecated team into a live successor: copies team_roles and per-member
      * notification_settings (skipping rows that already exist on the target), carries over

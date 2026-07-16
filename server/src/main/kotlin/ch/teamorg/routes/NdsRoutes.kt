@@ -110,8 +110,7 @@ fun Route.ndsRoutes() {
                 else -> {
                     // Surface an existing Angebot→team link (same club only) so the import
                     // dialog re-imports into that team instead of creating a new one.
-                    val linkedTeam = ndsRepository.findTeamIdByAngebot(result.angebotId)
-                        ?.takeIf { teamRepository.getClubId(it) == clubId }
+                    val linkedTeam = ndsRepository.findTeamIdByAngebot(result.angebotId, clubId)
                         ?.let { teamRepository.findById(it) }
                     call.respond(
                         if (linkedTeam != null)
@@ -174,7 +173,7 @@ fun Route.ndsRoutes() {
                 !request.createTeamName.isNullOrBlank() -> {
                     // The Angebot may only be linked to a single team — check BEFORE creating,
                     // otherwise every rejected re-import attempt leaves an orphan empty team.
-                    val existing = ndsRepository.findTeamIdByAngebot(parsed.angebotId)
+                    val existing = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
                     if (existing != null) {
                         val name = teamRepository.findById(existing)?.name ?: "einem anderen Team"
                         return@post call.respond(
@@ -188,8 +187,9 @@ fun Route.ndsRoutes() {
                 else -> return@post call.respond(HttpStatusCode.BadRequest, "teamId oder createTeamName erforderlich")
             }
 
-            // The Angebot may only be linked to a single team.
-            val existingForAngebot = ndsRepository.findTeamIdByAngebot(parsed.angebotId)
+            // The Angebot may only be linked to a single team within this club (scoped per-club so
+            // another club's link never blocks this import).
+            val existingForAngebot = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
             if (existingForAngebot != null && existingForAngebot != teamId) {
                 return@post call.respond(
                     HttpStatusCode.Conflict,

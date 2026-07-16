@@ -56,10 +56,27 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			avatarUrl: memberMap.get(r.userId)?.avatarUrl ?? null
 		}));
 
+		// Members of the event's teams who haven't responded get a synthetic no-response row so
+		// coaches can still resolve them via the per-member edit control (otherwise finalize is
+		// permanently blocked once a no-response member exists).
+		const respondedIds = new Set(responses.map((r) => r.userId));
+		const noResponseMembers = Array.from(memberMap.values())
+			.filter((m) => !respondedIds.has(m.userId))
+			.map((m) => ({
+				eventId: id,
+				userId: m.userId,
+				status: 'no-response',
+				reason: null,
+				manualOverride: false,
+				unexcused: false,
+				displayName: m.displayName,
+				avatarUrl: m.avatarUrl
+			}));
+
 		return {
 			event: data.event,
 			teams: data.matchedTeams,
-			responses: named,
+			responses: [...named, ...noResponseMembers],
 			myResponse,
 			canManage,
 			canReconcile

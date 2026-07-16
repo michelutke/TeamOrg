@@ -120,6 +120,14 @@ fun Route.teamRoutes() {
                     call.respond(team)
                 }
 
+                post("/unarchive") {
+                    val teamId = UUID.fromString(call.parameters["teamId"])
+                    if (!call.requireTeamRole(teamId, "club_manager", teamRepository = teamRepository)) return@post
+
+                    val team = teamRepository.unarchive(teamId)
+                    call.respond(team)
+                }
+
                 get("/importable-series") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@get

@@ -30,6 +30,7 @@
 		location: data.event.location,
 		description: data.event.description,
 		minAttendees: data.event.minAttendees,
+		responseDeadline: data.event.responseDeadline,
 		defaultResponse: data.event.defaultResponse,
 		teamIds: data.event.teamIds
 	}}

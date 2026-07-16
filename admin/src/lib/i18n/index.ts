@@ -90,6 +90,7 @@ export interface Dict {
 		saved: string;
 		responses: string;
 		deadlinePassed: string;
+		minAttendeesWarning: string;
 	};
 	eventForm: {
 		newTitle: string;
@@ -103,6 +104,7 @@ export interface Dict {
 		fLocation: string;
 		fDescription: string;
 		fMinAttendees: string;
+		fResponseDeadline: string;
 		selectTeams: string;
 		required: string;
 		recurringSection: string;
@@ -160,6 +162,16 @@ export interface Dict {
 		language: string;
 		name: string;
 		email: string;
+		changePasswordTitle: string;
+		currentPasswordLabel: string;
+		newPasswordLabel: string;
+		confirmPasswordLabel: string;
+		changePasswordButton: string;
+		passwordChanged: string;
+		passwordMismatch: string;
+		passwordTooShort: string;
+		passwordWrongCurrent: string;
+		passwordChangeFailed: string;
 	};
 	invite: {
 		eyebrow: string;
@@ -184,6 +196,8 @@ export interface Dict {
 		invalidBody: string;
 		emailTaken: string;
 		failed: string;
+		alreadyRedeemedTitle: string;
+		alreadyRedeemedBody: string;
 	};
 	swissvolley: {
 		importButton: string;
@@ -241,6 +255,84 @@ export interface Dict {
 		errSourceNotDeprecated: string;
 		errTargetNotLive: string;
 		errFailed: string;
+	};
+	manage: {
+		editClubTitle: string;
+		locationLabel: string;
+		logoTitle: string;
+		logoHint: string;
+		logoUpdated: string;
+		uploadLogo: string;
+		coManagersTitle: string;
+		coManagersBody: string;
+		inviteLinkGenerated: string;
+		expiresLabel: string;
+		inviteCoManager: string;
+		emailPlaceholderColleague: string;
+		sendInvite: string;
+		teamsQuickLinkBody: string;
+		viewTeamsLink: string;
+		membersQuickLinkBody: string;
+		manageMembersTitle: string;
+		ndsImport: string;
+		newTeam: string;
+		teamNamePlaceholder: string;
+		optionalPlaceholder: string;
+		noTeamsYet: string;
+		viewLink: string;
+		backToTeams: string;
+		attendance: string;
+		archive: string;
+		inviteMembersTitle: string;
+		inviteMembersBody: string;
+		inviteOnlyEmailPrefix: string;
+		inviteOnlyEmailSuffix: string;
+		inviteEmailedToPrefix: string;
+		shareableInviteGenerated: string;
+		inviteMember: string;
+		emailOptionalLabel: string;
+		emailPlaceholderPerson: string;
+		createInvite: string;
+		subgroupsTitle: string;
+		subgroupsBody: string;
+		memberSingular: string;
+		rename: string;
+		delete: string;
+		addSubgroup: string;
+		subgroupNameLabel: string;
+		subgroupNamePlaceholder: string;
+		subgroupSelectMemberPlaceholder: string;
+		subgroupAddMemberLabel: string;
+		noMembersYet: string;
+		actionsLabel: string;
+		makeCoach: string;
+		makePlayer: string;
+		remove: string;
+		archiveTeamTitle: string;
+		archiveConfirmPrefix: string;
+		archiveConfirmSuffix: string;
+		removeMemberTitle: string;
+		removeConfirmPrefix: string;
+		removeConfirmMiddle: string;
+		removeConfirmSuffix: string;
+		deleteSubgroupTitle: string;
+		deleteSubgroupConfirmPrefix: string;
+		deleteSubgroupConfirmSuffix: string;
+		membersPageTitle: string;
+		inviteByEmailTitle: string;
+		teamLabel: string;
+		inviteButton: string;
+		noTeamsForInvite: string;
+		filterPlaceholder: string;
+		noMatch: string;
+		noMembersFound: string;
+		addTeamButton: string;
+		loadingShort: string;
+		loadMore: string;
+		shownCountMiddle: string;
+		shownCountSuffix: string;
+		archivedTeamsTitle: string;
+		unarchive: string;
 	};
 }
 
@@ -322,7 +414,8 @@ const de: Dict = {
 		save: 'Speichern',
 		saved: 'Gespeichert',
 		responses: 'Rückmeldungen',
-		deadlinePassed: 'Die Antwortfrist ist abgelaufen.'
+		deadlinePassed: 'Die Antwortfrist ist abgelaufen.',
+		minAttendeesWarning: 'Mindestteilnehmer nicht erreicht'
 	},
 	eventForm: {
 		newTitle: 'Neuer Termin',
@@ -336,6 +429,7 @@ const de: Dict = {
 		fLocation: 'Ort',
 		fDescription: 'Beschreibung',
 		fMinAttendees: 'Mindestteilnehmer',
+		fResponseDeadline: 'Anmeldeschluss (optional)',
 		selectTeams: 'Mindestens ein Team wählen',
 		required: 'Pflichtfeld',
 		recurringSection: 'Wiederholung',
@@ -393,7 +487,17 @@ const de: Dict = {
 		account: 'Konto',
 		language: 'Sprache',
 		name: 'Name',
-		email: 'E-Mail'
+		email: 'E-Mail',
+		changePasswordTitle: 'Passwort ändern',
+		currentPasswordLabel: 'Aktuelles Passwort',
+		newPasswordLabel: 'Neues Passwort',
+		confirmPasswordLabel: 'Neues Passwort bestätigen',
+		changePasswordButton: 'Passwort ändern',
+		passwordChanged: 'Passwort geändert.',
+		passwordMismatch: 'Die Passwörter stimmen nicht überein.',
+		passwordTooShort: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
+		passwordWrongCurrent: 'Das aktuelle Passwort ist falsch.',
+		passwordChangeFailed: 'Passwort konnte nicht geändert werden. Bitte versuche es erneut.'
 	},
 	invite: {
 		eyebrow: 'EINLADUNG',
@@ -418,7 +522,9 @@ const de: Dict = {
 		invalidTitle: 'Einladung ungültig oder abgelaufen',
 		invalidBody: 'Diese Einladung ist nicht mehr gültig. Bitte fordere beim Verein eine neue an.',
 		emailTaken: 'Für diese E-Mail existiert bereits ein Konto. Bitte melde dich an.',
-		failed: 'Beitritt fehlgeschlagen. Bitte versuche es erneut.'
+		failed: 'Beitritt fehlgeschlagen. Bitte versuche es erneut.',
+		alreadyRedeemedTitle: 'Einladung bereits verwendet',
+		alreadyRedeemedBody: 'Diese Einladung wurde bereits verwendet.'
 	},
 	swissvolley: {
 		importButton: 'Aus SwissVolley importieren',
@@ -477,6 +583,86 @@ const de: Dict = {
 		errSourceNotDeprecated: 'Dieses Team ist nicht veraltet und kann nicht migriert werden.',
 		errTargetNotLive: 'Das Zielteam ist kein aktives SwissVolley-Team.',
 		errFailed: 'Migration fehlgeschlagen. Bitte versuche es erneut.'
+	},
+	manage: {
+		editClubTitle: 'Verein bearbeiten',
+		locationLabel: 'Standort',
+		logoTitle: 'Vereinslogo',
+		logoHint: 'JPG, PNG oder WebP, bis 2MB.',
+		logoUpdated: 'Logo aktualisiert.',
+		uploadLogo: 'Logo hochladen',
+		coManagersTitle: 'Co-Manager',
+		coManagersBody: 'Lade eine weitere Person ein, diesen Verein mitzuverwalten.',
+		inviteLinkGenerated: 'Einladungslink erstellt!',
+		expiresLabel: 'Gültig bis:',
+		inviteCoManager: 'Co-Manager einladen',
+		emailPlaceholderColleague: 'kollege@example.com',
+		sendInvite: 'Einladung senden',
+		teamsQuickLinkBody: 'Kader verwalten, Mitglieder einladen, Teaminfos aktualisieren.',
+		viewTeamsLink: 'Teams ansehen',
+		membersQuickLinkBody: 'Alle Club-Mitglieder anzeigen, zu Teams hinzufügen oder entfernen.',
+		manageMembersTitle: 'Mitglieder verwalten',
+		ndsImport: 'NDS-Import',
+		newTeam: 'Neues Team',
+		teamNamePlaceholder: 'z.B. U18 Herren',
+		optionalPlaceholder: 'Optional',
+		noTeamsYet: 'Noch keine Teams. Lege eines an, um loszulegen.',
+		viewLink: 'Ansehen ›',
+		backToTeams: '‹ Zurück zu Teams',
+		attendance: 'Anwesenheit',
+		archive: 'Archivieren',
+		inviteMembersTitle: 'Mitglieder einladen',
+		inviteMembersBody:
+			'Gib eine E-Mail-Adresse an, um eine Person privat einzuladen — nur diese Adresse kann beitreten (empfohlen für Trainer). Lass das Feld leer für einen teilbaren Link, den jeder verwenden kann.',
+		inviteOnlyEmailPrefix: 'Nur',
+		inviteOnlyEmailSuffix: 'kann diese Einladung verwenden.',
+		inviteEmailedToPrefix: 'Einladung gesendet an',
+		shareableInviteGenerated: 'Teilbarer Einladungslink erstellt!',
+		inviteMember: 'Mitglied einladen',
+		emailOptionalLabel: 'E-Mail (optional)',
+		emailPlaceholderPerson: 'person@example.com',
+		createInvite: 'Einladung erstellen',
+		subgroupsTitle: 'Untergruppen',
+		subgroupsBody:
+			'Organisiere das Kader in Untergruppen (z.B. Stammspieler, U18), um Termine an einen Teil des Teams zu richten.',
+		memberSingular: 'Mitglied',
+		rename: 'Umbenennen',
+		delete: 'Löschen',
+		addSubgroup: 'Untergruppe hinzufügen',
+		subgroupNameLabel: 'Name der Untergruppe',
+		subgroupNamePlaceholder: 'z.B. Stammspieler',
+		subgroupSelectMemberPlaceholder: 'Mitglied wählen…',
+		subgroupAddMemberLabel: 'Hinzufügen',
+		noMembersYet: 'Noch keine Mitglieder. Erstelle einen Einladungslink, um Mitglieder hinzuzufügen.',
+		actionsLabel: 'Aktionen',
+		makeCoach: 'Zum Trainer machen',
+		makePlayer: 'Zum Spieler machen',
+		remove: 'Entfernen',
+		archiveTeamTitle: 'Team archivieren',
+		archiveConfirmPrefix: '',
+		archiveConfirmSuffix: ' archivieren? Mitglieder sehen dieses Team danach nicht mehr. Dies kann später rückgängig gemacht werden.',
+		removeMemberTitle: 'Mitglied entfernen',
+		removeConfirmPrefix: '',
+		removeConfirmMiddle: ' aus ',
+		removeConfirmSuffix: ' entfernen? Der Zugriff wird sofort entzogen.',
+		deleteSubgroupTitle: 'Untergruppe löschen',
+		deleteSubgroupConfirmPrefix: 'Untergruppe ',
+		deleteSubgroupConfirmSuffix: ' löschen? Mitglieder bleiben im Team; nur die Gruppierung wird entfernt.',
+		membersPageTitle: 'Mitglieder',
+		inviteByEmailTitle: 'Per E-Mail einladen',
+		teamLabel: 'Team',
+		inviteButton: 'Einladen',
+		noTeamsForInvite: 'Erst ein Team anlegen, bevor Mitglieder eingeladen werden können.',
+		filterPlaceholder: 'Filtern…',
+		noMatch: 'Keine Übereinstimmung.',
+		noMembersFound: 'Keine Mitglieder gefunden.',
+		addTeamButton: '+ Team hinzufügen',
+		loadingShort: 'Lädt…',
+		loadMore: 'Mehr laden',
+		shownCountMiddle: 'von',
+		shownCountSuffix: 'angezeigt',
+		archivedTeamsTitle: 'Archivierte Teams',
+		unarchive: 'Wiederherstellen'
 	}
 };
 
@@ -558,7 +744,8 @@ const en: Dict = {
 		save: 'Save',
 		saved: 'Saved',
 		responses: 'Responses',
-		deadlinePassed: 'The response deadline has passed.'
+		deadlinePassed: 'The response deadline has passed.',
+		minAttendeesWarning: 'Minimum attendees not reached'
 	},
 	eventForm: {
 		newTitle: 'New event',
@@ -572,6 +759,7 @@ const en: Dict = {
 		fLocation: 'Location',
 		fDescription: 'Description',
 		fMinAttendees: 'Min. attendees',
+		fResponseDeadline: 'Response deadline (optional)',
 		selectTeams: 'Select at least one team',
 		required: 'Required',
 		recurringSection: 'Recurrence',
@@ -629,7 +817,17 @@ const en: Dict = {
 		account: 'Account',
 		language: 'Language',
 		name: 'Name',
-		email: 'Email'
+		email: 'Email',
+		changePasswordTitle: 'Change password',
+		currentPasswordLabel: 'Current password',
+		newPasswordLabel: 'New password',
+		confirmPasswordLabel: 'Confirm new password',
+		changePasswordButton: 'Change password',
+		passwordChanged: 'Password changed.',
+		passwordMismatch: 'Passwords do not match.',
+		passwordTooShort: 'The password must be at least 8 characters long.',
+		passwordWrongCurrent: 'The current password is incorrect.',
+		passwordChangeFailed: 'Could not change password. Please try again.'
 	},
 	invite: {
 		eyebrow: 'INVITATION',
@@ -654,7 +852,9 @@ const en: Dict = {
 		invalidTitle: 'Invitation invalid or expired',
 		invalidBody: 'This invitation is no longer valid. Please ask the club for a new one.',
 		emailTaken: 'An account already exists for this email. Please sign in.',
-		failed: 'Could not join. Please try again.'
+		failed: 'Could not join. Please try again.',
+		alreadyRedeemedTitle: 'Invitation already used',
+		alreadyRedeemedBody: 'This invite has already been used.'
 	},
 	swissvolley: {
 		importButton: 'Import from SwissVolley',
@@ -713,6 +913,86 @@ const en: Dict = {
 		errSourceNotDeprecated: 'This team is not deprecated and cannot be migrated.',
 		errTargetNotLive: 'The target team is not an active SwissVolley team.',
 		errFailed: 'Migration failed. Please try again.'
+	},
+	manage: {
+		editClubTitle: 'Edit club',
+		locationLabel: 'Location',
+		logoTitle: 'Club logo',
+		logoHint: 'JPG, PNG or WebP, up to 2MB.',
+		logoUpdated: 'Logo updated.',
+		uploadLogo: 'Upload logo',
+		coManagersTitle: 'Co-managers',
+		coManagersBody: 'Invite another person to co-manage this club.',
+		inviteLinkGenerated: 'Invite link generated!',
+		expiresLabel: 'Expires:',
+		inviteCoManager: 'Invite co-manager',
+		emailPlaceholderColleague: 'colleague@example.com',
+		sendInvite: 'Send invite',
+		teamsQuickLinkBody: 'Manage rosters, invite members, update team info.',
+		viewTeamsLink: 'View Teams',
+		membersQuickLinkBody: 'View all club members, add to teams or remove.',
+		manageMembersTitle: 'Manage members',
+		ndsImport: 'NDS-Import',
+		newTeam: 'New team',
+		teamNamePlaceholder: 'e.g. U18 Boys',
+		optionalPlaceholder: 'Optional',
+		noTeamsYet: 'No teams yet. Create one to get started.',
+		viewLink: 'View ›',
+		backToTeams: '‹ Back to Teams',
+		attendance: 'Attendance',
+		archive: 'Archive',
+		inviteMembersTitle: 'Invite members',
+		inviteMembersBody:
+			'Add an email to invite one person privately — only that address can join (best for coaches). Leave it empty for a shareable link anyone can use.',
+		inviteOnlyEmailPrefix: 'Only',
+		inviteOnlyEmailSuffix: 'can use this invite.',
+		inviteEmailedToPrefix: 'Invite emailed to',
+		shareableInviteGenerated: 'Shareable invite link generated!',
+		inviteMember: 'Invite a member',
+		emailOptionalLabel: 'Email (optional)',
+		emailPlaceholderPerson: 'person@example.com',
+		createInvite: 'Create invite',
+		subgroupsTitle: 'Subgroups',
+		subgroupsBody:
+			'Organise the roster into subgroups (e.g. starters, U18) to target events at part of the team.',
+		memberSingular: 'member',
+		rename: 'Rename',
+		delete: 'Delete',
+		addSubgroup: 'Add subgroup',
+		subgroupNameLabel: 'Subgroup name',
+		subgroupNamePlaceholder: 'e.g. Starters',
+		subgroupSelectMemberPlaceholder: 'Select member…',
+		subgroupAddMemberLabel: 'Add',
+		noMembersYet: 'No members yet. Generate an invite link to add members.',
+		actionsLabel: 'Actions',
+		makeCoach: 'Make Coach',
+		makePlayer: 'Make Player',
+		remove: 'Remove',
+		archiveTeamTitle: 'Archive team',
+		archiveConfirmPrefix: 'Archive ',
+		archiveConfirmSuffix: '? Members will no longer see this team. This can be reversed later.',
+		removeMemberTitle: 'Remove member',
+		removeConfirmPrefix: 'Remove ',
+		removeConfirmMiddle: ' from ',
+		removeConfirmSuffix: '? They will lose access immediately.',
+		deleteSubgroupTitle: 'Delete subgroup',
+		deleteSubgroupConfirmPrefix: 'Delete subgroup ',
+		deleteSubgroupConfirmSuffix: '? Members stay on the team; only the grouping is removed.',
+		membersPageTitle: 'Members',
+		inviteByEmailTitle: 'Invite by email',
+		teamLabel: 'Team',
+		inviteButton: 'Invite',
+		noTeamsForInvite: 'Create a team first before you can invite members.',
+		filterPlaceholder: 'Filter…',
+		noMatch: 'No matches.',
+		noMembersFound: 'No members found.',
+		addTeamButton: '+ Add team',
+		loadingShort: 'Loading…',
+		loadMore: 'Load more',
+		shownCountMiddle: 'of',
+		shownCountSuffix: 'shown',
+		archivedTeamsTitle: 'Archived teams',
+		unarchive: 'Restore'
 	}
 };
 

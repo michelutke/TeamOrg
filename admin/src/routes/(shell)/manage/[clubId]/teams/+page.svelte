@@ -17,8 +17,10 @@
 	let showNdsImport = $state(false);
 	let migrateSource = $state<{ id: string; name: string } | null>(null);
 
-	const activeTeams = $derived(data.teams.filter((t) => !t.deprecated));
-	const deprecatedTeams = $derived(data.teams.filter((t) => t.deprecated));
+	const archivedTeams = $derived(data.teams.filter((t) => t.archivedAt != null));
+	const nonArchivedTeams = $derived(data.teams.filter((t) => t.archivedAt == null));
+	const activeTeams = $derived(nonArchivedTeams.filter((t) => !t.deprecated));
+	const deprecatedTeams = $derived(nonArchivedTeams.filter((t) => t.deprecated));
 	const migrateTargets = $derived(activeTeams.map((t) => ({ id: t.id, name: t.name })));
 
 	const inputClasses =
@@ -27,14 +29,14 @@
 </script>
 
 <svelte:head>
-	<title>Teams — {data.club.name} — TeamOrg</title>
+	<title>{data.m.teams.title} — {data.club.name} — TeamOrg</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">
 	<!-- Page header -->
 	<div class="flex items-center justify-between">
 		<div class="flex flex-col gap-1">
-			<h1 class="font-display text-[30px] font-extrabold text-on-surface">Teams</h1>
+			<h1 class="font-display text-[30px] font-extrabold text-on-surface">{data.m.teams.title}</h1>
 			<p class="text-[13px] text-on-surface-variant">{data.club.name}</p>
 		</div>
 		<div class="flex items-center gap-3">
@@ -54,7 +56,7 @@
 				class="flex cursor-pointer items-center gap-2 rounded-full border border-outline-variant bg-transparent py-[13px] pl-[22px] pr-6 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
 			>
 				<Download size={16} />
-				NDS-Import
+				{data.m.manage.ndsImport}
 			</button>
 			<button
 				type="button"
@@ -62,7 +64,7 @@
 				class="flex cursor-pointer items-center gap-2 rounded-full border-none bg-primary py-[13px] pl-[22px] pr-6 text-[14px] font-bold text-on-primary hover:opacity-90"
 			>
 				<Plus size={16} />
-				New team
+				{data.m.manage.newTeam}
 			</button>
 		</div>
 	</div>
@@ -92,28 +94,28 @@
 	<!-- Create form -->
 	{#if showCreateForm}
 		<div class="rounded-3xl bg-surface-container-low p-6">
-			<h2 class="mb-4 text-[17px] font-bold text-on-surface">New team</h2>
+			<h2 class="mb-4 text-[17px] font-bold text-on-surface">{data.m.manage.newTeam}</h2>
 			{#if form?.error}
 				<p class="mb-3 text-[12px] font-medium text-error">{form.error}</p>
 			{/if}
 			<form method="POST" action="?/create" class="flex items-end gap-3">
 				<div class="flex-1">
-					<label for="team-name" class={labelClasses}>Name</label>
-					<input id="team-name" name="name" type="text" required placeholder="e.g. U18 Boys" class={inputClasses} />
+					<label for="team-name" class={labelClasses}>{data.m.profile.name}</label>
+					<input id="team-name" name="name" type="text" required placeholder={data.m.manage.teamNamePlaceholder} class={inputClasses} />
 				</div>
 				<div class="flex-1">
-					<label for="team-desc" class={labelClasses}>Description</label>
-					<input id="team-desc" name="description" type="text" placeholder="Optional" class={inputClasses} />
+					<label for="team-desc" class={labelClasses}>{data.m.events.description}</label>
+					<input id="team-desc" name="description" type="text" placeholder={data.m.manage.optionalPlaceholder} class={inputClasses} />
 				</div>
 				<button
 					type="submit"
 					class="cursor-pointer whitespace-nowrap rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90"
-				>Create</button>
+				>{data.m.common.create}</button>
 				<button
 					type="button"
 					onclick={() => (showCreateForm = false)}
 					class="cursor-pointer whitespace-nowrap rounded-full border border-outline-variant bg-transparent px-6 py-3 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
-				>Cancel</button>
+				>{data.m.common.cancel}</button>
 			</form>
 		</div>
 	{/if}
@@ -121,7 +123,7 @@
 	<!-- Team cards -->
 	{#if data.teams.length === 0}
 		<div class="rounded-3xl bg-surface-container-low px-6 py-12 text-center">
-			<p class="text-[14px] text-on-surface-variant">No teams yet. Create one to get started.</p>
+			<p class="text-[14px] text-on-surface-variant">{data.m.manage.noTeamsYet}</p>
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -136,13 +138,13 @@
 						{/if}
 					</div>
 					<p class="text-[14px] text-on-surface-variant">
-						{team.memberCount} members{team.description ? ` · ${team.description}` : ''}
+						{team.memberCount} {data.m.teams.members}{team.description ? ` · ${team.description}` : ''}
 					</p>
 					<div class="mt-1 flex items-center gap-4">
 						<a
 							href="/manage/{data.clubId}/teams/{team.id}"
 							class="text-[14px] font-bold text-primary no-underline hover:underline"
-						>View ›</a>
+						>{data.m.manage.viewLink}</a>
 						{#if team.deprecated}
 							<button
 								type="button"
@@ -153,6 +155,31 @@
 					</div>
 				</div>
 			{/each}
+		</div>
+	{/if}
+
+	{#if archivedTeams.length > 0}
+		<div class="flex flex-col gap-4">
+			<h2 class="text-[17px] font-bold text-on-surface">{data.m.manage.archivedTeamsTitle}</h2>
+			<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				{#each archivedTeams as team}
+					<div class="flex flex-col gap-2 rounded-[28px] bg-surface-container-low px-6 py-6 opacity-80">
+						<h2 class="text-[18px] font-bold text-on-surface">{team.name}</h2>
+						<p class="text-[14px] text-on-surface-variant">
+							{team.memberCount} {data.m.teams.members}{team.description ? ` · ${team.description}` : ''}
+						</p>
+						<div class="mt-1">
+							<form method="POST" action="?/unarchive">
+								<input type="hidden" name="teamId" value={team.id} />
+								<button
+									type="submit"
+									class="cursor-pointer border-none bg-transparent p-0 text-[14px] font-bold text-primary hover:underline"
+								>{data.m.manage.unarchive}</button>
+							</form>
+						</div>
+					</div>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </div>

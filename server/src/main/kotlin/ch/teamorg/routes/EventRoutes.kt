@@ -38,7 +38,8 @@ private data class EditEventWithScope(
     val minAttendees: Int? = null,
     val teamIds: List<String>? = null,
     val subgroupIds: List<String>? = null,
-    val defaultResponse: String? = null
+    val defaultResponse: String? = null,
+    val responseDeadline: String? = null
 )
 
 private val VALID_DEFAULT_RESPONSES = setOf("none", "accepted", "declined")
@@ -169,7 +170,8 @@ fun Route.eventRoutes() {
                 minAttendees = body.minAttendees,
                 teamIds = body.teamIds?.map { UUID.fromString(it) },
                 subgroupIds = body.subgroupIds?.map { UUID.fromString(it) },
-                defaultResponse = body.defaultResponse
+                defaultResponse = body.defaultResponse,
+                responseDeadline = body.responseDeadline?.let { Instant.parse(it) }
             )
 
             val existing = eventRepository.findById(id)

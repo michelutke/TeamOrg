@@ -1,11 +1,13 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import { enhance } from '$app/forms';
+	import type { PageData, ActionData } from './$types';
 
 	interface Props {
 		data: PageData;
+		form: ActionData;
 	}
 
-	let { data }: Props = $props();
+	let { data, form }: Props = $props();
 
 	const initials = $derived(
 		data.user.displayName
@@ -14,6 +16,9 @@
 			.map((w) => w[0]?.toUpperCase() ?? '')
 			.join('')
 	);
+
+	const inputCls =
+		'w-full rounded-2xl bg-surface-container-high px-4 py-3 text-[14px] text-on-surface outline-none';
 </script>
 
 <svelte:head>
@@ -62,5 +67,36 @@
 					: 'text-on-surface-variant hover:bg-surface-container-high'}">EN</a
 			>
 		</div>
+	</section>
+
+	<section class="flex flex-col gap-4 rounded-[28px] bg-surface p-6">
+		<h2 class="text-[12px] font-semibold uppercase tracking-wide text-on-surface-variant">
+			{data.m.profile.changePasswordTitle}
+		</h2>
+		<form method="POST" action="?/changePassword" use:enhance class="flex flex-col gap-4">
+			<label class="flex flex-col gap-1">
+				<span class="text-[12px] font-medium text-primary">{data.m.profile.currentPasswordLabel}</span>
+				<input name="currentPassword" type="password" required class={inputCls} />
+			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-[12px] font-medium text-primary">{data.m.profile.newPasswordLabel}</span>
+				<input name="newPassword" type="password" required minlength="8" class={inputCls} />
+			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-[12px] font-medium text-primary">{data.m.profile.confirmPasswordLabel}</span>
+				<input name="confirmPassword" type="password" required minlength="8" class={inputCls} />
+			</label>
+			{#if form?.error}
+				<p class="text-[12px] font-medium text-error">{form.error}</p>
+			{:else if form?.success}
+				<p class="text-[12px] font-medium text-success">{data.m.profile.passwordChanged}</p>
+			{/if}
+			<button
+				type="submit"
+				class="rounded-full border-none bg-primary py-3 text-[15px] font-bold text-on-primary hover:opacity-90"
+			>
+				{data.m.profile.changePasswordButton}
+			</button>
+		</form>
 	</section>
 </div>
