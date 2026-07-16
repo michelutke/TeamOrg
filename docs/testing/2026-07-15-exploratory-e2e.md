@@ -4,6 +4,30 @@ Date: 2026-07-15. Tester: Claude (browser via playwright-cli). Target: **product
 
 Method: accessibility-snapshot-driven browser automation, named sessions per role (`super`, `manager-a`, `coach-a`, `player-a`, …), storage-state reuse. Screenshots only where visual judgment needed.
 
+## Executive summary
+
+Exploratory, real-persona testing of the web admin across superadmin / club-manager / coach / player, plus NDS import and security (IDOR) probes. Scenarios **S0–S5** (bootstrap, hands-on manager, delegation, NDS import, player lifecycle, isolation/audit/session) and follow-up **S7–S10** (attendance depth, invite edges, event lifecycle, account/club lifecycle).
+
+**Security held throughout**: read + write IDOR fully blocked, cross-club isolation, session handling, audit logging all correct.
+
+**Fixes shipped on branch `fix/exploratory-e2e-findings`** (web = SvelteKit `admin/`, server = Ktor `server/`):
+- Event manage actions 500 (cancel/uncancel/reopen/reconcile) — `apiPost` tolerates empty bodies.
+- Attendance grid miscount — read `responseStatus` not `status`.
+- NDS Angebot dedup scoped per-club (was global, blocked cross-club import).
+- NDS export unauthorized → 403 (was 500).
+- Impersonation banner shown in `/manage` shell.
+- `/manage` i18n (mixed DE/EN removed).
+- Finalize dead-end — event detail shows full roster so no-response members are resolvable.
+- Subgroups — added members-read endpoint + assign/remove UI.
+- Change-password — new `POST /auth/change-password` + profile form.
+- Response-deadline field on event create/edit; minAttendees warning surfaced.
+- Team unarchive endpoint + archived-teams UI.
+- RSVP notification uses the real player name; redeemed invite shows an "already used" notice.
+
+**Deferred (need a product/infra decision):** forgot-password reset (no email-based auth exists today); club-deactivation access enforcement (currently a soft flag — members keep access).
+
+**Verification:** `admin` `npm run check` 0 errors; `:server:compileKotlin` green. Server integration tests need Docker (unavailable in the test env) — run `:server:test` locally before merge. QA Testclub A + all test data left intact on prod.
+
 Test accounts (created during this run; passwords in scratchpad, not committed):
 - Superadmin: teamorg@michelutke.com (existing)
 - QA Manager A: qa.manager.a@example.com
