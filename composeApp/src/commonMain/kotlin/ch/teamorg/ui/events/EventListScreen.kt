@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.EventWithTeams
@@ -95,12 +96,14 @@ fun EventListScreen(
                         SegmentedButton(
                             selected = state.viewMode == EventViewMode.LIST,
                             onClick = { viewModel.setViewMode(EventViewMode.LIST) },
-                            shape = SegmentedButtonDefaults.itemShape(0, 2)
+                            shape = SegmentedButtonDefaults.itemShape(0, 2),
+                            modifier = Modifier.testTag("btn_view_list")
                         ) { Text("List") }
                         SegmentedButton(
                             selected = state.viewMode == EventViewMode.CALENDAR,
                             onClick = { viewModel.setViewMode(EventViewMode.CALENDAR) },
-                            shape = SegmentedButtonDefaults.itemShape(1, 2)
+                            shape = SegmentedButtonDefaults.itemShape(1, 2),
+                            modifier = Modifier.testTag("btn_view_calendar")
                         ) { Text("Calendar") }
                     }
                 }
@@ -193,14 +196,16 @@ private fun FilterRows(
                 M3eFilterChip(
                     selected = selectedTeamIds.isEmpty(),
                     onClick = onTeamsClear,
-                    label = "All teams"
+                    label = "All teams",
+                    tag = "filter_teams_all"
                 )
             }
             items(teams) { team ->
                 M3eFilterChip(
                     selected = team.id in selectedTeamIds,
                     onClick = { onTeamToggle(team.id) },
-                    label = team.name
+                    label = team.name,
+                    tag = "filter_team_${team.id}"
                 )
             }
         }
@@ -214,7 +219,8 @@ private fun FilterRows(
                 M3eFilterChip(
                     selected = selectedTypes.isEmpty(),
                     onClick = onTypesClear,
-                    label = "All"
+                    label = "All",
+                    tag = "filter_types_all"
                 )
             }
             val types = listOf("training" to "Training", "match" to "Match", "other" to "Other")
@@ -222,7 +228,8 @@ private fun FilterRows(
                 M3eFilterChip(
                     selected = value in selectedTypes,
                     onClick = { onTypeToggle(value) },
-                    label = label
+                    label = label,
+                    tag = "filter_type_$value"
                 )
             }
             if (isCoach) {
@@ -230,7 +237,8 @@ private fun FilterRows(
                     M3eFilterChip(
                         selected = showAwaitingOnly,
                         onClick = onAwaitingToggle,
-                        label = "Check-in offen"
+                        label = "Check-in offen",
+                        tag = "filter_awaiting"
                     )
                 }
             }
@@ -239,10 +247,11 @@ private fun FilterRows(
 }
 
 @Composable
-private fun M3eFilterChip(selected: Boolean, onClick: () -> Unit, label: String) {
+private fun M3eFilterChip(selected: Boolean, onClick: () -> Unit, label: String, tag: String? = null) {
     FilterChip(
         selected = selected,
         onClick = onClick,
+        modifier = if (tag != null) Modifier.testTag(tag) else Modifier,
         shape = ch.teamorg.ui.theme.PillShape,
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,

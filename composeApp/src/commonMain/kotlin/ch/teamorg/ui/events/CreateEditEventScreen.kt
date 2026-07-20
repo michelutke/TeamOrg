@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -246,7 +247,8 @@ fun CreateEditEventScreen(
                 // Sub-groups selector
                 FilledField(
                     label = "Sub-groups",
-                    onClick = { showSubgroupSheet = true }
+                    onClick = { showSubgroupSheet = true },
+                    modifier = Modifier.testTag("field_subgroups")
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val subgroupLabel = if (state.selectedSubgroupIds.isEmpty()) {
@@ -792,6 +794,7 @@ private fun SubgroupsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("subgroup_sheet")
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
