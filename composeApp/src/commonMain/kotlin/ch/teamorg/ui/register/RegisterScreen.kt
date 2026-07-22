@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.components.TeamorgTextField
 import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
@@ -121,11 +122,7 @@ fun RegisterScreen(
                 shape = PillShape
             ) {
                 if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
+                    TeamorgLoader(size = 40.dp, color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     Text("Create Account", style = MaterialTheme.typography.titleMedium)
                 }

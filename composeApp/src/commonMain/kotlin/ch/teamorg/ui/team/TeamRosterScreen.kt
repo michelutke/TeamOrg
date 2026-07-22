@@ -26,6 +26,7 @@ import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.TeamorgLoader
 import coil3.compose.AsyncImage
 import ch.teamorg.domain.TeamMember
 import ch.teamorg.ui.theme.PillShape
@@ -114,7 +115,7 @@ fun TeamRosterScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (state.isLoading && !state.isRefreshing) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                TeamorgLoader(modifier = Modifier.align(Alignment.Center))
             } else {
                 val coaches = state.members.filter { it.role != "player" }
                 val players = state.members.filter { it.role == "player" }

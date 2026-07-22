@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check } from 'lucide-svelte';
+	import LogoMark from './LogoMark.svelte';
 	import type { Dict, Locale } from '$lib/i18n';
 
 	let { m, lang }: { m: Dict['footer']; lang: Locale } = $props();
@@ -11,11 +11,9 @@
 			<!-- Brand -->
 			<div class="max-w-[300px]">
 				<div class="flex items-center gap-2.5">
-					<span class="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-primary">
-						<Check class="h-5 w-5 text-on-primary" strokeWidth={3} />
-					</span>
-					<span class="font-display text-[22px] font-extrabold tracking-tight text-white"
-						>teamorg</span
+					<LogoMark size={34} blocks="#64D8E8" stem="#E2E4E8" />
+					<span class="font-display text-[22px] font-extrabold tracking-tight"
+						><span class="text-[#E2E4E8]">Team</span><span class="text-[#64D8E8]">Org</span></span
 					>
 				</div>
 				<p class="mt-4 text-[14px] leading-[1.5] text-white/70">{m.tagline}</p>

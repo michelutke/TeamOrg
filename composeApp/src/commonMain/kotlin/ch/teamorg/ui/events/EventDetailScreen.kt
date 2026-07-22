@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import ch.teamorg.ui.components.TeamorgLoader
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.AttendanceResponse
 import ch.teamorg.domain.EventWithTeams
@@ -173,7 +174,7 @@ fun EventDetailScreen(
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                TeamorgLoader()
             }
             state.error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(state.error ?: "Error", color = MaterialTheme.colorScheme.error)
@@ -457,11 +458,7 @@ private fun EventDetailBody(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (isFinalizingOrReopening) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            TeamorgLoader(size = 36.dp, color = MaterialTheme.colorScheme.onPrimary)
                         } else {
                             Text("CheckIn abschliessen")
                         }
@@ -474,10 +471,7 @@ private fun EventDetailBody(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (isFinalizingOrReopening) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
+                            TeamorgLoader(size = 36.dp)
                         } else {
                             Text("CheckIn wieder öffnen")
                         }

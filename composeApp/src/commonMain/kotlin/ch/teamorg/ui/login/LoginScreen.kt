@@ -17,6 +17,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.TeamorgLoader
+import ch.teamorg.ui.components.TeamorgMark
 import ch.teamorg.ui.components.TeamorgTextField
 import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
@@ -51,19 +53,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Logo mark
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.size(72.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "TO",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
+            TeamorgMark(modifier = Modifier.size(72.dp))
 
             Text(
                 text = "Sign in to Teamorg",
@@ -118,11 +108,7 @@ fun LoginScreen(
                 shape = PillShape
             ) {
                 if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
+                    TeamorgLoader(size = 40.dp, color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     Text("Sign in", style = MaterialTheme.typography.titleMedium)
                 }

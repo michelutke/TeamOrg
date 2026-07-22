@@ -28,6 +28,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import ch.teamorg.ui.components.TeamorgLoader
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
@@ -275,7 +276,7 @@ private fun EventListContent(
     when {
         state.isLoading -> {
             Box(modifier = Modifier.fillMaxSize()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                TeamorgLoader(modifier = Modifier.align(Alignment.Center))
             }
         }
         state.error != null -> {
@@ -355,7 +356,7 @@ private fun CalendarContent(
 ) {
     if (state.isLoading) {
         Box(modifier = Modifier.fillMaxSize()) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            TeamorgLoader(modifier = Modifier.align(Alignment.Center))
         }
         return
     }

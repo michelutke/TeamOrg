@@ -21,6 +21,7 @@ import ch.teamorg.navigation.Screen
 import ch.teamorg.ui.components.TeamorgBottomBar
 import ch.teamorg.ui.theme.TeamorgTheme
 import ch.teamorg.ui.components.PlatformBackHandler
+import ch.teamorg.ui.components.TeamorgSplash
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ch.teamorg.data.MutationQueueManager
 import ch.teamorg.repository.NotificationRepository
@@ -59,6 +60,8 @@ fun TeamorgApp(
     }
 
     TeamorgTheme {
+        var splashDone by remember { mutableStateOf(false) }
+
         LaunchedEffect(authState, pendingToken) {
             val token = pendingToken
             when (val state = authState) {
@@ -96,37 +99,43 @@ fun TeamorgApp(
             backStack.removeAt(backStack.lastIndex)
         }
 
-        Box(
-            modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
-        ) {
-            // Content takes full screen — no layout shift from bottom bar
-            AppNavigation(
-                backStack = backStack,
-                isLoggedIn = authState is AuthState.Authenticated,
-                onAuthSuccess = { viewModel.checkAuthState() },
-                onLogout = {
-                    DeepLinkHandler.pendingToken.value = null
-                    DeepLinkHandler.pendingInviteEmail.value = null
-                    viewModel.logout()
-                }
-            )
-
-            // Bottom bar overlaid on top — animates without affecting content layout
-            AnimatedVisibility(
-                visible = showBottomBar,
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
-                enter = slideInVertically { it },
-                exit = slideOutVertically { it }
+        Box {
+            Box(
+                modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
             ) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    TeamorgBottomBar(
-                        currentRoute = currentScreen.route,
-                        onNavigate = { screen ->
-                            backStack.add(screen)
-                        },
-                        unreadCount = unreadCount
-                    )
+                // Content takes full screen — no layout shift from bottom bar
+                AppNavigation(
+                    backStack = backStack,
+                    isLoggedIn = authState is AuthState.Authenticated,
+                    onAuthSuccess = { viewModel.checkAuthState() },
+                    onLogout = {
+                        DeepLinkHandler.pendingToken.value = null
+                        DeepLinkHandler.pendingInviteEmail.value = null
+                        viewModel.logout()
+                    }
+                )
+
+                // Bottom bar overlaid on top — animates without affecting content layout
+                AnimatedVisibility(
+                    visible = showBottomBar,
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                    enter = slideInVertically { it },
+                    exit = slideOutVertically { it }
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        TeamorgBottomBar(
+                            currentRoute = currentScreen.route,
+                            onNavigate = { screen ->
+                                backStack.add(screen)
+                            },
+                            unreadCount = unreadCount
+                        )
+                    }
                 }
+            }
+
+            if (!splashDone) {
+                TeamorgSplash(onFinished = { splashDone = true })
             }
         }
     }

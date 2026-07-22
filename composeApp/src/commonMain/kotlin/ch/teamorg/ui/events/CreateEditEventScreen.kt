@@ -22,6 +22,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.theme.PillShape
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.datetime.LocalDate
@@ -444,11 +445,7 @@ fun CreateEditEventScreen(
                 )
             ) {
                 if (state.isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+                    TeamorgLoader(size = 40.dp, color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     Text(
                         if (state.isEditMode) "Save changes" else "Create event",

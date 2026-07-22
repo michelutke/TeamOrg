@@ -11,7 +11,7 @@
 
 	// Fallback palette (M3 container tones) keyed deterministically off the name so a
 	// team without an explicit appearance still gets a stable, non-random color.
-	const palette = ['#EADDFF', '#FFD8E4', '#E8DEF8', '#C8E6C9', '#FFE0B2', '#B3E5FC'];
+	const palette = ['#BFEAF4', '#DCE1FF', '#CDE7EC', '#D7F0DC', '#F8ECC8', '#FADCD8'];
 	function hash(s: string): number {
 		let h = 0;
 		for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;

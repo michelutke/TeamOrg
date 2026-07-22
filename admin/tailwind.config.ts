@@ -1,32 +1,32 @@
 import type { Config } from 'tailwindcss';
 
-// M3 Expressive palette (Figma redesign iKcGJfgxUxMi2AnE9o4BAL)
+// Graphite Cyan brand palette (light scheme) — mirrors composeApp ui/theme/Color.kt
 export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 	theme: {
 		extend: {
 			colors: {
-				primary: '#6750A4',
+				primary: '#0E6577',
 				'on-primary': '#FFFFFF',
-				'primary-container': '#EADDFF',
-				'on-primary-container': '#4F378B',
-				'secondary-container': '#E8DEF8',
-				'on-secondary-container': '#1D192B',
-				tertiary: '#7D5260',
+				'primary-container': '#BFEAF4',
+				'on-primary-container': '#001F26',
+				'secondary-container': '#CDE7EC',
+				'on-secondary-container': '#051F24',
+				tertiary: '#545D92',
 				'on-tertiary': '#FFFFFF',
-				'tertiary-container': '#FFD8E4',
-				'on-tertiary-container': '#31111D',
-				surface: '#FEF7FF',
-				'surface-container-low': '#F7F2FA',
-				'surface-container-high': '#ECE6F0',
-				'on-surface': '#1D1B20',
-				'on-surface-variant': '#49454F',
-				'outline-variant': '#E6E0E9',
-				error: '#B3261E',
+				'tertiary-container': '#DCE1FF',
+				'on-tertiary-container': '#101A4B',
+				surface: '#F7F9FA',
+				'surface-container-low': '#F1F4F6',
+				'surface-container-high': '#E5E9EB',
+				'on-surface': '#181C1F',
+				'on-surface-variant': '#40484C',
+				'outline-variant': '#C3CBD1',
+				error: '#BA1A1A',
 				'on-error': '#FFFFFF',
-				'error-container': '#F9DEDC',
-				success: '#2E7D32',
-				'success-container': '#C8E6C9'
+				'error-container': '#FFDAD6',
+				success: '#1F6B37',
+				'success-container': '#D7F0DC'
 			},
 			fontFamily: {
 				sans: ['Roboto Flex', 'Roboto', 'ui-sans-serif', 'system-ui', 'sans-serif'],

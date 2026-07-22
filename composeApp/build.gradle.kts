@@ -104,8 +104,8 @@ android {
         applicationId = "ch.teamorg"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = System.getenv("ANDROID_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("ANDROID_VERSION_NAME") ?: "1.0"
         val onesignalAppId: String by lazy {
             val props = providers.gradleProperty("onesignal.appId").orNull
                 ?: rootProject.file("local.properties").takeIf { it.exists() }?.readLines()
