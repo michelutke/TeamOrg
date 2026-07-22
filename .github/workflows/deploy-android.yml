@@ -11,7 +11,8 @@ jobs:
   build-and-deploy:
     name: Build APK + Upload to Updraft
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}
+    if: github.ref == 'refs/heads/main'
+    environment: development
 
     steps:
       - uses: actions/checkout@v4
