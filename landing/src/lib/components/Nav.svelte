@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Check, Menu, X } from 'lucide-svelte';
+	import { Menu, X } from 'lucide-svelte';
+	import LogoMark from './LogoMark.svelte';
 	import type { Dict, Locale } from '$lib/i18n';
 
 	let { m, lang, appUrl }: { m: Dict['nav']; lang: Locale; appUrl: string } = $props();
@@ -20,11 +21,9 @@
 	<nav class="mx-auto flex h-[68px] max-w-content items-center justify-between px-5 md:px-10">
 		<!-- Logo -->
 		<a href="/" class="flex items-center gap-2.5" aria-label="teamorg">
-			<span class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-primary">
-				<Check class="h-5 w-5 text-on-primary" strokeWidth={3} />
-			</span>
-			<span class="font-display text-[22px] font-extrabold tracking-tight text-on-surface"
-				>teamorg</span
+			<LogoMark size={28} />
+			<span class="font-display text-[22px] font-extrabold tracking-tight"
+				><span class="text-on-surface">Team</span><span class="text-primary">Org</span></span
 			>
 		</a>
 
