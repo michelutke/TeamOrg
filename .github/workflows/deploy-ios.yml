@@ -4,6 +4,9 @@ name: Build iOS
 # the simulator with code signing disabled just to verify it builds. When an Apple
 # account is available, add signing + a TestFlight/Updraft upload step (see bottom).
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:

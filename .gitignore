@@ -31,3 +31,8 @@ docs/deploy-secrets.local.md
 
 # Playwright CLI session artifacts
 .playwright-cli/
+
+# Signing material (never commit)
+*.p12
+*.p8
+*.mobileprovision
