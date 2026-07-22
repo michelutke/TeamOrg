@@ -22,7 +22,7 @@ fun initKoin() {
 }
 
 fun MainViewController() = ComposeUIViewController {
-    Box(Modifier.fillMaxSize().background(Color(0xFF090912))) {
+    Box(Modifier.fillMaxSize().background(Color(0xFF14181D))) {
         TeamorgApp()
     }
 }
