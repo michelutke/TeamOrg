@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import ch.teamorg.domain.ClubUser
 import ch.teamorg.domain.Team
 import ch.teamorg.domain.TeamRoleRef
+import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.theme.PillShape
 import ch.teamorg.ui.theme.extendedColors
 
@@ -166,7 +167,7 @@ fun ClubMembersScreen(
             when {
                 state.loading && state.users.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        TeamorgLoader(modifier = Modifier.align(Alignment.Center))
                     }
                 }
                 filtered.isEmpty() && !state.loading -> {
@@ -195,7 +196,7 @@ fun ClubMembersScreen(
                         if (state.loading) {
                             item {
                                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                                    TeamorgLoader(modifier = Modifier.align(Alignment.Center))
                                 }
                             }
                         }

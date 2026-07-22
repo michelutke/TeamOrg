@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.theme.PillShape
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +53,7 @@ fun TeamsListScreen(
         ) {
             when {
                 state.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    TeamorgLoader(modifier = Modifier.align(Alignment.Center))
                 }
                 state.error != null -> {
                     Text(

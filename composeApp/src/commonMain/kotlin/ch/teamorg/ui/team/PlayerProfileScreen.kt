@@ -25,6 +25,7 @@ import ch.teamorg.domain.AbwesenheitRule
 import ch.teamorg.ui.attendance.AbsenceCard
 import ch.teamorg.ui.attendance.AddAbsenceSheet
 import ch.teamorg.ui.attendance.AttendanceStatsBar
+import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.theme.PillShape
 import ch.teamorg.ui.util.rememberImagePickerLauncher
 import coil3.compose.AsyncImage
@@ -87,7 +88,7 @@ fun PlayerProfileScreen(
             when {
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        TeamorgLoader()
                     }
                 }
                 state.member == null -> {

@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.InviteDetails
+import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 
@@ -46,7 +47,7 @@ fun InviteScreen(
         contentAlignment = Alignment.Center
     ) {
         if (state.isLoading) {
-            CircularProgressIndicator()
+            TeamorgLoader()
         } else if (state.error != null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -176,11 +177,7 @@ fun InviteScreen(
                         shape = PillShape
                     ) {
                         if (state.isRedeeming) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
+                            TeamorgLoader(size = 40.dp, color = MaterialTheme.colorScheme.onPrimary)
                         } else {
                             Text("Join $title", style = MaterialTheme.typography.titleMedium)
                         }
