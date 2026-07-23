@@ -2,6 +2,23 @@
 
 Sports team management platform. Create clubs, manage teams, invite members, and assign roles, jerseys, and positions — across Android, iOS, and the web.
 
+## Maintainer / Tech Lead
+
+| Role | Name |
+|---|---|
+| Maintainer / Tech Lead | Michel Utke |
+
+## Quick links
+
+| What | Where |
+|---|---|
+| Repository | https://github.com/michelutke/TeamOrg |
+| CI / Actions | https://github.com/michelutke/TeamOrg/actions |
+| Play Console | https://play.google.com/console (app `ch.teamorg`) |
+| App Store Connect | https://appstoreconnect.apple.com (bundle `ch.teamorg`) |
+| Store deployment guide | [docs/play-store-deployment.md](docs/play-store-deployment.md) |
+| Local setup | [SETUP.md](SETUP.md) |
+
 ## Tech Stack
 
 | Layer | Technology |
