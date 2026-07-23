@@ -1,0 +1,152 @@
+# TeamOrg fastlane — Compose Multiplatform (Android + iOS).
+# Secrets come from the environment: GitHub environment secrets in CI,
+# fastlane/.env (gitignored, auto-loaded — copy from fastlane/env.example) locally.
+
+require "base64"
+require "tmpdir"
+require "fileutils"
+
+PACKAGE_NAME = "ch.teamorg"
+BUNDLE_ID = "ch.teamorg"
+XCODE_WORKSPACE = "iosApp/iosApp.xcworkspace"
+XCODE_SCHEME = "iosApp-Workspace"
+XCODE_CONFIG_FILE = "iosApp/Configuration/Config.xcconfig"
+PLAY_TRACK = "internal"
+
+ANDROID_SECRETS = %w[ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD].freeze
+PLAY_SECRETS = (ANDROID_SECRETS + %w[PLAY_SERVICE_ACCOUNT_JSON]).freeze
+UPDRAFT_SECRETS = (ANDROID_SECRETS + %w[UPDRAFT_APP_KEY UPDRAFT_API_KEY]).freeze
+IOS_SECRETS = %w[APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 IOS_DIST_CERT_P12_BASE64 IOS_DIST_CERT_PASSWORD].freeze
+ALL_SECRETS = (PLAY_SECRETS + UPDRAFT_SECRETS + IOS_SECRETS + %w[API_BASE_URL ONESIGNAL_APP_ID]).uniq.freeze
+
+def require_env!(*keys)
+  missing = keys.flatten.select { |k| ENV[k].to_s.empty? }
+  return if missing.empty?
+
+  UI.user_error!("Missing required environment variables: #{missing.join(', ')} " \
+                 "(CI: GitHub environment secrets; local: fastlane/.env — see fastlane/env.example)")
+end
+
+def build_number
+  ENV["ANDROID_VERSION_CODE"] || ENV["GITHUB_RUN_NUMBER"] || "1"
+end
+
+desc "Report presence of every deploy secret (names only, never values)"
+lane :check_secrets do
+  ALL_SECRETS.each do |key|
+    UI.message("#{key}: #{ENV[key].to_s.empty? ? '✗ missing' : '✓ set'}")
+  end
+end
+
+desc "Build signed release APK and upload to Updraft"
+lane :android_updraft do
+  require_env!(UPDRAFT_SECRETS)
+  gradle(task: ":composeApp:assembleRelease", project_dir: ".")
+  apk = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH] ||
+        Dir["../composeApp/build/outputs/apk/release/*.apk"].first
+  UI.user_error!("No release APK produced") if apk.to_s.empty?
+  sh("curl", "-sS", "--fail-with-body", "-X", "PUT", "--http1.1",
+     "-F", "app=@#{apk}",
+     "-F", "whats_new=Build #{ENV['ANDROID_VERSION_NAME'] || build_number}",
+     "-F", "build_version=#{build_number}",
+     "https://app.getupdraft.com/api/app_upload/#{ENV['UPDRAFT_APP_KEY']}/#{ENV['UPDRAFT_API_KEY']}/")
+end
+
+desc "Build signed release AAB and upload to the Play internal track"
+lane :android_play do
+  require_env!(PLAY_SECRETS)
+  gradle(task: ":composeApp:bundleRelease", project_dir: ".")
+  aab = lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH] ||
+        "composeApp/build/outputs/bundle/release/composeApp-release.aab"
+
+  metadata_dir = play_changelogs_dir
+  upload_to_play_store(
+    package_name: PACKAGE_NAME,
+    track: PLAY_TRACK,
+    aab: aab,
+    json_key_data: ENV["PLAY_SERVICE_ACCOUNT_JSON"],
+    release_status: ENV["PLAY_RELEASE_STATUS"].to_s.empty? ? "completed" : ENV["PLAY_RELEASE_STATUS"],
+    metadata_path: metadata_dir,
+    skip_upload_metadata: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: true,
+    skip_upload_changelogs: metadata_dir.nil?
+  )
+end
+
+# supply expects metadata/<locale>/changelogs/default.txt; the repo keeps release
+# notes in distribution/whatsnew/whatsnew-<locale> (Play console bulk format).
+def play_changelogs_dir
+  sources = Dir["../distribution/whatsnew/whatsnew-*"]
+  return nil if sources.empty?
+
+  root = Dir.mktmpdir("play-metadata")
+  sources.each do |src|
+    locale = File.basename(src).sub("whatsnew-", "")
+    dir = File.join(root, locale, "changelogs")
+    FileUtils.mkdir_p(dir)
+    FileUtils.cp(src, File.join(dir, "default.txt"))
+  end
+  root
+end
+
+desc "Unsigned iOS simulator build — compile check"
+lane :ios_check do
+  sh("cd .. && xcodebuild build " \
+     "-workspace #{XCODE_WORKSPACE} -scheme #{XCODE_SCHEME} -configuration Debug " \
+     "-destination 'generic/platform=iOS Simulator' " \
+     "CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO")
+end
+
+desc "Archive, sign (manual, profile via App Store Connect API) and upload to TestFlight"
+lane :ios_testflight do
+  require_env!(IOS_SECRETS)
+  setup_ci
+
+  api_key = app_store_connect_api_key(
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    key_content: ENV["ASC_KEY_P8_BASE64"],
+    is_key_content_base64: true
+  )
+
+  Dir.mktmpdir do |tmp|
+    cert_path = File.join(tmp, "dist.p12")
+    File.binwrite(cert_path, Base64.decode64(ENV["IOS_DIST_CERT_P12_BASE64"]))
+    import_certificate(
+      certificate_path: cert_path,
+      certificate_password: ENV["IOS_DIST_CERT_PASSWORD"],
+      keychain_name: "fastlane_tmp_keychain",
+      keychain_password: ""
+    )
+  end
+
+  sigh(app_identifier: BUNDLE_ID, api_key: api_key, force: true, output_path: Dir.mktmpdir)
+  profile_name = lane_context[SharedValues::SIGH_NAME]
+
+  config_path = "../#{XCODE_CONFIG_FILE}"
+  config = File.read(config_path)
+  config = config.sub(/^TEAM_ID=.*$/, "TEAM_ID=#{ENV['APPLE_TEAM_ID']}")
+  config = config.sub(/^CURRENT_PROJECT_VERSION=.*$/, "CURRENT_PROJECT_VERSION=#{build_number}")
+  unless config.include?("TEAM_ID=#{ENV['APPLE_TEAM_ID']}") && config.include?("CURRENT_PROJECT_VERSION=#{build_number}")
+    UI.user_error!("Failed to inject TEAM_ID/CURRENT_PROJECT_VERSION into #{XCODE_CONFIG_FILE}")
+  end
+  File.write(config_path, config)
+
+  build_app(
+    workspace: XCODE_WORKSPACE,
+    scheme: XCODE_SCHEME,
+    configuration: "Release",
+    export_method: "app-store",
+    export_team_id: ENV["APPLE_TEAM_ID"],
+    xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Manual " \
+            "CODE_SIGN_IDENTITY=\"Apple Distribution\" " \
+            "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\"",
+    export_options: {
+      signingStyle: "manual",
+      provisioningProfiles: { BUNDLE_ID => profile_name }
+    }
+  )
+
+  pilot(api_key: api_key, skip_waiting_for_build_processing: true)
+end
