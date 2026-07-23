@@ -41,7 +41,7 @@ end
 desc "Build signed release APK and upload to Updraft"
 lane :android_updraft do
   require_env!(UPDRAFT_SECRETS)
-  gradle(task: ":composeApp:assembleRelease", project_dir: "..")
+  gradle(task: ":composeApp:assembleRelease", project_dir: ".")
   apk = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH] ||
         Dir["../composeApp/build/outputs/apk/release/*.apk"].first
   UI.user_error!("No release APK produced") if apk.to_s.empty?
@@ -55,9 +55,9 @@ end
 desc "Build signed release AAB and upload to the Play internal track"
 lane :android_play do
   require_env!(PLAY_SECRETS)
-  gradle(task: ":composeApp:bundleRelease", project_dir: "..")
+  gradle(task: ":composeApp:bundleRelease", project_dir: ".")
   aab = lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH] ||
-        "../composeApp/build/outputs/bundle/release/composeApp-release.aab"
+        "composeApp/build/outputs/bundle/release/composeApp-release.aab"
 
   metadata_dir = play_changelogs_dir
   upload_to_play_store(
@@ -128,10 +128,13 @@ lane :ios_testflight do
   config = File.read(config_path)
   config = config.sub(/^TEAM_ID=.*$/, "TEAM_ID=#{ENV['APPLE_TEAM_ID']}")
   config = config.sub(/^CURRENT_PROJECT_VERSION=.*$/, "CURRENT_PROJECT_VERSION=#{build_number}")
+  unless config.include?("TEAM_ID=#{ENV['APPLE_TEAM_ID']}") && config.include?("CURRENT_PROJECT_VERSION=#{build_number}")
+    UI.user_error!("Failed to inject TEAM_ID/CURRENT_PROJECT_VERSION into #{XCODE_CONFIG_FILE}")
+  end
   File.write(config_path, config)
 
   build_app(
-    workspace: "../#{XCODE_WORKSPACE}",
+    workspace: XCODE_WORKSPACE,
     scheme: XCODE_SCHEME,
     configuration: "Release",
     export_method: "app-store",
