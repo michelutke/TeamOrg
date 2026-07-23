@@ -1,0 +1,31 @@
+# TeamOrg fastlane — Compose Multiplatform (Android + iOS).
+# Secrets come from the environment: GitHub environment secrets in CI,
+# fastlane/.env (gitignored, auto-loaded — copy from fastlane/env.example) locally.
+
+PACKAGE_NAME = "ch.teamorg"
+BUNDLE_ID = "ch.teamorg"
+XCODE_WORKSPACE = "iosApp/iosApp.xcworkspace"
+XCODE_SCHEME = "iosApp-Workspace"
+XCODE_CONFIG_FILE = "iosApp/Configuration/Config.xcconfig"
+PLAY_TRACK = "internal"
+
+ANDROID_SECRETS = %w[ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD].freeze
+PLAY_SECRETS = (ANDROID_SECRETS + %w[PLAY_SERVICE_ACCOUNT_JSON]).freeze
+UPDRAFT_SECRETS = (ANDROID_SECRETS + %w[UPDRAFT_APP_KEY UPDRAFT_API_KEY]).freeze
+IOS_SECRETS = %w[APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 IOS_DIST_CERT_P12_BASE64 IOS_DIST_CERT_PASSWORD].freeze
+ALL_SECRETS = (PLAY_SECRETS + UPDRAFT_SECRETS + IOS_SECRETS + %w[API_BASE_URL ONESIGNAL_APP_ID]).uniq.freeze
+
+def require_env!(*keys)
+  missing = keys.flatten.select { |k| ENV[k].to_s.empty? }
+  return if missing.empty?
+
+  UI.user_error!("Missing required environment variables: #{missing.join(', ')} " \
+                 "(CI: GitHub environment secrets; local: fastlane/.env — see fastlane/env.example)")
+end
+
+desc "Report presence of every deploy secret (names only, never values)"
+lane :check_secrets do
+  ALL_SECRETS.each do |key|
+    UI.message("#{key}: #{ENV[key].to_s.empty? ? '✗ missing' : '✓ set'}")
+  end
+end
