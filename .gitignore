@@ -32,6 +32,14 @@ docs/deploy-secrets.local.md
 # Playwright CLI session artifacts
 .playwright-cli/
 
+# fastlane (local env files never committed; env.example is the template)
+fastlane/.env
+fastlane/.env.*
+!fastlane/env.example
+fastlane/report.xml
+fastlane/README.md
+*.mobileprovision
+
 # Signing material (never commit)
 *.p12
 *.p8
