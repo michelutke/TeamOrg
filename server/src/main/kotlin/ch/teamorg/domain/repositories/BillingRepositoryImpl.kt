@@ -17,6 +17,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.notInSubQuery
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class BillingRepositoryImpl : BillingRepository {
@@ -155,7 +156,15 @@ class BillingRepositoryImpl : BillingRepository {
     }
 
     override fun deleteAbandonedPendingClubs(cutoff: Instant): Int = transaction {
-        ClubsTable.deleteWhere { (ClubsTable.status eq "pending") and (ClubsTable.createdAt less cutoff) }
+        // A pending club with a live Stripe subscription means confirm partially completed
+        // (subscription created, but the club status update didn't land) — that needs manual
+        // attention, not deletion, so it would strand a live paid subscription otherwise.
+        ClubsTable.deleteWhere {
+            (ClubsTable.status eq "pending") and (ClubsTable.createdAt less cutoff) and
+                (ClubsTable.id notInSubQuery (
+                    ClubBillingTable.select(ClubBillingTable.clubId).where { ClubBillingTable.stripeSubscriptionId.isNotNull() }
+                ))
+        }
     }
 
     private fun rowToClubBilling(row: org.jetbrains.exposed.sql.ResultRow) = ClubBilling(

@@ -97,4 +97,34 @@ class BillingJobsTest : IntegrationTestBase() {
         assertTrue(stale !in remaining)
         assertTrue(fresh in remaining)
     }
+
+    @Test
+    fun `pending cleanup spares a stale pending club with a live subscription`() = withTeamorgTestApplication(stripeOverride) {
+        lateinit var repo: BillingRepository
+        application { repo = getKoin().get() }
+        startApplication()
+        val staleWithSub = transaction {
+            ClubsTable.insert { it[name] = "stale-with-sub"; it[status] = "pending" } get ClubsTable.id
+        }
+        transaction {
+            ClubsTable.update({ ClubsTable.id eq staleWithSub }) { it[createdAt] = Instant.now().minusSeconds(3 * 86400) }
+            ClubBillingTable.insert {
+                it[clubId] = staleWithSub
+                it[stripeCustomerId] = "cus_stale_with_sub"
+                it[billingEmail] = "t@x.ch"
+                it[setupIntentId] = "seti"
+                it[stripeSubscriptionId] = "sub_stale_with_sub"
+            }
+        }
+        val staleWithoutSub = transaction {
+            ClubsTable.insert { it[name] = "stale-without-sub"; it[status] = "pending" } get ClubsTable.id
+        }
+        transaction {
+            ClubsTable.update({ ClubsTable.id eq staleWithoutSub }) { it[createdAt] = Instant.now().minusSeconds(3 * 86400) }
+        }
+        runPendingCleanup(repo, ZonedDateTime.now(ZURICH))
+        val remaining = transaction { ClubsTable.selectAll().map { it[ClubsTable.id] } }
+        assertTrue(staleWithSub in remaining)
+        assertTrue(staleWithoutSub !in remaining)
+    }
 }
