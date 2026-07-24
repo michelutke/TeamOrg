@@ -82,7 +82,9 @@ class BillingRepositoryImpl : BillingRepository {
             }
             true
         } catch (e: ExposedSQLException) {
-            false
+            // Only a unique violation on stripe_event_id means "concurrent duplicate";
+            // anything else is a real failure and must surface.
+            if (e.sqlState == "23505") false else throw e
         }
     }
 
