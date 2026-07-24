@@ -37,6 +37,12 @@ onesignal.appId=<OneSignal app id>
 cd admin && npm run check && npm run test
 ```
 
+## Stripe webhook
+
+- Stripe dashboard → webhook endpoint: `https://<api-host>/stripe/webhook`
+- Events to subscribe: `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`
+- Dunning: Settings → Billing → Automatic collection → Smart Retries (~3 weeks), then "mark subscription unpaid" — triggers the `frozen` billing status transition in the app.
+
 ## Deploys (fastlane)
 
 CI deploys automatically: `main` → Updraft (Android APK) + iOS build check; `production` → Play internal track + TestFlight.
