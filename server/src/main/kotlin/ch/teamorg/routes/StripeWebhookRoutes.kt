@@ -15,6 +15,13 @@ import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("StripeWebhook")
 
+private val HANDLED_EVENT_TYPES = setOf(
+    "invoice.paid",
+    "invoice.payment_failed",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+)
+
 fun Route.stripeWebhookRoutes() {
     val billingRepository by inject<BillingRepository>()
     val stripeService by inject<StripeService>()
@@ -36,12 +43,16 @@ fun Route.stripeWebhookRoutes() {
         // Dispatchers.IO keeps the blocking transaction off the Netty worker thread while
         // preserving the thread-local join semantics of the nested repository transactions.
         val response = withContext(Dispatchers.IO) { transaction {
+            if (event.type in HANDLED_EVENT_TYPES && event.customerId == null) {
+                logger.warn("Handled Stripe event ${event.type} has no customerId, cannot resolve club")
+                return@transaction HttpStatusCode.InternalServerError to "Cannot resolve customer"
+            }
             val clubId = event.customerId?.let { billingRepository.findClubIdByCustomerId(it) }
             if (!billingRepository.recordEvent(event.id, clubId, event.type, event.rawJson)) {
                 return@transaction HttpStatusCode.OK to "Already processed"
             }
             if (clubId == null) {
-                logger.warn("Stripe event ${event.type} without matching club, ignoring")
+                logger.info("Stripe event ${event.type} without matching club, ignoring")
                 return@transaction HttpStatusCode.OK to "No club"
             }
 

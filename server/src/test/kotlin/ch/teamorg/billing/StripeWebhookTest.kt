@@ -9,6 +9,7 @@ import io.ktor.http.*
 import kotlinx.serialization.json.*
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import org.koin.dsl.module
 import java.util.UUID
 import kotlin.test.*
@@ -100,6 +101,41 @@ class StripeWebhookTest : IntegrationTestBase() {
 
         assertEquals(HttpStatusCode.OK, hook("evt_del", "customer.subscription.deleted"))
         assertEquals("frozen", billingStatus(clubId))
+    }
+
+    @Test
+    fun `handled event type with unresolvable customer id returns 500 and is not recorded`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("wh-noc@x.ch")
+        val createRes = client.post("/clubs/self-serve") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kind":"club","name":"VC No Customer","billingEmail":"wh-noc@x.ch"}""")
+        }
+        val clubId = Json.parseToJsonElement(createRes.bodyAsText()).jsonObject["clubId"]!!.jsonPrimitive.content
+        client.post("/clubs/$clubId/billing/confirm") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"setupIntentId":"seti_x"}""")
+        }
+        transaction {
+            ClubsTable.update({ ClubsTable.id eq UUID.fromString(clubId) }) { it[billingStatus] = "past_due" }
+        }
+
+        val noCustomerRes = client.post("/stripe/webhook") {
+            contentType(ContentType.Application.Json)
+            header("Stripe-Signature", "t=1,v1=fake")
+            setBody("""{"id":"evt_noc","type":"invoice.paid"}""")
+        }
+        assertEquals(HttpStatusCode.InternalServerError, noCustomerRes.status)
+        assertEquals("past_due", billingStatus(clubId))
+
+        val customerId = customerIdFor(clubId)
+        val retryRes = client.post("/stripe/webhook") {
+            contentType(ContentType.Application.Json)
+            header("Stripe-Signature", "t=1,v1=fake")
+            setBody("""{"id":"evt_noc","type":"invoice.paid","customerId":"$customerId"}""")
+        }
+        assertEquals(HttpStatusCode.OK, retryRes.status)
+        assertEquals("active", billingStatus(clubId))
     }
 
     @Test
