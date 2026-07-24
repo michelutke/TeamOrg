@@ -47,7 +47,7 @@ data class CreateClubInviteRequest(
 )
 
 @Serializable
-data class InviteResponse(val token: String, val inviteUrl: String, val expiresAt: String)
+data class InviteResponse(val token: String, val inviteUrl: String, val expiresAt: String, val shortCode: String? = null)
 
 @Serializable
 data class SetActiveRequest(val active: Boolean)
@@ -146,7 +146,7 @@ fun Route.inviteRoutes() {
 
                     call.respond(
                         HttpStatusCode.Created,
-                        InviteResponse(invite.token, inviteUrlFor(invite.token), invite.expiresAt)
+                        InviteResponse(invite.token, inviteUrlFor(invite.token), invite.expiresAt, shortCode = invite.shortCode)
                     )
                 }
             }
@@ -209,6 +209,16 @@ fun Route.inviteRoutes() {
                     )
                 }
             }
+        }
+    }
+
+    route("/invites/code/{shortCode}") {
+        get {
+            val shortCode = call.parameters["shortCode"]?.uppercase()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing short code")
+            val details = inviteRepository.findByShortCode(shortCode)
+                ?: return@get call.respond(HttpStatusCode.NotFound, "Invite not found")
+            call.respond(details)
         }
     }
 

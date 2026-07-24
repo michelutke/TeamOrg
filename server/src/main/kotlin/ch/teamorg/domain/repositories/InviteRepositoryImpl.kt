@@ -3,10 +3,17 @@ package ch.teamorg.domain.repositories
 import ch.teamorg.db.tables.*
 import ch.teamorg.domain.models.InviteDetails
 import ch.teamorg.domain.models.InviteLink
+import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.util.*
+
+private const val SHORT_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+private val secureRandom = java.security.SecureRandom()
+
+private fun generateShortCode(): String =
+    (1..8).map { SHORT_CODE_ALPHABET[secureRandom.nextInt(SHORT_CODE_ALPHABET.length)] }.joinToString("")
 
 class InviteRepositoryImpl : InviteRepository {
     override suspend fun create(
@@ -18,7 +25,8 @@ class InviteRepositoryImpl : InviteRepository {
         expiresInDays: Int?
     ): InviteLink = transaction {
         val days = expiresInDays ?: if (reusable) 30 else 7
-        val insertedId = InviteLinksTable.insert {
+
+        fun insert(shortCode: String?): UUID = InviteLinksTable.insert {
             it[InviteLinksTable.token] = UUID.randomUUID().toString()
             it[InviteLinksTable.teamId] = teamId
             it[InviteLinksTable.clubId] = null
@@ -27,8 +35,26 @@ class InviteRepositoryImpl : InviteRepository {
             it[InviteLinksTable.invitedEmail] = email
             it[InviteLinksTable.reusable] = reusable
             it[InviteLinksTable.active] = true
+            it[InviteLinksTable.shortCode] = shortCode
             it[InviteLinksTable.expiresAt] = Instant.now().plusSeconds(days.toLong() * 24 * 60 * 60)
         } get InviteLinksTable.id
+
+        val insertedId = if (reusable) {
+            var attempt = 0
+            var result: UUID? = null
+            var lastError: ExposedSQLException? = null
+            while (attempt < 5 && result == null) {
+                try {
+                    result = insert(generateShortCode())
+                } catch (e: ExposedSQLException) {
+                    lastError = e
+                    attempt++
+                }
+            }
+            result ?: throw lastError!!
+        } else {
+            insert(null)
+        }
 
         InviteLinksTable.selectAll().where { InviteLinksTable.id eq insertedId }
             .map(::rowToInviteLink)
@@ -135,6 +161,16 @@ class InviteRepositoryImpl : InviteRepository {
         )
     }
 
+    override suspend fun findByShortCode(shortCode: String): InviteDetails? {
+        val token = transaction {
+            InviteLinksTable.select(InviteLinksTable.token)
+                .where { InviteLinksTable.shortCode eq shortCode }
+                .map { it[InviteLinksTable.token] }
+                .singleOrNull()
+        } ?: return null
+        return getInviteDetails(token)
+    }
+
     override suspend fun setActive(token: String, active: Boolean): Unit = transaction {
         InviteLinksTable.update({ InviteLinksTable.token eq token }) {
             it[InviteLinksTable.active] = active
@@ -217,6 +253,7 @@ class InviteRepositoryImpl : InviteRepository {
         redeemedAt = row[InviteLinksTable.redeemedAt]?.toString(),
         redeemedByUserId = row[InviteLinksTable.redeemedByUserId]?.toString(),
         createdAt = row[InviteLinksTable.createdAt].toString(),
-        ndsMemberId = row[InviteLinksTable.ndsMemberId]?.toString()
+        ndsMemberId = row[InviteLinksTable.ndsMemberId]?.toString(),
+        shortCode = row[InviteLinksTable.shortCode]
     )
 }
