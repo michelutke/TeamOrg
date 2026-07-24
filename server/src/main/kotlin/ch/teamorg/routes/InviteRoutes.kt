@@ -9,6 +9,7 @@ import ch.teamorg.mail.MailService
 import ch.teamorg.mail.buildInviteEmail
 import ch.teamorg.middleware.authenticateUser
 import ch.teamorg.middleware.requireClubRole
+import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -83,6 +84,8 @@ fun Route.inviteRoutes() {
                 if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) {
                     return@post
                 }
+                val clubId = teamRepository.getClubId(teamId)
+                if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@post
 
                 val request = call.receive<CreateInviteRequest>()
                 if (request.role !in listOf("player", "coach")) {
@@ -159,6 +162,7 @@ fun Route.inviteRoutes() {
                 if (!call.requireClubRole(clubId, "club_manager", clubRepository)) {
                     return@post
                 }
+                if (!call.requireClubWritable(clubId, clubRepository)) return@post
 
                 val request = call.receive<CreateClubInviteRequest>()
                 if (request.role != "club_manager") {
@@ -235,6 +239,10 @@ fun Route.inviteRoutes() {
                     )
                 }
                 if (!authorized) return@patch
+
+                val clubId = invite.clubId?.let { UUID.fromString(it) }
+                    ?: teamRepository.getClubId(UUID.fromString(invite.teamId!!))
+                if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@patch
 
                 val request = call.receive<SetActiveRequest>()
                 inviteRepository.setActive(token, request.active)

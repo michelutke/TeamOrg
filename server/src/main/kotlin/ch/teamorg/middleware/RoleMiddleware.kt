@@ -50,6 +50,18 @@ suspend fun ApplicationCall.requireClubMember(clubId: UUID, clubRepository: Club
 }
 
 /**
+ * Block mutating operations on clubs frozen for non-payment (billing_status = 'frozen').
+ * Reads and the billing endpoints themselves stay available so the owner can recover.
+ */
+suspend fun ApplicationCall.requireClubWritable(clubId: UUID, clubRepository: ClubRepository): Boolean {
+    if (clubRepository.isFrozen(clubId)) {
+        respond(HttpStatusCode.PaymentRequired, "Club is frozen due to unpaid invoice")
+        return false
+    }
+    return true
+}
+
+/**
  * Verify the caller may access an event. The event is resolved to its team(s); the caller must
  * hold one of [roles] in at least one of those teams. Events with no teams (personal/orphaned)
  * are only accessible to their creator.

@@ -182,6 +182,11 @@ class ClubRepositoryImpl : ClubRepository {
         TeamsTable.selectAll().where { (TeamsTable.clubId eq clubId) and (TeamsTable.archivedAt.isNull()) }.count().toInt()
     }
 
+    override suspend fun isFrozen(clubId: UUID): Boolean = transaction {
+        ClubsTable.selectAll().where { ClubsTable.id eq clubId }
+            .singleOrNull()?.get(ClubsTable.billingStatus) == "frozen"
+    }
+
     private fun rowToClub(row: ResultRow) = Club(
         id = row[ClubsTable.id].toString(),
         name = row[ClubsTable.name],

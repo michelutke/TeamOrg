@@ -19,4 +19,5 @@ interface ClubRepository {
     suspend fun setStatus(clubId: UUID, status: String)
     suspend fun setKind(clubId: UUID, kind: String)
     suspend fun countActiveTeams(clubId: UUID): Int
+    suspend fun isFrozen(clubId: UUID): Boolean
 }

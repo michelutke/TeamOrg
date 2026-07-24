@@ -4,15 +4,18 @@ import ch.teamorg.domain.models.CreateEventRequest
 import ch.teamorg.domain.models.EditEventRequest
 import ch.teamorg.domain.models.RecurringScope
 import ch.teamorg.domain.repositories.AttendanceRepository
+import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.TeamRepository
+import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.middleware.requireEventAccess
 import ch.teamorg.middleware.requireTeamRole
 import ch.teamorg.infra.AbwesenheitBackfillJob
 import ch.teamorg.infra.NotificationDispatcher
 import org.slf4j.LoggerFactory
 import io.ktor.http.*
+import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
@@ -69,6 +72,15 @@ fun Route.eventRoutes() {
     val dispatcher by inject<NotificationDispatcher>()
     val notificationRepo by inject<NotificationRepository>()
     val attendanceRepository by inject<AttendanceRepository>()
+    val clubRepository by inject<ClubRepository>()
+
+    // Events attached to multiple teams belong to a single club in this model (self-serve clubs
+    // keep all teams under one club); personal events with no teams are not club-scoped writes.
+    suspend fun ApplicationCall.requireEventClubWritable(teamIds: List<UUID>): Boolean {
+        val teamId = teamIds.firstOrNull() ?: return true
+        val clubId = teamRepository.getClubId(teamId) ?: return true
+        return requireClubWritable(clubId, clubRepository)
+    }
 
     authenticate("jwt") {
         get("/users/me/events") {
@@ -115,6 +127,7 @@ fun Route.eventRoutes() {
             for (teamId in request.teamIds) {
                 if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
             }
+            if (!call.requireEventClubWritable(request.teamIds)) return@post
             val event = eventRepository.create(request, userId)
             backfillJob.applyRulesToNewEvent(event.id, event.startAt, event.teamIds)
 
@@ -179,6 +192,7 @@ fun Route.eventRoutes() {
                 call.respond(HttpStatusCode.NotFound)
                 return@patch
             }
+            if (!call.requireEventClubWritable(existing.teamIds)) return@patch
 
             when (scope) {
                 RecurringScope.this_only -> {
@@ -258,6 +272,7 @@ fun Route.eventRoutes() {
                 call.respond(HttpStatusCode.NotFound)
                 return@post
             }
+            if (!call.requireEventClubWritable(existing.teamIds)) return@post
 
             when (scope) {
                 RecurringScope.this_only -> eventRepository.cancel(id)
@@ -311,6 +326,7 @@ fun Route.eventRoutes() {
                 call.respond(HttpStatusCode.NotFound)
                 return@post
             }
+            if (!call.requireEventClubWritable(existing.teamIds)) return@post
 
             when (scope) {
                 RecurringScope.this_only -> eventRepository.uncancel(id)
@@ -337,6 +353,12 @@ fun Route.eventRoutes() {
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val id = UUID.fromString(call.parameters["id"])
             if (!call.requireEventAccess(id, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
+            val existing = eventRepository.findById(id)
+            if (existing == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+            if (!call.requireEventClubWritable(existing.teamIds)) return@post
             val event = eventRepository.duplicate(id, userId)
             if (event != null) {
                 backfillJob.applyRulesToNewEvent(event.id, event.startAt, event.teamIds)
@@ -356,6 +378,7 @@ fun Route.eventRoutes() {
                 call.respond(HttpStatusCode.NotFound)
                 return@post
             }
+            if (!call.requireEventClubWritable(existing.teamIds)) return@post
             if (existing.externalSource != "swissvolley" || !existing.needsReview) {
                 call.respond(HttpStatusCode.Conflict)
                 return@post
