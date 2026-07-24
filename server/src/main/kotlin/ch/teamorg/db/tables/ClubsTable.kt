@@ -12,6 +12,10 @@ object ClubsTable : Table("clubs") {
     val location = text("location").nullable()
     val logoPath = text("logo_path").nullable()
     val status = text("status").default("active")
+    val kind = text("kind").default("club") // club | team
+    val ownerUserId = uuid("owner_user_id").references(UsersTable.id, onDelete = ReferenceOption.SET_NULL).nullable()
+    val billingMode = text("billing_mode").default("manual") // stripe | manual | free
+    val billingStatus = text("billing_status").default("active") // active | past_due | frozen
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
 

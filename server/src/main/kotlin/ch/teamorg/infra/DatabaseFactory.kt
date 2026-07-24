@@ -1,8 +1,11 @@
 package ch.teamorg.infra
 
+import ch.teamorg.db.tables.BillingEventsTable
+import ch.teamorg.db.tables.ClubBillingTable
 import ch.teamorg.db.tables.ClubRolesTable
 import ch.teamorg.db.tables.ClubsTable
 import ch.teamorg.db.tables.InviteLinksTable
+import ch.teamorg.db.tables.MemberCountSamplesTable
 import ch.teamorg.db.tables.SubGroupMembersTable
 import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.TeamRolesTable
@@ -49,7 +52,10 @@ object DatabaseFactory {
                     TeamRolesTable,
                     InviteLinksTable,
                     SubGroupsTable,
-                    SubGroupMembersTable
+                    SubGroupMembersTable,
+                    ClubBillingTable,
+                    MemberCountSamplesTable,
+                    BillingEventsTable
                 )
             }
             logger.info("H2 test database initialised with SchemaUtils")
