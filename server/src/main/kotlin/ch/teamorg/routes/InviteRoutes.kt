@@ -240,10 +240,6 @@ fun Route.inviteRoutes() {
                 }
                 if (!authorized) return@patch
 
-                val clubId = invite.clubId?.let { UUID.fromString(it) }
-                    ?: teamRepository.getClubId(UUID.fromString(invite.teamId!!))
-                if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@patch
-
                 val request = call.receive<SetActiveRequest>()
                 inviteRepository.setActive(token, request.active)
                 call.respond(HttpStatusCode.OK, OkResponse())

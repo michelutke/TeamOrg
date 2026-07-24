@@ -3,7 +3,9 @@ package ch.teamorg.routes
 import ch.teamorg.db.tables.SubGroupMembersTable
 import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.UsersTable
+import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.TeamRepository
+import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -77,6 +79,7 @@ private suspend fun io.ktor.server.application.ApplicationCall.requireSubGroupIn
 
 fun Route.subGroupRoutes() {
     val teamRepository by inject<TeamRepository>()
+    val clubRepository by inject<ClubRepository>()
 
     authenticate("jwt") {
         route("/teams/{teamId}/subgroups") {
@@ -105,6 +108,8 @@ fun Route.subGroupRoutes() {
             post {
                 val teamId = UUID.fromString(call.parameters["teamId"])
                 if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
+                val clubId = teamRepository.getClubId(teamId)
+                if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@post
                 val request = call.receive<CreateSubGroupRequest>()
                 val subGroup = newSuspendedTransaction {
                     val id = SubGroupsTable.insert {
@@ -121,6 +126,8 @@ fun Route.subGroupRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@put
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@put
                     if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@put
                     val request = call.receive<UpdateSubGroupRequest>()
                     newSuspendedTransaction {
@@ -135,6 +142,8 @@ fun Route.subGroupRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@delete
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@delete
                     if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@delete
                     newSuspendedTransaction {
                         SubGroupMembersTable.deleteWhere { SubGroupMembersTable.subGroupId eq subGroupId }
@@ -155,6 +164,8 @@ fun Route.subGroupRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@post
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@post
                     if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@post
                     val request = call.receive<AddSubGroupMemberRequest>()
                     newSuspendedTransaction {
@@ -171,6 +182,8 @@ fun Route.subGroupRoutes() {
                     val subGroupId = UUID.fromString(call.parameters["subGroupId"])
                     val userId = UUID.fromString(call.parameters["userId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@delete
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@delete
                     if (!call.requireSubGroupInTeam(subGroupId, teamId)) return@delete
                     newSuspendedTransaction {
                         SubGroupMembersTable.deleteWhere {

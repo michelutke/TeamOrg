@@ -202,8 +202,6 @@ fun Route.teamRoutes() {
                 delete("/leave") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     call.authenticateUser(userRepository) { user ->
-                        val clubId = teamRepository.getClubId(teamId)
-                        if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@authenticateUser
                         teamRepository.removeMember(teamId, UUID.fromString(user.id))
                         call.respond(HttpStatusCode.NoContent)
                     }
@@ -224,8 +222,6 @@ fun Route.teamRoutes() {
                         "Not a member of this team"
                     )
                 }
-                val clubId = teamRepository.getClubId(teamId)
-                if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@authenticateUser
                 val member = teamRepository.updateMemberProfile(
                     teamId,
                     userId,

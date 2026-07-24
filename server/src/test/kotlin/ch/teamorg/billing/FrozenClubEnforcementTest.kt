@@ -57,4 +57,33 @@ class FrozenClubEnforcementTest : IntegrationTestBase() {
         // billing endpoints must stay open to fix the card
         assertEquals(HttpStatusCode.OK, client.post("/clubs/$clubId/billing/update-card") { bearerAuth(token) }.status)
     }
+
+    @Test
+    fun `frozen club blocks subgroup creation but still allows leaving the team`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("fr2@x.ch")
+        val createRes = client.post("/clubs/self-serve") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kind":"team","name":"VC Frost","billingEmail":"fr2@x.ch"}""")
+        }
+        val createBody = Json.parseToJsonElement(createRes.bodyAsText()).jsonObject
+        val clubId = createBody["clubId"]!!.jsonPrimitive.content
+        val teamId = createBody["teamId"]!!.jsonPrimitive.content
+        client.post("/clubs/$clubId/billing/confirm") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"setupIntentId":"seti_x"}""")
+        }
+        transaction {
+            ClubsTable.update({ ClubsTable.id eq UUID.fromString(clubId) }) { it[billingStatus] = "frozen" }
+        }
+
+        val subGroupRes = client.post("/teams/$teamId/subgroups") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"name":"A"}""")
+        }
+        assertEquals(HttpStatusCode.PaymentRequired, subGroupRes.status)
+
+        val leaveRes = client.delete("/teams/$teamId/leave") { bearerAuth(token) }
+        assertEquals(HttpStatusCode.NoContent, leaveRes.status)
+    }
 }
