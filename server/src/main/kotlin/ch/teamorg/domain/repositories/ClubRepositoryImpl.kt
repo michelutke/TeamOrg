@@ -158,6 +158,12 @@ class ClubRepositoryImpl : ClubRepository {
             .singleOrNull()
     }
 
+    override suspend fun findKind(clubId: UUID): String? = transaction {
+        ClubsTable.selectAll().where { ClubsTable.id eq clubId }
+            .map { it[ClubsTable.kind] }
+            .singleOrNull()
+    }
+
     override suspend fun setStatus(clubId: UUID, status: String): Unit = transaction {
         ClubsTable.update({ ClubsTable.id eq clubId }) {
             it[ClubsTable.status] = status

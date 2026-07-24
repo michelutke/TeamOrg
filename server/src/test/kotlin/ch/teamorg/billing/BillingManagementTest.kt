@@ -95,4 +95,43 @@ class BillingManagementTest : IntegrationTestBase() {
         assertEquals(HttpStatusCode.OK, res.status)
         assertEquals("seti_secret_fake", Json.parseToJsonElement(res.bodyAsText()).jsonObject["setupIntentClientSecret"]!!.jsonPrimitive.content)
     }
+
+    @Test
+    fun `update-card forbids non-owner stranger`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("uc2@x.ch")
+        val clubId = client.createAndConfirm(token, "club", "VC Bern")
+
+        val stranger = client.register("ucs@x.ch")
+        val res = client.post("/clubs/$clubId/billing/update-card") { bearerAuth(stranger) }
+        assertEquals(HttpStatusCode.Forbidden, res.status)
+    }
+
+    @Test
+    fun `convert forbids non-owner stranger`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("cv2@x.ch")
+        val clubId = client.createAndConfirm(token, "club", "VC Thun")
+
+        val stranger = client.register("cvs@x.ch")
+        val res = client.post("/clubs/$clubId/convert") {
+            bearerAuth(stranger); contentType(ContentType.Application.Json)
+            setBody("""{"targetKind":"club"}""")
+        }
+        assertEquals(HttpStatusCode.Forbidden, res.status)
+    }
+
+    @Test
+    fun `convert to same kind is a no-op`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("cv3@x.ch")
+        val clubId = client.createAndConfirm(token, "club", "VC Biel")
+
+        val res = client.post("/clubs/$clubId/convert") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"targetKind":"club"}""")
+        }
+        assertEquals(HttpStatusCode.OK, res.status)
+        assertEquals("club", Json.parseToJsonElement(res.bodyAsText()).jsonObject["kind"]!!.jsonPrimitive.content)
+    }
 }

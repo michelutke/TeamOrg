@@ -183,6 +183,10 @@ fun Route.selfServeRoutes() {
                 if (request.targetKind !in setOf("club", "team")) {
                     return@authenticateUser call.respond(HttpStatusCode.BadRequest, "targetKind must be club or team")
                 }
+                val currentKind = clubRepository.findKind(clubId)
+                if (currentKind == request.targetKind) {
+                    return@authenticateUser call.respond(HttpStatusCode.OK, mapOf("kind" to request.targetKind))
+                }
                 if (request.targetKind == "team" && clubRepository.countActiveTeams(clubId) != 1) {
                     return@authenticateUser call.respond(HttpStatusCode.Conflict, "Club must have exactly one active team to become a team")
                 }
