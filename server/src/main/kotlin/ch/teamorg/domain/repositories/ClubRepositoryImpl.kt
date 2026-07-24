@@ -182,6 +182,8 @@ class ClubRepositoryImpl : ClubRepository {
         sportType = row[ClubsTable.sportType],
         location = row[ClubsTable.location],
         logoUrl = row[ClubsTable.logoPath],
+        billingStatus = row[ClubsTable.billingStatus],
+        billingMode = row[ClubsTable.billingMode],
         createdAt = row[ClubsTable.createdAt].toString(),
         updatedAt = row[ClubsTable.updatedAt].toString()
     )

@@ -1,6 +1,7 @@
 package ch.teamorg.routes
 
 import ch.teamorg.domain.ZURICH
+import ch.teamorg.domain.computeBilledCount
 import ch.teamorg.domain.nextJanuaryFirstEpochSeconds
 import ch.teamorg.domain.repositories.BillingRepository
 import ch.teamorg.domain.repositories.ClubRepository
@@ -36,6 +37,22 @@ data class BillingConfirmRequest(val setupIntentId: String)
 
 @Serializable
 data class BillingConfirmResponse(val status: String)
+
+@Serializable
+data class ConvertRequest(val targetKind: String)
+
+@Serializable
+data class BillingInfoResponse(
+    val billingEmail: String,
+    val cardBrand: String?,
+    val cardLast4: String?,
+    val cardExpMonth: Int?,
+    val cardExpYear: Int?,
+    val currentMemberCount: Int,
+    val projectedBilledCount: Int,
+    val billingStatus: String,
+    val billingMode: String,
+)
 
 fun Route.selfServeRoutes() {
     val clubRepository by inject<ClubRepository>()
@@ -106,6 +123,71 @@ fun Route.selfServeRoutes() {
                 }
                 billingRepository.setBillingStatus(clubId, "active")
                 call.respond(HttpStatusCode.OK, BillingConfirmResponse("active"))
+            }
+        }
+
+        get("/clubs/{clubId}/billing") {
+            call.authenticateUser(userRepository) { user ->
+                val userId = UUID.fromString(user.id)
+                val clubId = UUID.fromString(call.parameters["clubId"])
+                if (clubRepository.findOwnerId(clubId) != userId) {
+                    return@authenticateUser call.respond(HttpStatusCode.Forbidden, "Only the club owner can view billing")
+                }
+                val billing = billingRepository.findByClubId(clubId)
+                    ?: return@authenticateUser call.respond(HttpStatusCode.NotFound, "No billing record for club")
+                val club = clubRepository.findById(clubId)
+                    ?: return@authenticateUser call.respond(HttpStatusCode.NotFound, "Club not found")
+                val current = billingRepository.countActiveMembers(clubId)
+                val now = ZonedDateTime.now(ZURICH)
+                val q4From = ZonedDateTime.of(now.year, 10, 1, 0, 0, 0, 0, ZURICH).toInstant()
+                val samples = billingRepository.sampleCountsBetween(clubId, q4From, now.toInstant())
+                call.respond(
+                    BillingInfoResponse(
+                        billingEmail = billing.billingEmail,
+                        cardBrand = billing.cardBrand,
+                        cardLast4 = billing.cardLast4,
+                        cardExpMonth = billing.cardExpMonth,
+                        cardExpYear = billing.cardExpYear,
+                        currentMemberCount = current,
+                        projectedBilledCount = computeBilledCount(current, samples),
+                        billingStatus = club.billingStatus,
+                        billingMode = club.billingMode,
+                    )
+                )
+            }
+        }
+
+        post("/clubs/{clubId}/billing/update-card") {
+            call.authenticateUser(userRepository) { user ->
+                val userId = UUID.fromString(user.id)
+                val clubId = UUID.fromString(call.parameters["clubId"])
+                if (clubRepository.findOwnerId(clubId) != userId) {
+                    return@authenticateUser call.respond(HttpStatusCode.Forbidden, "Only the club owner can manage billing")
+                }
+                val billing = billingRepository.findByClubId(clubId)
+                    ?: return@authenticateUser call.respond(HttpStatusCode.NotFound, "No billing record for club")
+                val setupIntent = stripeService.createSetupIntent(billing.stripeCustomerId)
+                billingRepository.setSetupIntent(clubId, setupIntent.id)
+                call.respond(mapOf("setupIntentClientSecret" to setupIntent.clientSecret))
+            }
+        }
+
+        post("/clubs/{clubId}/convert") {
+            call.authenticateUser(userRepository) { user ->
+                val userId = UUID.fromString(user.id)
+                val clubId = UUID.fromString(call.parameters["clubId"])
+                if (clubRepository.findOwnerId(clubId) != userId) {
+                    return@authenticateUser call.respond(HttpStatusCode.Forbidden, "Only the club owner can convert")
+                }
+                val request = call.receive<ConvertRequest>()
+                if (request.targetKind !in setOf("club", "team")) {
+                    return@authenticateUser call.respond(HttpStatusCode.BadRequest, "targetKind must be club or team")
+                }
+                if (request.targetKind == "team" && clubRepository.countActiveTeams(clubId) != 1) {
+                    return@authenticateUser call.respond(HttpStatusCode.Conflict, "Club must have exactly one active team to become a team")
+                }
+                clubRepository.setKind(clubId, request.targetKind)
+                call.respond(mapOf("kind" to request.targetKind))
             }
         }
     }
