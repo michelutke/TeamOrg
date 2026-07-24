@@ -3,7 +3,6 @@ package ch.teamorg.domain.repositories
 import ch.teamorg.db.tables.*
 import ch.teamorg.domain.models.InviteDetails
 import ch.teamorg.domain.models.InviteLink
-import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
@@ -39,24 +38,12 @@ class InviteRepositoryImpl : InviteRepository {
             it[InviteLinksTable.expiresAt] = Instant.now().plusSeconds(days.toLong() * 24 * 60 * 60)
         } get InviteLinksTable.id
 
-        val insertedId = if (reusable) {
-            var attempt = 0
-            var result: UUID? = null
-            var lastError: ExposedSQLException? = null
-            while (attempt < 5 && result == null) {
-                try {
-                    result = insert(generateShortCode())
-                } catch (e: ExposedSQLException) {
-                    // Retry only on unique violation (short_code collision); anything else is real.
-                    if (e.sqlState != "23505") throw e
-                    lastError = e
-                    attempt++
-                }
-            }
-            result ?: throw lastError!!
-        } else {
-            insert(null)
-        }
+        // No retry on short_code collision: on Postgres, once a statement inside this transaction
+        // fails with a unique violation, the transaction is aborted and any subsequent statement
+        // (including a retry insert) fails with 25P02, not a fresh attempt. A real retry would
+        // require a new transaction — the collision odds at this code space size (31^8) don't
+        // justify that complexity, so a collision bubbles up as an exception instead.
+        val insertedId = if (reusable) insert(generateShortCode()) else insert(null)
 
         InviteLinksTable.selectAll().where { InviteLinksTable.id eq insertedId }
             .map(::rowToInviteLink)
