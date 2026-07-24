@@ -52,6 +52,7 @@ fun Route.stripeWebhookRoutes() {
                     if (event.subscriptionStatus in setOf("unpaid", "canceled")) {
                         billingRepository.setBillingStatus(clubId, "frozen")
                     }
+                "customer.subscription.deleted" -> billingRepository.setBillingStatus(clubId, "frozen")
                 else -> logger.info("Ignoring Stripe event type ${event.type}")
             }
             HttpStatusCode.OK to "OK"

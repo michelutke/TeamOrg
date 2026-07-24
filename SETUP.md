@@ -37,11 +37,15 @@ onesignal.appId=<OneSignal app id>
 cd admin && npm run check && npm run test
 ```
 
-## Stripe webhook
+## Stripe billing
 
-- Stripe dashboard → webhook endpoint: `https://<api-host>/stripe/webhook`
-- Events to subscribe: `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`
-- Dunning: Settings → Billing → Automatic collection → Smart Retries (~3 weeks), then "mark subscription unpaid" — triggers the `frozen` billing status transition in the app.
+Env vars (server): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`. All optional — empty-string fallbacks keep dev/test boot working without Stripe configured.
+
+- Dashboard → Products: create a per-unit price of CHF 1/year, copy its price id into `STRIPE_PRICE_ID`.
+- Dashboard → Developers → API keys: use `sk_test_...` in test mode, copy into `STRIPE_SECRET_KEY`.
+- Dashboard → Developers → Webhooks: add endpoint `https://<api-host>/stripe/webhook`, subscribe to `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+- Dashboard → Settings → Billing → Automatic collection: enable Smart Retries, then set the failed-payment outcome to "mark subscription unpaid" — this triggers the `frozen` billing status transition in the app (a canceled/deleted subscription also freezes the club).
+- Local webhook testing: `stripe listen --forward-to localhost:8080/stripe/webhook` (prints a `whsec_...` secret to use as `STRIPE_WEBHOOK_SECRET` locally).
 
 ## Deploys (fastlane)
 

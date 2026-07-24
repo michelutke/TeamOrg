@@ -77,6 +77,32 @@ class StripeWebhookTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `subscription deleted freezes club`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("wh-del@x.ch")
+        val createRes = client.post("/clubs/self-serve") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kind":"club","name":"VC Hook Del","billingEmail":"wh-del@x.ch"}""")
+        }
+        val clubId = Json.parseToJsonElement(createRes.bodyAsText()).jsonObject["clubId"]!!.jsonPrimitive.content
+        client.post("/clubs/$clubId/billing/confirm") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"setupIntentId":"seti_x"}""")
+        }
+        val customerId = customerIdFor(clubId)
+
+        suspend fun hook(id: String, type: String): HttpStatusCode =
+            client.post("/stripe/webhook") {
+                contentType(ContentType.Application.Json)
+                header("Stripe-Signature", "t=1,v1=fake")
+                setBody("""{"id":"$id","type":"$type","customerId":"$customerId"}""")
+            }.status
+
+        assertEquals(HttpStatusCode.OK, hook("evt_del", "customer.subscription.deleted"))
+        assertEquals("frozen", billingStatus(clubId))
+    }
+
+    @Test
     fun `webhook without Stripe-Signature header is rejected with 400`() = withTeamorgTestApplication(stripeOverride) {
         val client = createJsonClient()
         val res = client.post("/stripe/webhook") {
