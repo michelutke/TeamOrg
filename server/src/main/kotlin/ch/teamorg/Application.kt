@@ -1,6 +1,7 @@
 package ch.teamorg
 
 import ch.teamorg.infra.DatabaseFactory
+import ch.teamorg.infra.startBillingJobs
 import ch.teamorg.infra.startMaterialisationJob
 import ch.teamorg.infra.startReminderSchedulerJob
 import ch.teamorg.infra.startSwissVolleySyncJob
@@ -36,4 +37,5 @@ fun Application.module() {
     startMaterialisationJob()
     startReminderSchedulerJob()
     startSwissVolleySyncJob()
+    startBillingJobs()
 }
