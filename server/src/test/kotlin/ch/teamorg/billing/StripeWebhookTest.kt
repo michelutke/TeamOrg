@@ -75,4 +75,14 @@ class StripeWebhookTest : IntegrationTestBase() {
         assertEquals(HttpStatusCode.OK, hook("evt_b", "customer.subscription.updated", "unpaid"))
         assertEquals("active", billingStatus(clubId))
     }
+
+    @Test
+    fun `webhook without Stripe-Signature header is rejected with 400`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val res = client.post("/stripe/webhook") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"evt_nosig","type":"invoice.paid"}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, res.status)
+    }
 }

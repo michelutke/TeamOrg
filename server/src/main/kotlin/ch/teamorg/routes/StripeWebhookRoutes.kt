@@ -7,6 +7,8 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
@@ -31,7 +33,9 @@ fun Route.stripeWebhookRoutes() {
         // Recording the event and applying its status transition must commit or roll back
         // together: if setBillingStatus failed after recordEvent alone committed, Stripe's
         // retry would hit the duplicate check and never reapply the transition.
-        val response = transaction {
+        // Dispatchers.IO keeps the blocking transaction off the Netty worker thread while
+        // preserving the thread-local join semantics of the nested repository transactions.
+        val response = withContext(Dispatchers.IO) { transaction {
             val clubId = event.customerId?.let { billingRepository.findClubIdByCustomerId(it) }
             if (!billingRepository.recordEvent(event.id, clubId, event.type, event.rawJson)) {
                 return@transaction HttpStatusCode.OK to "Already processed"
@@ -51,7 +55,7 @@ fun Route.stripeWebhookRoutes() {
                 else -> logger.info("Ignoring Stripe event type ${event.type}")
             }
             HttpStatusCode.OK to "OK"
-        }
+        } }
         call.respond(response.first, response.second)
     }
 }
