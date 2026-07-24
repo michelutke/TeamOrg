@@ -51,10 +51,23 @@ class InviteShortCodeTest : IntegrationTestBase() {
         assertEquals(HttpStatusCode.OK, lookupRes.status)
         val token = Json.parseToJsonElement(lookupRes.bodyAsText()).jsonObject["token"]!!.jsonPrimitive.content
 
+        // codes are case-insensitive for manual entry
+        val lowercaseRes = client.get("/invites/code/${shortCode.lowercase()}")
+        assertEquals(HttpStatusCode.OK, lowercaseRes.status)
+
         val playerToken = client.register("newplayer@x.ch")
         val redeemRes = client.post("/invites/$token/redeem") { bearerAuth(playerToken) }
         assertEquals(HttpStatusCode.OK, redeemRes.status)
 
         assertEquals(HttpStatusCode.NotFound, client.get("/invites/code/ZZZZZZZZ").status)
+
+        // personal (non-reusable) invites get no short code
+        val personalRes = client.post("/teams/$teamId/invites") {
+            bearerAuth(ownerToken); contentType(ContentType.Application.Json)
+            setBody("""{"email":"personal@x.ch","role":"player"}""")
+        }
+        assertEquals(HttpStatusCode.Created, personalRes.status)
+        val personalShortCode = Json.parseToJsonElement(personalRes.bodyAsText()).jsonObject["shortCode"]
+        assertTrue(personalShortCode == null || personalShortCode is JsonNull)
     }
 }

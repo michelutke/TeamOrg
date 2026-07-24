@@ -47,6 +47,8 @@ class InviteRepositoryImpl : InviteRepository {
                 try {
                     result = insert(generateShortCode())
                 } catch (e: ExposedSQLException) {
+                    // Retry only on unique violation (short_code collision); anything else is real.
+                    if (e.sqlState != "23505") throw e
                     lastError = e
                     attempt++
                 }
