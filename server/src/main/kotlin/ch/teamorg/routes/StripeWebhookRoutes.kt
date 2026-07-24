@@ -27,6 +27,10 @@ fun Route.stripeWebhookRoutes() {
     val stripeService by inject<StripeService>()
 
     post("/stripe/webhook") {
+        val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 0
+        if (contentLength > 262_144) {
+            return@post call.respond(HttpStatusCode.PayloadTooLarge, "Payload too large")
+        }
         val payload = call.receiveText()
         val signature = call.request.header("Stripe-Signature")
             ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing signature")

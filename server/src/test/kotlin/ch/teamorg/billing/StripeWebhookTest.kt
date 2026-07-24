@@ -147,4 +147,16 @@ class StripeWebhookTest : IntegrationTestBase() {
         }
         assertEquals(HttpStatusCode.BadRequest, res.status)
     }
+
+    @Test
+    fun `webhook with oversized payload is rejected with 413`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val oversizedBody = """{"id":"evt_big","type":"invoice.paid","padding":"${"x".repeat(300_000)}"}"""
+        val res = client.post("/stripe/webhook") {
+            contentType(ContentType.Application.Json)
+            header("Stripe-Signature", "t=1,v1=fake")
+            setBody(oversizedBody)
+        }
+        assertEquals(HttpStatusCode.PayloadTooLarge, res.status)
+    }
 }
