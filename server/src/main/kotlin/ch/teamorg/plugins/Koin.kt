@@ -59,6 +59,7 @@ fun appModule(environment: ApplicationEnvironment) = module {
     single { SwissVolleySyncService(get(), get(), get(), get(), get(), get()) }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
     single<AdminRepository> { AdminRepositoryImpl() }
+    single<BillingRepository> { BillingRepositoryImpl() }
     single<MailService> { MailServiceImpl(environment.config) }
     single<StripeService> {
         val config = environment.config
