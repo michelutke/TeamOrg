@@ -92,10 +92,13 @@ fun Route.selfServeRoutes() {
                 stripeService.setDefaultPaymentMethod(billing.stripeCustomerId, si.paymentMethodId)
                 val card = stripeService.getCard(si.paymentMethodId)
 
+                // Idempotency key only guards the concurrent double-create race; a sequential re-confirm
+                // after stripeSubscriptionId is already persisted takes the else branch (card-update only)
+                // by design — that's expected/accepted behavior, not a bug.
                 if (billing.stripeSubscriptionId == null) {
                     val quantity = billingRepository.countActiveMembers(clubId)
                     val anchor = nextJanuaryFirstEpochSeconds(ZonedDateTime.now(ZURICH))
-                    val subscriptionId = stripeService.createYearlySubscription(billing.stripeCustomerId, quantity, anchor)
+                    val subscriptionId = stripeService.createYearlySubscription(billing.stripeCustomerId, quantity, anchor, "sub-create-$clubId")
                     billingRepository.activate(clubId, subscriptionId, card)
                     clubRepository.setStatus(clubId, "active")
                 } else {

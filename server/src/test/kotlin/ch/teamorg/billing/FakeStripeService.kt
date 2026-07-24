@@ -11,6 +11,7 @@ class FakeStripeService : StripeService {
     val quantityUpdates = mutableListOf<Pair<String, Int>>()
     val createdSubscriptions = mutableListOf<Triple<String, Int, Long>>()
     var nextSetupIntentStatus = SetupIntentStatus("succeeded", "pm_fake")
+    private val subscriptionsByIdempotencyKey = mutableMapOf<String, String>()
 
     companion object {
         // Shared across instances: JUnit creates a fresh FakeStripeService per test method,
@@ -24,8 +25,10 @@ class FakeStripeService : StripeService {
     override fun getSetupIntent(setupIntentId: String) = nextSetupIntentStatus
     override fun getCard(paymentMethodId: String) = CardInfo("visa", "4242", 12, 2030)
     override fun setDefaultPaymentMethod(customerId: String, paymentMethodId: String) {}
-    override fun createYearlySubscription(customerId: String, quantity: Int, anchorEpochSeconds: Long): String {
+    override fun createYearlySubscription(customerId: String, quantity: Int, anchorEpochSeconds: Long, idempotencyKey: String): String {
+        subscriptionsByIdempotencyKey[idempotencyKey]?.let { return it }
         val id = "sub_fake_${counter.incrementAndGet()}"
+        subscriptionsByIdempotencyKey[idempotencyKey] = id
         createdSubscriptions += Triple(customerId, quantity, anchorEpochSeconds)
         return id
     }

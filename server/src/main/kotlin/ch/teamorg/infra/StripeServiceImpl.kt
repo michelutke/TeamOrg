@@ -1,6 +1,7 @@
 package ch.teamorg.infra
 
 import com.stripe.StripeClient
+import com.stripe.net.RequestOptions
 import com.stripe.net.Webhook
 import com.stripe.param.CustomerCreateParams
 import com.stripe.param.CustomerUpdateParams
@@ -60,7 +61,7 @@ class StripeServiceImpl(
         )
     }
 
-    override fun createYearlySubscription(customerId: String, quantity: Int, anchorEpochSeconds: Long): String =
+    override fun createYearlySubscription(customerId: String, quantity: Int, anchorEpochSeconds: Long, idempotencyKey: String): String =
         client.subscriptions().create(
             SubscriptionCreateParams.builder()
                 .setCustomer(customerId)
@@ -72,7 +73,8 @@ class StripeServiceImpl(
                 )
                 .setBillingCycleAnchor(anchorEpochSeconds)
                 .setProrationBehavior(SubscriptionCreateParams.ProrationBehavior.NONE)
-                .build()
+                .build(),
+            RequestOptions.builder().setIdempotencyKey(idempotencyKey).build()
         ).id
 
     override fun updateSubscriptionQuantity(subscriptionId: String, quantity: Int) {

@@ -51,6 +51,36 @@ class SelfServeFlowTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `confirming billing twice does not create a duplicate subscription`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("owner2@x.ch")
+
+        val createRes = client.post("/clubs/self-serve") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"kind":"team","name":"Volley Crew 2","billingEmail":"owner2@x.ch"}""")
+        }
+        assertEquals(HttpStatusCode.Created, createRes.status)
+        val clubId = Json.parseToJsonElement(createRes.bodyAsText()).jsonObject["clubId"]!!.jsonPrimitive.content
+
+        val firstConfirmRes = client.post("/clubs/$clubId/billing/confirm") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"setupIntentId":"seti_fake_1"}""")
+        }
+        assertEquals(HttpStatusCode.OK, firstConfirmRes.status)
+
+        val secondConfirmRes = client.post("/clubs/$clubId/billing/confirm") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"setupIntentId":"seti_fake_1"}""")
+        }
+        assertEquals(HttpStatusCode.OK, secondConfirmRes.status)
+
+        assertEquals(1, fake.createdSubscriptions.size)
+    }
+
+    @Test
     fun `confirm rejected for non-owner`() = withTeamorgTestApplication(stripeOverride) {
         val client = createJsonClient()
         val ownerToken = client.register("own2@x.ch")

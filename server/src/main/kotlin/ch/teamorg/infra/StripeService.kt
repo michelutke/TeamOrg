@@ -13,7 +13,7 @@ interface StripeService {
     fun getSetupIntent(setupIntentId: String): SetupIntentStatus
     fun getCard(paymentMethodId: String): CardInfo?
     fun setDefaultPaymentMethod(customerId: String, paymentMethodId: String)
-    fun createYearlySubscription(customerId: String, quantity: Int, anchorEpochSeconds: Long): String
+    fun createYearlySubscription(customerId: String, quantity: Int, anchorEpochSeconds: Long, idempotencyKey: String): String
     fun updateSubscriptionQuantity(subscriptionId: String, quantity: Int)
     /** Verifies the Stripe-Signature header; throws IllegalArgumentException on bad signature. */
     fun constructWebhookEvent(payload: String, signatureHeader: String): StripeWebhookEvent
