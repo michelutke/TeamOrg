@@ -3,6 +3,8 @@ ALTER TABLE clubs ADD COLUMN owner_user_id UUID NULL REFERENCES users(id) ON DEL
 ALTER TABLE clubs ADD COLUMN billing_mode TEXT NOT NULL DEFAULT 'manual'; -- stripe | manual | free
 ALTER TABLE clubs ADD COLUMN billing_status TEXT NOT NULL DEFAULT 'active'; -- active | past_due | frozen
 -- clubs.status additionally allows 'pending' (self-serve club before card setup succeeds)
+ALTER TABLE clubs DROP CONSTRAINT clubs_status_check;
+ALTER TABLE clubs ADD CONSTRAINT clubs_status_check CHECK (status IN ('active', 'deactivated', 'deleted', 'pending'));
 
 CREATE TABLE club_billing (
     club_id UUID PRIMARY KEY REFERENCES clubs(id) ON DELETE CASCADE,

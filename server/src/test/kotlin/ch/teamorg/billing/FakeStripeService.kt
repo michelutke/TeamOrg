@@ -11,7 +11,13 @@ class FakeStripeService : StripeService {
     val quantityUpdates = mutableListOf<Pair<String, Int>>()
     val createdSubscriptions = mutableListOf<Triple<String, Int, Long>>()
     var nextSetupIntentStatus = SetupIntentStatus("succeeded", "pm_fake")
-    private val counter = AtomicInteger(0)
+
+    companion object {
+        // Shared across instances: JUnit creates a fresh FakeStripeService per test method,
+        // but the underlying Postgres testcontainer (and its unique customer-id constraint)
+        // persists for the whole test class, so per-instance ids would collide.
+        private val counter = AtomicInteger(0)
+    }
 
     override fun createCustomer(email: String, name: String, clubId: UUID) = "cus_fake_${counter.incrementAndGet()}"
     override fun createSetupIntent(customerId: String) = SetupIntentResult("seti_fake_${counter.incrementAndGet()}", "seti_secret_fake")

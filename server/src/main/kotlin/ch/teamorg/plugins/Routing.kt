@@ -12,6 +12,7 @@ import ch.teamorg.routes.integrationRoutes
 import ch.teamorg.routes.inviteRoutes
 import ch.teamorg.routes.ndsRoutes
 import ch.teamorg.routes.notificationRoutes
+import ch.teamorg.routes.selfServeRoutes
 import ch.teamorg.routes.subGroupRoutes
 import ch.teamorg.routes.teamRoutes
 import io.ktor.http.*
@@ -26,6 +27,7 @@ fun Application.configureRouting() {
         }
         authRoutes()
         clubRoutes()
+        selfServeRoutes()
         teamRoutes()
         inviteRoutes()
         eventRoutes()

@@ -13,4 +13,9 @@ interface ClubRepository {
     suspend fun listUsers(clubId: UUID, limit: Int, offset: Int): List<ClubUser>
     suspend fun hasRole(userId: UUID, clubId: UUID, role: String): Boolean
     suspend fun isMember(userId: UUID, clubId: UUID): Boolean
+    suspend fun createSelfServe(name: String, sportType: String, location: String?, kind: String, ownerUserId: UUID): UUID
+    suspend fun findOwnerId(clubId: UUID): UUID?
+    suspend fun setStatus(clubId: UUID, status: String)
+    suspend fun setKind(clubId: UUID, kind: String)
+    suspend fun countActiveTeams(clubId: UUID): Int
 }
