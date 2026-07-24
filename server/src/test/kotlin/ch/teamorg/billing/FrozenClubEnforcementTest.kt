@@ -7,6 +7,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.koin.dsl.module
@@ -56,6 +57,38 @@ class FrozenClubEnforcementTest : IntegrationTestBase() {
 
         // billing endpoints must stay open to fix the card
         assertEquals(HttpStatusCode.OK, client.post("/clubs/$clubId/billing/update-card") { bearerAuth(token) }.status)
+    }
+
+    @Test
+    fun `frozen club stays frozen after card update and re-confirm without new subscription`() = withTeamorgTestApplication(stripeOverride) {
+        val client = createJsonClient()
+        val token = client.register("fr3@x.ch")
+        val createRes = client.post("/clubs/self-serve") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kind":"club","name":"VC Chill","billingEmail":"fr3@x.ch"}""")
+        }
+        val clubId = Json.parseToJsonElement(createRes.bodyAsText()).jsonObject["clubId"]!!.jsonPrimitive.content
+        client.post("/clubs/$clubId/billing/confirm") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"setupIntentId":"seti_x"}""")
+        }
+        transaction {
+            ClubsTable.update({ ClubsTable.id eq UUID.fromString(clubId) }) { it[billingStatus] = "frozen" }
+        }
+
+        assertEquals(HttpStatusCode.OK, client.post("/clubs/$clubId/billing/update-card") { bearerAuth(token) }.status)
+
+        val confirmRes = client.post("/clubs/$clubId/billing/confirm") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"setupIntentId":"seti_y"}""")
+        }
+        assertEquals(HttpStatusCode.OK, confirmRes.status)
+
+        val billingStatus = transaction {
+            ClubsTable.selectAll().where { ClubsTable.id eq UUID.fromString(clubId) }.single()[ClubsTable.billingStatus]
+        }
+        assertEquals("frozen", billingStatus)
+        assertEquals(1, fake.createdSubscriptions.size)
     }
 
     @Test

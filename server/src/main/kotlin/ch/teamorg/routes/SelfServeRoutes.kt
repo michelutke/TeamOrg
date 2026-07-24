@@ -118,10 +118,13 @@ fun Route.selfServeRoutes() {
                     val subscriptionId = stripeService.createYearlySubscription(billing.stripeCustomerId, quantity, anchor, "sub-create-$clubId")
                     billingRepository.activate(clubId, subscriptionId, card)
                     clubRepository.setStatus(clubId, "active")
+                    billingRepository.setBillingStatus(clubId, "active")
                 } else {
-                    billingRepository.activate(clubId, null, card) // card update only
+                    // Card-update only (subscription already exists). Do NOT touch billingStatus here:
+                    // recovery from frozen/past_due happens exclusively via the invoice.paid Stripe
+                    // webhook, not via re-confirming card setup.
+                    billingRepository.activate(clubId, null, card)
                 }
-                billingRepository.setBillingStatus(clubId, "active")
                 call.respond(HttpStatusCode.OK, BillingConfirmResponse("active"))
             }
         }
