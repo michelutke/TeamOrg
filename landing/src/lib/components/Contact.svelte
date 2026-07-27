@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Mail, Clock, Building2, Check } from 'lucide-svelte';
 	import MorphShape from './MorphShape.svelte';
+	import RosterPattern from './RosterPattern.svelte';
 	import type { Dict } from '$lib/i18n';
 
 	type ContactForm = {
@@ -38,10 +39,11 @@
 
 <section
 	id="kontakt"
-	class="scroll-mt-20 bg-gradient-to-br from-[#c9760e] to-[#a85e08]"
+	class="relative scroll-mt-20 overflow-hidden bg-gradient-to-br from-[#2C313B] to-[#14171D]"
 >
+	<RosterPattern intensity={0.22} />
 	<div
-		class="mx-auto flex max-w-content flex-col gap-12 px-6 py-20 md:flex-row md:items-center md:gap-16 md:px-10 md:py-24"
+		class="relative mx-auto flex max-w-content flex-col gap-12 px-6 py-20 md:flex-row md:items-center md:gap-16 md:px-10 md:py-24"
 	>
 		<!-- Info -->
 		<div data-reveal class="md:flex-1">
