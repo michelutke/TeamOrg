@@ -11,6 +11,8 @@ import ch.teamorg.infra.PushServiceImpl
 import ch.teamorg.infra.SwissVolleyClient
 import ch.teamorg.infra.SwissVolleyClientImpl
 import ch.teamorg.infra.SwissVolleySyncService
+import ch.teamorg.infra.StripeService
+import ch.teamorg.infra.StripeServiceImpl
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -57,7 +59,16 @@ fun appModule(environment: ApplicationEnvironment) = module {
     single { SwissVolleySyncService(get(), get(), get(), get(), get(), get()) }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
     single<AdminRepository> { AdminRepositoryImpl() }
+    single<BillingRepository> { BillingRepositoryImpl() }
     single<MailService> { MailServiceImpl(environment.config) }
+    single<StripeService> {
+        val config = environment.config
+        StripeServiceImpl(
+            secretKey = config.propertyOrNull("stripe.secret-key")?.getString() ?: "",
+            webhookSecret = config.propertyOrNull("stripe.webhook-secret")?.getString() ?: "",
+            priceId = config.propertyOrNull("stripe.price-id")?.getString() ?: ""
+        )
+    }
 }
 
 fun Application.configureKoin() {

@@ -7,6 +7,7 @@ import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.authenticateUser
 import ch.teamorg.middleware.requireClubMember
 import ch.teamorg.middleware.requireClubRole
+import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.storage.FileStorageService
 import ch.teamorg.storage.FileType
 import io.ktor.http.*
@@ -75,6 +76,7 @@ fun Route.clubRoutes() {
                 patch {
                     val clubId = UUID.fromString(call.parameters["clubId"])
                     if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@patch
+                    if (!call.requireClubWritable(clubId, clubRepository)) return@patch
 
                     val request = call.receive<UpdateClubRequest>()
                     val club = clubRepository.update(clubId, request.name, request.location, null)
@@ -84,6 +86,7 @@ fun Route.clubRoutes() {
                 post("/logo") {
                     val clubId = UUID.fromString(call.parameters["clubId"])
                     if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
+                    if (!call.requireClubWritable(clubId, clubRepository)) return@post
 
                     val multipart = call.receiveMultipart()
                     var fileBytes: ByteArray? = null
@@ -144,6 +147,7 @@ fun Route.clubRoutes() {
                 post("/teams") {
                     val clubId = UUID.fromString(call.parameters["clubId"])
                     if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
+                    if (!call.requireClubWritable(clubId, clubRepository)) return@post
 
                     val request = call.receive<CreateTeamRequest>()
                     if (request.name.isBlank()) {
@@ -157,6 +161,7 @@ fun Route.clubRoutes() {
                 post("/teams/{teamId}/migrate-to") {
                     val clubId = UUID.fromString(call.parameters["clubId"])
                     if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
+                    if (!call.requireClubWritable(clubId, clubRepository)) return@post
 
                     val sourceTeamId = UUID.fromString(call.parameters["teamId"])
                     val request = call.receive<MigrateTeamRequest>()

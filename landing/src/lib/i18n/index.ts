@@ -117,7 +117,7 @@ const de: Dict = {
 	meta: {
 		title: 'teamorg: Trainings, Spiele und Anwesenheit für Vereine',
 		description:
-			'Die mobile App für Sportvereine: Trainings und Spiele planen, Anwesenheit in Echtzeit erfassen und das ganze Team auf dem Laufenden halten. 1 CHF pro Mitglied und Jahr.'
+			'Die mobile App für Sportvereine: Trainings und Spiele planen, Anwesenheit in Echtzeit erfassen und das ganze Team auf dem Laufenden halten. 2 CHF pro Mitglied und Jahr.'
 	},
 	nav: {
 		features: 'Funktionen',
@@ -133,7 +133,7 @@ const de: Dict = {
 		sub: 'teamorg ist die mobile App für Vereine: plane Trainings und Spiele, erfasse Zu- und Absagen in Echtzeit und halte dein ganzes Team auf dem Laufenden, online wie offline.',
 		ctaPrimary: 'Demo anfragen',
 		ctaSecondary: 'Funktionen ansehen',
-		trust: ['1 CHF / Mitglied / Jahr', 'Offline-fähig', 'Keine Einrichtungskosten']
+		trust: ['2 CHF / Mitglied / Jahr', 'Offline-fähig', 'Keine Einrichtungskosten']
 	},
 	features: {
 		eyebrow: 'FUNKTIONEN',
@@ -199,7 +199,7 @@ const de: Dict = {
 		title: 'Ein Preis. Keine Überraschungen.',
 		sub: 'Fair und planbar: du zahlst nur für aktive Mitglieder.',
 		planLabel: 'PRO VEREIN',
-		price: '1 CHF',
+		price: '2 CHF',
 		per: '/ Mitglied / Jahr',
 		fine: 'Jährliche Abrechnung. Mindestlaufzeit eine Saison. Du zahlst nur für aktive Mitglieder.',
 		example: 'Beispiel: 40 Mitglieder = 40 CHF pro Jahr',
@@ -285,7 +285,7 @@ const en: Dict = {
 	meta: {
 		title: 'teamorg: training, matches and attendance for clubs',
 		description:
-			'The mobile app for sports clubs: plan trainings and matches, track attendance in real time and keep your whole team in the loop. 1 CHF per member per year.'
+			'The mobile app for sports clubs: plan trainings and matches, track attendance in real time and keep your whole team in the loop. 2 CHF per member per year.'
 	},
 	nav: {
 		features: 'Features',
@@ -301,7 +301,7 @@ const en: Dict = {
 		sub: 'teamorg is the mobile app for clubs: plan trainings and matches, track confirmations and absences in real time, and keep your whole team in the loop, online and offline.',
 		ctaPrimary: 'Request a demo',
 		ctaSecondary: 'See features',
-		trust: ['1 CHF / member / year', 'Works offline', 'No setup fees']
+		trust: ['2 CHF / member / year', 'Works offline', 'No setup fees']
 	},
 	features: {
 		eyebrow: 'FEATURES',
@@ -367,7 +367,7 @@ const en: Dict = {
 		title: 'One price. No surprises.',
 		sub: 'Fair and predictable: you only pay for active members.',
 		planLabel: 'PER CLUB',
-		price: '1 CHF',
+		price: '2 CHF',
 		per: '/ member / year',
 		fine: 'Billed annually. Minimum term one season. You only pay for active members.',
 		example: 'Example: 40 members = 40 CHF per year',

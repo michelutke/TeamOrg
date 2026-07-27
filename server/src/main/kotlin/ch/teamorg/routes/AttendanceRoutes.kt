@@ -3,16 +3,19 @@ package ch.teamorg.routes
 import ch.teamorg.domain.repositories.AttendanceRepository
 import ch.teamorg.domain.repositories.AttendanceResponseDto
 import ch.teamorg.domain.repositories.AttendanceResponseRow
+import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.FinalizeResult
 import ch.teamorg.domain.repositories.NotificationRepository
 import ch.teamorg.domain.repositories.RawAttendanceRow
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
+import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.middleware.requireEventAccess
 import ch.teamorg.middleware.requireTeamRole
 import ch.teamorg.infra.NotificationDispatcher
 import io.ktor.http.*
+import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
@@ -76,6 +79,13 @@ fun Route.attendanceRoutes() {
     val eventRepository by inject<EventRepository>()
     val teamRepository by inject<TeamRepository>()
     val userRepository by inject<UserRepository>()
+    val clubRepository by inject<ClubRepository>()
+
+    suspend fun ApplicationCall.requireEventClubWritable(teamIds: List<UUID>): Boolean {
+        val teamId = teamIds.firstOrNull() ?: return true
+        val clubId = teamRepository.getClubId(teamId) ?: return true
+        return requireClubWritable(clubId, clubRepository)
+    }
 
     authenticate("jwt") {
         get("/events/{id}/attendance") {
@@ -100,6 +110,8 @@ fun Route.attendanceRoutes() {
         put("/events/{id}/attendance/me") {
             val eventId = UUID.fromString(call.parameters["id"])
             if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@put
+            val event = eventRepository.findById(eventId)
+            if (!call.requireEventClubWritable(event?.teamIds ?: emptyList())) return@put
             val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<SubmitResponseRequest>()
 
@@ -114,7 +126,6 @@ fun Route.attendanceRoutes() {
             }
 
             // Reject if the event is done (finalized)
-            val event = eventRepository.findById(eventId)
             if (event?.checkInCompletedAt != null) {
                 call.respond(HttpStatusCode.Forbidden, "Event attendance is finalized")
                 return@put
@@ -166,6 +177,8 @@ fun Route.attendanceRoutes() {
             val eventId = UUID.fromString(call.parameters["id"])
             val targetUserId = UUID.fromString(call.parameters["userId"])
             if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@put
+            val event = eventRepository.findById(eventId)
+            if (!call.requireEventClubWritable(event?.teamIds ?: emptyList())) return@put
 
             val coachId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
             val body = call.receive<CoachResponseRequest>()
@@ -175,7 +188,6 @@ fun Route.attendanceRoutes() {
                 return@put
             }
 
-            val event = eventRepository.findById(eventId)
             if (event?.checkInCompletedAt != null) {
                 call.respond(HttpStatusCode.Conflict, "Event attendance is finalized")
                 return@put
@@ -243,6 +255,7 @@ fun Route.attendanceRoutes() {
 
             val event = eventRepository.findById(eventId)
                 ?: return@post call.respond(HttpStatusCode.NotFound, "Event not found")
+            if (!call.requireEventClubWritable(event.teamIds)) return@post
 
             if (event.checkInCompletedAt != null) {
                 call.respond(HttpStatusCode.BadRequest, "Event attendance is already finalized")
@@ -277,6 +290,8 @@ fun Route.attendanceRoutes() {
         post("/events/{id}/attendance/reopen") {
             val eventId = UUID.fromString(call.parameters["id"])
             if (!call.requireEventAccess(eventId, "coach", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@post
+            val event = eventRepository.findById(eventId)
+            if (!call.requireEventClubWritable(event?.teamIds ?: emptyList())) return@post
 
             attendanceRepo.reopen(eventId)
             call.respond(HttpStatusCode.OK)
