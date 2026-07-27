@@ -5,7 +5,7 @@ Status: Approved (chunks A+B reviewed in session)
 
 ## Goal
 
-First-time users can onboard without a super-admin: join an existing club/team via invite link/code, or create their own team or club. Creation requires a saved card; billing is CHF 1 per member per year, charged each January for the previous year. Team and club are convertible in both directions. The existing "contact info mail → super-admin sets up club" path stays as the primary route for full clubs and is exempt from auto-billing.
+First-time users can onboard without a super-admin: join an existing club/team via invite link/code, or create their own team or club. Creation requires a saved card; billing is CHF 2 per member per year, charged each January for the previous year. Team and club are convertible in both directions. The existing "contact info mail → super-admin sets up club" path stays as the primary route for full clubs and is exempt from auto-billing.
 
 ## Decisions (locked)
 
@@ -14,7 +14,7 @@ First-time users can onboard without a super-admin: join an existing club/team v
 | Standalone team modeling | Wrapper club always: every self-serve signup creates a Club row; `kind = team \| club`. "Team" = club with `kind=team` + one auto-created team; UI hides the club layer. |
 | Payment rail | Stripe only, card/TWINT. No self-serve QR-bill; QR-bill = contact support → super-admin sets `billingMode=manual`. |
 | Card capture | Native Stripe PaymentSheet (setup mode) in the Compose Multiplatform app via expect/actual; Stripe Elements on web. Card saved at creation, no upfront charge. |
-| Charge mechanics | Stripe Subscription per club: yearly cycle anchored Jan 1, per-seat price CHF 1. Cron sets seat quantity before renewal; Stripe auto-invoices and charges the saved card. |
+| Charge mechanics | Stripe Subscription per club: yearly cycle anchored Jan 1, per-seat price CHF 2. Cron sets seat quantity before renewal; Stripe auto-invoices and charges the saved card. |
 | Billed member count | `max(Dec 31 snapshot, median of Oct 1–Dec 31 samples)` of distinct active users holding any ClubRole or TeamRole in the club. Provisional users (`provisional=true`) excluded. |
 | Anti-gaming sampling | Randomized sampling cron: ~monthly Jan–Sep, ~weekly Oct–Dec, random day/hour. Stored per club. |
 | Payment failure | Stripe Smart Retries + dunning emails (~3 weeks). Unpaid 30 days after invoice → club `billingStatus=frozen` (read-only). Auto-reactivates on payment. Data never deleted. |
@@ -70,7 +70,7 @@ Add human-friendly short code (6–8 chars, unambiguous alphabet) alongside exis
 ### Onboarding (mobile + web)
 1. Welcome: **Join a team** / **Create your own** / Login.
 2. Join: code or deep link → `GET /invites/{token}` preview → register (existing) → redeem (existing).
-3. Create: register → choose Team vs Club (copy: "you can switch later") → name/sport/location → billing screen ("CHF 1 per member per year, billed each January") → PaymentSheet (app) / Elements (web) → confirm → done.
+3. Create: register → choose Team vs Club (copy: "you can switch later") → name/sport/location → billing screen ("CHF 2 per member per year, billed each January") → PaymentSheet (app) / Elements (web) → confirm → done.
 
 ### Mobile specifics
 - expect/actual Stripe wrapper: Android PaymentSheet (Compose), iOS PaymentSheet (UIKit presented from CMP).

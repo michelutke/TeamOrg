@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Backend for self-serve club/team creation with Stripe card capture, CHF 1/member/year subscription billing, anti-gaming member sampling, frozen-club enforcement, and team↔club conversion.
+**Goal:** Backend for self-serve club/team creation with Stripe card capture, CHF 2/member/year subscription billing, anti-gaming member sampling, frozen-club enforcement, and team↔club conversion.
 
-**Architecture:** Wrapper-club model (`kind = club|team`; a "team" is a club with one team, UI hides club layer). Stripe Subscription per club (yearly, anchored Jan 1 Europe/Zurich, per-seat CHF 1); cron sets seat quantity from `max(Dec 31 snapshot, median of Oct–Dec samples)`. Webhooks drive `billingStatus`; `frozen` blocks writes via middleware. All Stripe access behind a `StripeService` interface so tests swap in a fake via the existing Koin-override pattern.
+**Architecture:** Wrapper-club model (`kind = club|team`; a "team" is a club with one team, UI hides club layer). Stripe Subscription per club (yearly, anchored Jan 1 Europe/Zurich, per-seat CHF 2); cron sets seat quantity from `max(Dec 31 snapshot, median of Oct–Dec samples)`. Webhooks drive `billingStatus`; `frozen` blocks writes via middleware. All Stripe access behind a `StripeService` interface so tests swap in a fake via the existing Koin-override pattern.
 
 **Tech Stack:** Kotlin/Ktor, Exposed, Flyway (Postgres), Koin, stripe-java 29.x, kotlin-test + testcontainers (existing `IntegrationTestBase`).
 
@@ -21,7 +21,7 @@
 - Timezone for all billing dates: `Europe/Zurich`.
 - Config keys (env-injected, never committed): `stripe.secret-key`, `stripe.webhook-secret`, `stripe.price-id`. Document in `.env.example` / SETUP.md.
 - Run tests with `./gradlew :server:test`. Commit after each task. No Co-Authored-By lines in commits.
-- New Stripe Price is created once, manually, in the Stripe dashboard: product "teamorg membership", CHF 1.00 / year, per-unit licensed pricing → its `price_...` id goes into `stripe.price-id`.
+- New Stripe Price is created once, manually, in the Stripe dashboard: product "teamorg membership", CHF 2.00 / year, per-unit licensed pricing → its `price_...` id goes into `stripe.price-id`.
 
 ---
 
@@ -2040,7 +2040,7 @@ stripe:
 
 - [ ] **Step 2: Document in SETUP.md**
 
-Add a "Stripe billing" section: the three env vars; dashboard setup (CHF 1/year per-unit price → price id; webhook endpoint + 3 event types; dunning settings: Smart Retries, then mark subscription **unpaid**); test mode uses `sk_test_...` keys; local webhook testing via `stripe listen --forward-to localhost:8080/stripe/webhook`.
+Add a "Stripe billing" section: the three env vars; dashboard setup (CHF 2/year per-unit price → price id; webhook endpoint + 3 event types; dunning settings: Smart Retries, then mark subscription **unpaid**); test mode uses `sk_test_...` keys; local webhook testing via `stripe listen --forward-to localhost:8080/stripe/webhook`.
 
 - [ ] **Step 3: Verify boot without Stripe env vars**
 

@@ -12,7 +12,7 @@ requests to **info@teamorg.ch**.
   lucide-svelte), mirrors `admin/`. Served via the existing Coolify Docker-Compose
   stack + Traefik.
   - Sections: Nav (DE/EN toggle), Hero (two overlapping iPhone mockups), Features,
-    How-it-works, Pricing (1 CHF/Mitglied/Jahr), Contact, Footer.
+    How-it-works, Pricing (2 CHF/Mitglied/Jahr), Contact, Footer.
   - **i18n** DE (default) + EN via `?lang=` → `lang` cookie (the toggle links use
     `data-sveltekit-reload` + `preload-data="off"` so hover doesn't flip the cookie).
   - **Amber/gold** theme + green/red/yellow pastel highlight accents (the app's
