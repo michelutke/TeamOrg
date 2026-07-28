@@ -3,6 +3,7 @@ package ch.teamorg.ui.emptystate
 import app.cash.turbine.test
 import ch.teamorg.domain.AuthUser
 import ch.teamorg.fake.FakeAuthRepository
+import ch.teamorg.fake.FakeInviteRepository
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.Dispatchers
@@ -20,12 +21,14 @@ class EmptyStateViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private val fakeAuth = FakeAuthRepository()
+    private val fakeInvite = FakeInviteRepository()
     private lateinit var viewModel: EmptyStateViewModel
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeAuth.reset()
+        fakeInvite.reset()
     }
 
     @AfterTest
@@ -33,7 +36,7 @@ class EmptyStateViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = EmptyStateViewModel(fakeAuth).also { viewModel = it }
+    private fun createViewModel() = EmptyStateViewModel(fakeAuth, fakeInvite).also { viewModel = it }
 
     // region — init: profile link loading
 
@@ -114,14 +117,50 @@ class EmptyStateViewModelTest {
         }
     }
 
+    @Test
+    fun onJoinTeamClick_withEightCharCode_resolvesViaGetInviteByCodeAndEmitsNavigateToInvite() = runTest(testDispatcher) {
+        fakeInvite.getInviteByCodeResult = Result.success(
+            ch.teamorg.domain.InviteDetails(
+                token = "resolved-token",
+                scope = "team",
+                teamName = "Team A",
+                clubName = "Club A",
+                role = "player",
+                invitedBy = "Coach",
+                expiresAt = "2099-01-01T00:00:00Z",
+                alreadyRedeemed = false
+            )
+        )
+        createViewModel()
+        viewModel.onInviteLinkChange("ABCD1234")
+        viewModel.events.test {
+            viewModel.onJoinTeamClick()
+            awaitItem() shouldBe EmptyStateEvent.NavigateToInvite("resolved-token")
+            cancelAndIgnoreRemainingEvents()
+        }
+        fakeInvite.lastCodeLookup shouldBe "ABCD1234"
+    }
+
+    @Test
+    fun onJoinTeamClick_withEightCharCode_onFailure_setsErrorAndEmitsNoEvent() = runTest(testDispatcher) {
+        fakeInvite.getInviteByCodeResult = Result.failure(Exception("not found"))
+        createViewModel()
+        viewModel.onInviteLinkChange("ABCD1234")
+        viewModel.events.test {
+            viewModel.onJoinTeamClick()
+            expectNoEvents()
+        }
+        viewModel.state.value.error shouldBe "Invalid invite code"
+    }
+
     // region — onCreateClubClick
 
     @Test
-    fun onCreateClubClick_emitsNavigateToClubSetupEvent() = runTest(testDispatcher) {
+    fun onCreateClubClick_emitsNavigateToCreateTeamOrClubEvent() = runTest(testDispatcher) {
         createViewModel()
         viewModel.events.test {
             viewModel.onCreateClubClick()
-            awaitItem() shouldBe EmptyStateEvent.NavigateToClubSetup
+            awaitItem() shouldBe EmptyStateEvent.NavigateToCreateTeamOrClub
             cancelAndIgnoreRemainingEvents()
         }
     }
