@@ -52,6 +52,7 @@ data class BillingInfoResponse(
     val projectedBilledCount: Int,
     val billingStatus: String,
     val billingMode: String,
+    val kind: String,
 )
 
 fun Route.selfServeRoutes() {
@@ -157,6 +158,7 @@ fun Route.selfServeRoutes() {
                         projectedBilledCount = computeBilledCount(current, samples),
                         billingStatus = club.billingStatus,
                         billingMode = club.billingMode,
+                        kind = clubRepository.findKind(clubId) ?: "club",
                     )
                 )
             }
