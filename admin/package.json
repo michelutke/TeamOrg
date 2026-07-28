@@ -24,6 +24,7 @@
     "vite": "^6.0.0"
   },
   "dependencies": {
+    "@stripe/stripe-js": "^9.12.1",
     "lucide-svelte": "^0.468.0"
   },
   "type": "module"
