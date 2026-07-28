@@ -1,5 +1,6 @@
 import SwiftUI
 import ComposeApp
+import StripePaymentSheet
 #if canImport(OneSignalFramework)
 import OneSignalFramework
 #endif
@@ -16,6 +17,9 @@ struct ContentView: View {
         ComposeView()
             .ignoresSafeArea()
             .onOpenURL { url in
+                if StripeAPI.handleURLCallback(with: url) {
+                    return
+                }
                 MainViewControllerKt.handleDeepLink(url: url.absoluteString)
             }
     }
@@ -38,6 +42,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         MainViewControllerKt.doInitKoin()
+        StripeSetupBridge.register()
 
         // OneSignal init
         #if canImport(OneSignalFramework)
