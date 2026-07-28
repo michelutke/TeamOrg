@@ -130,7 +130,12 @@ fun AppNavigation(
                     clubId = screen.clubId,
                     clientSecret = screen.clientSecret,
                     publishableKey = screen.publishableKey,
-                    onDone = { backStack.add(Screen.Teams) }
+                    onDone = {
+                        backStack.removeAll {
+                            it is Screen.CreateTeamOrClub || it is Screen.CardSetup || it is Screen.EmptyState
+                        }
+                        backStack.add(Screen.Teams)
+                    }
                 )
             }
             is Screen.TeamRoster -> {

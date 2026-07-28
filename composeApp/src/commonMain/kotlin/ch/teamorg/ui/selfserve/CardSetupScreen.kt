@@ -22,6 +22,7 @@ fun CardSetupScreen(
     onDone: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    var isPresentingSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -32,6 +33,7 @@ fun CardSetupScreen(
     }
 
     val presentSheet = rememberCardSetupSheet(onResult = { result ->
+        isPresentingSheet = false
         when (result) {
             SetupResult.Completed -> viewModel.confirm(clubId, clientSecret)
             SetupResult.Canceled -> { /* no-op — user can retry */ }
@@ -87,12 +89,15 @@ fun CardSetupScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { presentSheet(publishableKey, clientSecret) },
+                onClick = {
+                    isPresentingSheet = true
+                    presentSheet(publishableKey, clientSecret)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(57.dp)
                     .testTag("btn_add_card"),
-                enabled = !state.isLoading,
+                enabled = !state.isLoading && !isPresentingSheet,
                 shape = PillShape
             ) {
                 if (state.isLoading) {

@@ -34,7 +34,9 @@ fun BillingScreen(
     }
 
     var pendingClientSecret by remember { mutableStateOf<String?>(null) }
+    var isPresentingSheet by remember { mutableStateOf(false) }
     val presentSheet = rememberCardSetupSheet(onResult = { result ->
+        isPresentingSheet = false
         when (result) {
             SetupResult.Completed -> pendingClientSecret?.let { viewModel.onCardSetupCompleted(it) }
             SetupResult.Canceled -> { /* no-op — user can retry */ }
@@ -47,6 +49,7 @@ fun BillingScreen(
             when (event) {
                 is BillingEvent.PresentCardSheet -> {
                     pendingClientSecret = event.clientSecret
+                    isPresentingSheet = true
                     presentSheet(event.publishableKey, event.clientSecret)
                 }
             }
@@ -134,6 +137,7 @@ fun BillingScreen(
                                         .fillMaxWidth()
                                         .height(52.dp)
                                         .testTag("btn_update_card"),
+                                    enabled = !state.isUpdatingCard && !isPresentingSheet,
                                     shape = PillShape
                                 ) {
                                     Text("Update card")
@@ -164,6 +168,7 @@ fun BillingScreen(
                                     .fillMaxWidth()
                                     .height(52.dp)
                                     .testTag("btn_convert"),
+                                enabled = !state.isConverting,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer

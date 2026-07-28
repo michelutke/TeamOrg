@@ -15,7 +15,9 @@ data class BillingUiState(
     val isLoading: Boolean = false,
     val billingInfo: BillingInfo? = null,
     val notOwner: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isUpdatingCard: Boolean = false,
+    val isConverting: Boolean = false
 )
 
 sealed class BillingEvent {
@@ -56,8 +58,10 @@ class BillingViewModel(
     fun updateCard() {
         val clubId = clubId ?: return
         viewModelScope.launch {
+            _state.value = _state.value.copy(isUpdatingCard = true)
             billingRepository.startCardUpdate(clubId).fold(
                 onSuccess = { cardUpdateStart ->
+                    _state.value = _state.value.copy(isUpdatingCard = false)
                     _events.emit(
                         BillingEvent.PresentCardSheet(
                             publishableKey = cardUpdateStart.publishableKey,
@@ -66,7 +70,10 @@ class BillingViewModel(
                     )
                 },
                 onFailure = { e ->
-                    _state.value = _state.value.copy(error = e.message ?: "Failed to start card update")
+                    _state.value = _state.value.copy(
+                        isUpdatingCard = false,
+                        error = e.message ?: "Failed to start card update"
+                    )
                 }
             )
         }
@@ -94,13 +101,17 @@ class BillingViewModel(
         val currentKind = _state.value.billingInfo?.kind ?: return
         val target = if (currentKind == "club") "team" else "club"
         viewModelScope.launch {
+            _state.value = _state.value.copy(isConverting = true)
             billingRepository.convert(clubId, target).fold(
-                onSuccess = { load(clubId) },
+                onSuccess = {
+                    _state.value = _state.value.copy(isConverting = false)
+                    load(clubId)
+                },
                 onFailure = { e ->
-                    if (e.message?.contains(": 409") == true) {
-                        _state.value = _state.value.copy(error = "Only possible with exactly one active team.")
+                    _state.value = if (e.message?.contains(": 409") == true) {
+                        _state.value.copy(isConverting = false, error = "Only possible with exactly one active team.")
                     } else {
-                        _state.value = _state.value.copy(error = e.message ?: "Failed to convert")
+                        _state.value.copy(isConverting = false, error = e.message ?: "Failed to convert")
                     }
                 }
             )

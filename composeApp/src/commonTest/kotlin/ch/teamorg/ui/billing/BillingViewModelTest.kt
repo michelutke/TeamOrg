@@ -134,4 +134,38 @@ class BillingViewModelTest {
         fakeBillingRepo.lastConfirmBillingClubId shouldBe "club1"
         viewModel.state.value.billingInfo shouldBe fakeBillingRepo.getBillingResult.getOrNull()
     }
+
+    @Test
+    fun updateCard_success_clearsIsUpdatingCardFlag() = runTest(testDispatcher) {
+        viewModel.load("club1")
+        viewModel.updateCard()
+
+        viewModel.state.value.isUpdatingCard shouldBe false
+    }
+
+    @Test
+    fun updateCard_failure_clearsIsUpdatingCardFlag() = runTest(testDispatcher) {
+        viewModel.load("club1")
+        fakeBillingRepo.startCardUpdateResult = Result.failure(Exception("Failed to start card update: 500"))
+        viewModel.updateCard()
+
+        viewModel.state.value.isUpdatingCard shouldBe false
+    }
+
+    @Test
+    fun convert_success_clearsIsConvertingFlag() = runTest(testDispatcher) {
+        viewModel.load("club1")
+        viewModel.convert()
+
+        viewModel.state.value.isConverting shouldBe false
+    }
+
+    @Test
+    fun convert_conflictFailure_clearsIsConvertingFlag() = runTest(testDispatcher) {
+        viewModel.load("club1")
+        fakeBillingRepo.convertResult = Result.failure(Exception("Failed to convert club: 409 Conflict"))
+        viewModel.convert()
+
+        viewModel.state.value.isConverting shouldBe false
+    }
 }

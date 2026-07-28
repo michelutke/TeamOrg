@@ -222,3 +222,5 @@ Android + iOS, backend with STRIPE_* test env:
 - [ ] Billing screen: card meta correct, update card (new test card reflected), convert team→club and back, convert blocked with 2 teams
 - [ ] Frozen club (set billing_status='frozen' in DB): banner on Teams, writes blocked with friendly message, billing screen reachable
 - [ ] Xcode: open project once, confirm Package Dependencies UI shows stripe-ios 26.0.0 (hand-authored pbxproj)
+- [ ] KNOWN ISSUE — Android rotation/process-death while PaymentSheet is open resets navigation and drops the confirm step (pre-existing nav behavior); verify recovery via Billing → update card, and consider a "pending club" banner as follow-up
+- [ ] Verify empty STRIPE_PUBLISHABLE_KEY produces a clear failure (ops footgun)
