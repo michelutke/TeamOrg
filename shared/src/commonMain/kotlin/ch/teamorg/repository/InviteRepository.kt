@@ -5,5 +5,6 @@ import ch.teamorg.domain.RedeemResult
 
 interface InviteRepository {
     suspend fun getInviteDetails(token: String): Result<InviteDetails>
+    suspend fun getInviteByCode(code: String): Result<InviteDetails>
     suspend fun redeemInvite(token: String): RedeemResult
 }

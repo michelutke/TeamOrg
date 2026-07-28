@@ -39,6 +39,7 @@ class SelfServeFlowTest : IntegrationTestBase() {
         val clubId = body["clubId"]!!.jsonPrimitive.content
         assertNotNull(body["teamId"], "team kind must auto-create its single team")
         assertEquals("seti_secret_fake", body["setupIntentClientSecret"]!!.jsonPrimitive.content)
+        assertNotNull(body["publishableKey"])
 
         val confirmRes = client.post("/clubs/$clubId/billing/confirm") {
             bearerAuth(token)

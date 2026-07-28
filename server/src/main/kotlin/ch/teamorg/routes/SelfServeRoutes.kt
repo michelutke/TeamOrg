@@ -30,7 +30,7 @@ data class SelfServeCreateRequest(
 )
 
 @Serializable
-data class SelfServeCreateResponse(val clubId: String, val teamId: String? = null, val setupIntentClientSecret: String)
+data class SelfServeCreateResponse(val clubId: String, val teamId: String? = null, val setupIntentClientSecret: String, val publishableKey: String)
 
 @Serializable
 data class BillingConfirmRequest(val setupIntentId: String)
@@ -61,6 +61,8 @@ fun Route.selfServeRoutes() {
     val billingRepository by inject<BillingRepository>()
     val userRepository by inject<UserRepository>()
     val stripeService by inject<StripeService>()
+    val publishableKey = application.environment.config
+        .propertyOrNull("stripe.publishable-key")?.getString() ?: ""
 
     authenticate("jwt") {
         post("/clubs/self-serve") {
@@ -87,7 +89,7 @@ fun Route.selfServeRoutes() {
                 billingRepository.createBilling(clubId, customerId, request.billingEmail, setupIntent.id)
                 call.respond(
                     HttpStatusCode.Created,
-                    SelfServeCreateResponse(clubId.toString(), teamId?.toString(), setupIntent.clientSecret)
+                    SelfServeCreateResponse(clubId.toString(), teamId?.toString(), setupIntent.clientSecret, publishableKey)
                 )
             }
         }
@@ -173,7 +175,7 @@ fun Route.selfServeRoutes() {
                     ?: return@authenticateUser call.respond(HttpStatusCode.NotFound, "No billing record for club")
                 val setupIntent = stripeService.createSetupIntent(billing.stripeCustomerId)
                 billingRepository.setSetupIntent(clubId, setupIntent.id)
-                call.respond(mapOf("setupIntentClientSecret" to setupIntent.clientSecret))
+                call.respond(mapOf("setupIntentClientSecret" to setupIntent.clientSecret, "publishableKey" to publishableKey))
             }
         }
 

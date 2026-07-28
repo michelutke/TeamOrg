@@ -94,7 +94,9 @@ class BillingManagementTest : IntegrationTestBase() {
         val clubId = client.createAndConfirm(token, "club", "VC Aare")
         val res = client.post("/clubs/$clubId/billing/update-card") { bearerAuth(token) }
         assertEquals(HttpStatusCode.OK, res.status)
-        assertEquals("seti_secret_fake", Json.parseToJsonElement(res.bodyAsText()).jsonObject["setupIntentClientSecret"]!!.jsonPrimitive.content)
+        val body = Json.parseToJsonElement(res.bodyAsText()).jsonObject
+        assertEquals("seti_secret_fake", body["setupIntentClientSecret"]!!.jsonPrimitive.content)
+        assertNotNull(body["publishableKey"])
     }
 
     @Test

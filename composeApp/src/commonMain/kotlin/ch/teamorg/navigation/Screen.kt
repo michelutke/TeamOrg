@@ -36,6 +36,12 @@ sealed class Screen(val route: String) {
     data object ClubSetup : Screen("club_setup")
 
     @Serializable
+    data object CreateTeamOrClub : Screen("create_team_or_club")
+
+    @Serializable
+    data class CardSetup(val clubId: String, val clientSecret: String, val publishableKey: String) : Screen("card_setup")
+
+    @Serializable
     data class TeamRoster(val teamId: String) : Screen("team_roster/{teamId}")
 
     @Serializable
@@ -61,4 +67,7 @@ sealed class Screen(val route: String) {
 
     @Serializable
     data class ClubMembers(val clubId: String) : Screen("club_members/{clubId}")
+
+    @Serializable
+    data class Billing(val clubId: String) : Screen("billing/{clubId}")
 }

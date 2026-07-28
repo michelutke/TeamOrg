@@ -39,7 +39,7 @@ cd admin && npm run check && npm run test
 
 ## Stripe billing
 
-Env vars (server): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`. All optional — empty-string fallbacks keep dev/test boot working without Stripe configured.
+Env vars (server): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `PUBLIC_STRIPE_PUBLISHABLE_KEY` (same name the admin app uses — one var for both). All optional — empty-string fallbacks keep dev/test boot working without Stripe configured.
 
 Env vars (admin web app): `PUBLIC_STRIPE_PUBLISHABLE_KEY` — Stripe's publishable key (client-side, safe to expose, unlike the secret key above). Read via `$env/dynamic/public` in `admin/src/routes/create/billing/+page.server.ts`; tolerates an empty string, in which case the `/create/billing` page renders a "billing not configured" state instead of mounting Stripe Elements.
 

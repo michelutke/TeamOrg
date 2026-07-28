@@ -37,6 +37,7 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.androidx.lifecycleProcess)
             implementation(libs.onesignal)
+            implementation(libs.stripe.android)
             // implementation(libs.updraft.sdk) // TODO: needs com.simplify:ink + com.rm:freedrawview repos
         }
         commonMain.dependencies {

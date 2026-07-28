@@ -18,21 +18,30 @@ class FakeInviteRepository : InviteRepository {
     )
 
     var getInviteDetailsResult: Result<InviteDetails> = Result.success(defaultDetails())
+    var getInviteByCodeResult: Result<InviteDetails> = Result.success(defaultDetails())
     var redeemInviteResult: RedeemResult = RedeemResult.Success
 
     var lastDetailsToken: String? = null
+    var lastCodeLookup: String? = null
     var lastRedeemToken: String? = null
 
     fun reset() {
         getInviteDetailsResult = Result.success(defaultDetails())
+        getInviteByCodeResult = Result.success(defaultDetails())
         redeemInviteResult = RedeemResult.Success
         lastDetailsToken = null
+        lastCodeLookup = null
         lastRedeemToken = null
     }
 
     override suspend fun getInviteDetails(token: String): Result<InviteDetails> {
         lastDetailsToken = token
         return getInviteDetailsResult
+    }
+
+    override suspend fun getInviteByCode(code: String): Result<InviteDetails> {
+        lastCodeLookup = code
+        return getInviteByCodeResult
     }
 
     override suspend fun redeemInvite(token: String): RedeemResult {
