@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 import { register } from '$lib/server/auth';
 import { createSelfServe } from '$lib/server/billing';
 import { ApiError } from '$lib/server/guards';
@@ -70,10 +71,12 @@ export const actions: Actions = {
 			throw e;
 		}
 
-		cookies.set('to_onboarding', JSON.stringify(result), {
+		// userId binds the handoff to the account that created the club, so a later
+		// login by someone else in the same browser can't pick up the card step.
+		cookies.set('to_onboarding', JSON.stringify({ ...result, userId: locals.user.id }), {
 			path: '/create',
 			httpOnly: true,
-			secure: false,
+			secure: !dev,
 			sameSite: 'lax',
 			maxAge: 1800
 		});

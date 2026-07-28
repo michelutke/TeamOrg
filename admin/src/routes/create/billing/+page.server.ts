@@ -12,7 +12,12 @@ function readOnboardingCookie(raw: string | undefined) {
 		if (!parsed || typeof parsed.clubId !== 'string' || typeof parsed.setupIntentClientSecret !== 'string') {
 			return null;
 		}
-		return parsed as { clubId: string; teamId?: string | null; setupIntentClientSecret: string };
+		return parsed as {
+			clubId: string;
+			teamId?: string | null;
+			setupIntentClientSecret: string;
+			userId?: string;
+		};
 	} catch {
 		return null;
 	}
@@ -25,6 +30,9 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 
 	const onboarding = readOnboardingCookie(cookies.get('to_onboarding'));
 	if (!onboarding) throw redirect(303, '/create');
+	// The handoff belongs to the account that created the club — a different user in
+	// the same browser must not resume someone else's card step.
+	if (onboarding.userId && onboarding.userId !== locals.user.id) throw redirect(303, '/create');
 
 	return {
 		clubId: onboarding.clubId,
@@ -41,6 +49,9 @@ export const actions: Actions = {
 		const onboarding = readOnboardingCookie(cookies.get('to_onboarding'));
 		if (!onboarding || !locals.token) {
 			return fail(400, { error: m.cardError });
+		}
+		if (onboarding.userId && onboarding.userId !== locals.user?.id) {
+			return fail(403, { error: m.cardError });
 		}
 
 		const form = await request.formData();
