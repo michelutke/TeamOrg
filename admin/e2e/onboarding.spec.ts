@@ -119,36 +119,51 @@ test.describe('full join flow with a freshly created reusable invite', () => {
 	});
 });
 
-test.describe('/create wizard through the billing step', () => {
-	test.skip(!RUN, 'Mutating — registers a throwaway account and a club/team. Set E2E_ALLOW_MUTATION=1.');
+test.describe('/create wizard', () => {
+	test.skip(!RUN, 'Mutating — registers a throwaway account (and with Stripe, a club/team). Set E2E_ALLOW_MUTATION=1.');
 
-	test('register, fill details, and reach the billing step', async ({ browser }) => {
-		const stamp = Date.now();
+	async function registerToDetails(browser: import('@playwright/test').Browser, stamp: number) {
 		const email = `e2e.onboarding.${stamp}@example.com`;
 		const password = `E2e!${stamp}pw`;
 		const name = `E2E Onboarding ${stamp}`;
 
 		const { ctx, page } = await anonymousPage(browser);
-
 		await page.goto('/create');
 		await page.locator('input[name="name"]').fill(name);
 		await page.locator('input[name="email"]').fill(email);
 		await page.locator('input[name="password"]').fill(password);
 		await page.getByRole('button', { name: 'Konto erstellen' }).click();
 		await page.waitForURL(/\/create$/, { timeout: 15_000 });
+		return { ctx, page, name };
+	}
 
-		// Step 2 (details) — kind defaults to "team"; only name is required beyond the
-		// pre-filled billing email.
-		await page.locator('input[name="name"]').fill(name);
-		await page.getByRole('button', { name: 'Weiter zur Zahlung' }).click();
-		await page.waitForURL(/\/create\/billing$/, { timeout: 15_000 });
-
-		// Env-dependent: the Payment Element mounts an iframe when a publishable key is
-		// configured, otherwise the "not configured" fallback shows. Assert one of the two.
-		const paymentIframe = page.locator('iframe').first();
-		const notConfigured = page.getByText('Billing is not configured in this environment.');
-		await expect(paymentIframe.or(notConfigured)).toBeVisible({ timeout: 15_000 });
-
+	test('register lands on the details step with kind cards', async ({ browser }) => {
+		const { ctx, page } = await registerToDetails(browser, Date.now());
+		// Step 2 (details) — kind defaults to "team"; billing email is pre-filled.
+		await expect(page.getByRole('radio', { checked: true })).toBeVisible();
+		await expect(page.locator('input[name="billingEmail"]')).not.toHaveValue('');
+		await expect(page.getByRole('button', { name: 'Weiter zur Zahlung' })).toBeVisible();
 		await ctx.close();
+	});
+
+	// Submitting the details step calls the backend's POST /clubs/self-serve, which
+	// requires STRIPE_SECRET_KEY on the *backend*. Gate behind E2E_STRIPE=1 so the
+	// suite stays green against a Stripe-less dev stack.
+	test.describe('through the billing step (needs Stripe-configured backend)', () => {
+		test.skip(process.env.E2E_STRIPE !== '1', 'Backend needs STRIPE_* env. Set E2E_STRIPE=1.');
+
+		test('fill details and reach the billing step', async ({ browser }) => {
+			const { ctx, page, name } = await registerToDetails(browser, Date.now());
+			await page.locator('input[name="name"]').fill(name);
+			await page.getByRole('button', { name: 'Weiter zur Zahlung' }).click();
+			await page.waitForURL(/\/create\/billing$/, { timeout: 15_000 });
+
+			// Env-dependent: the Payment Element mounts an iframe when a publishable key
+			// is configured on the admin app, otherwise the fallback shows.
+			const paymentIframe = page.locator('iframe').first();
+			const notConfigured = page.getByText('Billing is not configured in this environment.');
+			await expect(paymentIframe.or(notConfigured)).toBeVisible({ timeout: 15_000 });
+			await ctx.close();
+		});
 	});
 });
