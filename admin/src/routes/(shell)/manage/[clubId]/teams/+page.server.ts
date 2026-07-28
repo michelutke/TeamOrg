@@ -1,5 +1,5 @@
 import { apiGet, apiPost } from '$lib/server/api';
-import { ApiError, assertClubAccess } from '$lib/server/guards';
+import { ApiError, assertClubAccess, billingBlockedMessage } from '$lib/server/guards';
 import { getMessages, resolveLocale } from '$lib/i18n';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -61,7 +61,7 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 };
 
 export const actions: Actions = {
-	create: async ({ request, params, locals }) => {
+	create: async ({ request, params, locals, cookies }) => {
 		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const name = data.get('name') as string;
@@ -72,6 +72,10 @@ export const actions: Actions = {
 			await apiPost(`/clubs/${params.clubId}/teams`, locals.token!, { name, description });
 			return { success: true };
 		} catch (err) {
+			const lang = resolveLocale(cookies.get('lang'));
+			const m = getMessages(lang);
+			const billingError = billingBlockedMessage(err, m);
+			if (billingError) return fail(402, { error: billingError });
 			if (err instanceof ApiError && err.status === 403)
 				return fail(403, { error: 'Not authorized to create teams for this club' });
 			return fail(500, { error: 'Failed to create team' });

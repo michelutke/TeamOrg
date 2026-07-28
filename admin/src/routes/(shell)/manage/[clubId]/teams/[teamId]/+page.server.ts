@@ -1,5 +1,6 @@
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from '$lib/server/api';
-import { ApiError, assertClubAccess } from '$lib/server/guards';
+import { ApiError, assertClubAccess, billingBlockedMessage } from '$lib/server/guards';
+import { getMessages, resolveLocale } from '$lib/i18n';
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -69,7 +70,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-	updateTeam: async ({ request, params, locals }) => {
+	updateTeam: async ({ request, params, locals, cookies }) => {
 		assertClubAccess(locals, params.clubId);
 		const data = await request.formData();
 		const name = (data.get('name') as string) || undefined;
@@ -78,6 +79,10 @@ export const actions: Actions = {
 			await apiPatch(`/teams/${params.teamId}`, locals.token!, { name, description });
 			return { success: true };
 		} catch (err) {
+			const lang = resolveLocale(cookies.get('lang'));
+			const m = getMessages(lang);
+			const billingError = billingBlockedMessage(err, m);
+			if (billingError) return fail(402, { error: billingError });
 			if (err instanceof ApiError && err.status === 403)
 				return fail(403, { error: 'Not authorized to update this team' });
 			return fail(500, { error: 'Failed to update team' });

@@ -395,6 +395,7 @@ export interface Dict {
 		statusFrozen: string;
 		frozenBanner: string;
 		frozenBannerCta: string;
+		pastDueBanner: string;
 	};
 }
 
@@ -787,7 +788,9 @@ const de: Dict = {
 		statusPastDue: 'Zahlung überfällig',
 		statusFrozen: 'Gesperrt',
 		frozenBanner: 'Dieser Verein ist wegen einer überfälligen Zahlung gesperrt.',
-		frozenBannerCta: 'Zahlungsmethode aktualisieren'
+		frozenBannerCta: 'Zahlungsmethode aktualisieren',
+		pastDueBanner:
+			'Die Zahlung für diesen Verein ist überfällig. Bitte aktualisiere bald deine Zahlungsmethode.'
 	}
 };
 
@@ -1180,7 +1183,8 @@ const en: Dict = {
 		statusPastDue: 'Past due',
 		statusFrozen: 'Frozen',
 		frozenBanner: 'This club is frozen due to a past-due payment.',
-		frozenBannerCta: 'Update payment method'
+		frozenBannerCta: 'Update payment method',
+		pastDueBanner: 'Payment for this club is past due. Please update your payment method soon.'
 	}
 };
 
