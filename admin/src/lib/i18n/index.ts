@@ -361,6 +361,16 @@ export interface Dict {
 		cardProcessing: string;
 		cardError: string;
 		done: string;
+		emailLabel: string;
+		passwordLabel: string;
+		registerSubmit: string;
+		haveAccount: string;
+		toLogin: string;
+		nameRequired: string;
+		billingEmailInvalid: string;
+		detailsSubmit: string;
+		registerFailed: string;
+		emailTaken: string;
 	};
 	billing: {
 		title: string;
@@ -734,7 +744,17 @@ const de: Dict = {
 		cardSubmit: 'Bestätigen',
 		cardProcessing: 'Wird verarbeitet…',
 		cardError: 'Zahlungsmethode konnte nicht gespeichert werden. Bitte versuche es erneut.',
-		done: 'Fertig'
+		done: 'Fertig',
+		emailLabel: 'E-Mail',
+		passwordLabel: 'Passwort',
+		registerSubmit: 'Konto erstellen',
+		haveAccount: 'Ich habe bereits ein Konto',
+		toLogin: 'Anmelden',
+		nameRequired: 'Bitte gib einen Namen ein.',
+		billingEmailInvalid: 'Bitte gib eine gültige E-Mail-Adresse ein.',
+		detailsSubmit: 'Weiter zur Zahlung',
+		registerFailed: 'Registrierung fehlgeschlagen. Bitte versuche es erneut.',
+		emailTaken: 'Für diese E-Mail existiert bereits ein Konto. Bitte melde dich an.'
 	},
 	billing: {
 		title: 'Abrechnung',
@@ -1108,7 +1128,17 @@ const en: Dict = {
 		cardSubmit: 'Confirm',
 		cardProcessing: 'Processing…',
 		cardError: 'Could not save payment method. Please try again.',
-		done: 'Done'
+		done: 'Done',
+		emailLabel: 'Email',
+		passwordLabel: 'Password',
+		registerSubmit: 'Create account',
+		haveAccount: 'I already have an account',
+		toLogin: 'Sign in',
+		nameRequired: 'Please enter a name.',
+		billingEmailInvalid: 'Please enter a valid email address.',
+		detailsSubmit: 'Continue to payment',
+		registerFailed: 'Registration failed. Please try again.',
+		emailTaken: 'An account already exists for this email. Please sign in.'
 	},
 	billing: {
 		title: 'Billing',
