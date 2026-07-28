@@ -39,7 +39,7 @@ cd admin && npm run check && npm run test
 
 ## Stripe billing
 
-Env vars (server): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`. All optional — empty-string fallbacks keep dev/test boot working without Stripe configured.
+Env vars (server): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `STRIPE_PUBLISHABLE_KEY`. All optional — empty-string fallbacks keep dev/test boot working without Stripe configured.
 
 - Dashboard → Products: create a per-unit price of CHF 2/year, copy its price id into `STRIPE_PRICE_ID`.
 - Dashboard → Developers → API keys: use `sk_test_...` in test mode, copy into `STRIPE_SECRET_KEY`.
