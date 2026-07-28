@@ -38,7 +38,10 @@ data class CardUpdateStart(val setupIntentClientSecret: String, val publishableK
 private data class SelfServeCreateRequest(
     val kind: String,
     val name: String,
-    val sportType: String?,
+    // Server declares sportType non-nullable with a "volleyball" default that only
+    // applies when the key is ABSENT — an explicit "sportType": null would 400.
+    // kotlinx.serialization's explicitNulls default is true, so coerce client-side.
+    val sportType: String,
     val location: String?,
     val billingEmail: String
 )
@@ -62,7 +65,7 @@ class BillingRepositoryImpl(private val client: HttpClient) : BillingRepository 
     ): Result<SelfServeCreated> {
         return try {
             val response = client.post("/clubs/self-serve") {
-                setBody(SelfServeCreateRequest(kind, name, sportType, location, billingEmail))
+                setBody(SelfServeCreateRequest(kind, name, sportType ?: "volleyball", location, billingEmail))
             }
             if (response.status == HttpStatusCode.Created) {
                 Result.success(response.body())
