@@ -334,6 +334,50 @@ export interface Dict {
 		archivedTeamsTitle: string;
 		unarchive: string;
 	};
+	onboarding: {
+		welcomeTitle: string;
+		welcomeSubtitle: string;
+		joinCta: string;
+		createCta: string;
+		loginCta: string;
+		joinTitle: string;
+		joinCodeLabel: string;
+		joinCodeInvalid: string;
+		joinSubmit: string;
+		createAccountTitle: string;
+		createDetailsTitle: string;
+		kindTeam: string;
+		kindClub: string;
+		kindTeamHint: string;
+		kindClubHint: string;
+		kindSwitchNote: string;
+		nameLabel: string;
+		sportLabel: string;
+		locationLabel: string;
+		billingEmailLabel: string;
+		pricingNote: string;
+		cardTitle: string;
+		cardSubmit: string;
+		cardProcessing: string;
+		cardError: string;
+		done: string;
+	};
+	billing: {
+		title: string;
+		cardOnFile: string;
+		noCard: string;
+		memberCount: string;
+		projectedCount: string;
+		updateCard: string;
+		convertToClub: string;
+		convertToTeam: string;
+		convertBlocked: string;
+		statusActive: string;
+		statusPastDue: string;
+		statusFrozen: string;
+		frozenBanner: string;
+		frozenBannerCta: string;
+	};
 }
 
 const de: Dict = {
@@ -663,6 +707,50 @@ const de: Dict = {
 		shownCountSuffix: 'angezeigt',
 		archivedTeamsTitle: 'Archivierte Teams',
 		unarchive: 'Wiederherstellen'
+	},
+	onboarding: {
+		welcomeTitle: 'Willkommen bei TeamOrg',
+		welcomeSubtitle: 'Tritt einem bestehenden Team bei oder erstelle einen neuen Verein.',
+		joinCta: 'Team beitreten',
+		createCta: 'Verein erstellen',
+		loginCta: 'Ich habe bereits ein Konto',
+		joinTitle: 'Team beitreten',
+		joinCodeLabel: 'Einladungscode',
+		joinCodeInvalid: 'Dieser Code ist ungültig oder abgelaufen.',
+		joinSubmit: 'Beitreten',
+		createAccountTitle: 'Konto erstellen',
+		createDetailsTitle: 'Verein oder Team einrichten',
+		kindTeam: 'Team',
+		kindClub: 'Verein',
+		kindTeamHint: 'Ein einzelnes Team ohne mehrere Mannschaften.',
+		kindClubHint: 'Ein Verein mit mehreren Teams.',
+		kindSwitchNote: 'Du kannst später jederzeit zwischen Team und Verein wechseln.',
+		nameLabel: 'Name',
+		sportLabel: 'Sportart',
+		locationLabel: 'Standort',
+		billingEmailLabel: 'Rechnungs-E-Mail',
+		pricingNote: 'CHF 2 pro Mitglied und Jahr, jeweils im Januar abgerechnet.',
+		cardTitle: 'Zahlungsmethode hinterlegen',
+		cardSubmit: 'Bestätigen',
+		cardProcessing: 'Wird verarbeitet…',
+		cardError: 'Zahlungsmethode konnte nicht gespeichert werden. Bitte versuche es erneut.',
+		done: 'Fertig'
+	},
+	billing: {
+		title: 'Abrechnung',
+		cardOnFile: 'Hinterlegte Karte',
+		noCard: 'Keine Karte hinterlegt',
+		memberCount: 'Aktuelle Mitgliederzahl',
+		projectedCount: 'Voraussichtlich abgerechnete Mitglieder',
+		updateCard: 'Karte aktualisieren',
+		convertToClub: 'Zu Verein wechseln',
+		convertToTeam: 'Zu Team wechseln',
+		convertBlocked: 'Wechsel derzeit nicht möglich.',
+		statusActive: 'Aktiv',
+		statusPastDue: 'Zahlung überfällig',
+		statusFrozen: 'Gesperrt',
+		frozenBanner: 'Dieser Verein ist wegen einer überfälligen Zahlung gesperrt.',
+		frozenBannerCta: 'Zahlungsmethode aktualisieren'
 	}
 };
 
@@ -993,6 +1081,50 @@ const en: Dict = {
 		shownCountSuffix: 'shown',
 		archivedTeamsTitle: 'Archived teams',
 		unarchive: 'Restore'
+	},
+	onboarding: {
+		welcomeTitle: 'Welcome to TeamOrg',
+		welcomeSubtitle: 'Join an existing team or create a new club.',
+		joinCta: 'Join a team',
+		createCta: 'Create a club',
+		loginCta: 'I already have an account',
+		joinTitle: 'Join a team',
+		joinCodeLabel: 'Invite code',
+		joinCodeInvalid: 'This code is invalid or expired.',
+		joinSubmit: 'Join',
+		createAccountTitle: 'Create account',
+		createDetailsTitle: 'Set up your club or team',
+		kindTeam: 'Team',
+		kindClub: 'Club',
+		kindTeamHint: 'A single team without multiple squads.',
+		kindClubHint: 'A club with multiple teams.',
+		kindSwitchNote: 'You can switch between team and club anytime later.',
+		nameLabel: 'Name',
+		sportLabel: 'Sport',
+		locationLabel: 'Location',
+		billingEmailLabel: 'Billing email',
+		pricingNote: 'CHF 2 per member per year, billed each January.',
+		cardTitle: 'Add payment method',
+		cardSubmit: 'Confirm',
+		cardProcessing: 'Processing…',
+		cardError: 'Could not save payment method. Please try again.',
+		done: 'Done'
+	},
+	billing: {
+		title: 'Billing',
+		cardOnFile: 'Card on file',
+		noCard: 'No card on file',
+		memberCount: 'Current member count',
+		projectedCount: 'Projected billed members',
+		updateCard: 'Update card',
+		convertToClub: 'Convert to club',
+		convertToTeam: 'Convert to team',
+		convertBlocked: 'Conversion is not possible right now.',
+		statusActive: 'Active',
+		statusPastDue: 'Past due',
+		statusFrozen: 'Frozen',
+		frozenBanner: 'This club is frozen due to a past-due payment.',
+		frozenBannerCta: 'Update payment method'
 	}
 };
 
