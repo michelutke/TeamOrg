@@ -18,6 +18,7 @@ enum StripeSetupBridge {
                 current = paymentSheet
 
                 guard let topViewController = topViewController() else {
+                    current = nil
                     completion("failed")
                     return
                 }
