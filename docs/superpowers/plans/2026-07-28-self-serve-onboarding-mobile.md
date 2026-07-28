@@ -211,3 +211,14 @@ fun setSetupPresenter(presenter: (String, String, (String) -> Unit) -> Unit) { s
 ## Out of scope
 - Web parity changes (web PR #66 handles web).
 - Push-notification for billing events; super-admin mobile tooling; reusable-invite creation UI (exists in mobile already? — TeamRoster invite sheet creates reusable links per Figma; verify during Task 5, don't build new).
+
+## Manual QA checklist (device runs, Stripe sandbox — do before release)
+
+Android + iOS, backend with STRIPE_* test env:
+- [ ] Create team with test card 4242 4242 4242 4242 → lands on Teams, club active, subscription in Stripe test dashboard
+- [ ] Decline card 4000 0000 0000 0002 → error shown, retry works
+- [ ] 3DS card 4000 0027 6000 3184 → challenge completes; on iOS verify teamorg://stripe-redirect returns into PaymentSheet (not the invite handler)
+- [ ] Join via 8-char short code from EmptyState
+- [ ] Billing screen: card meta correct, update card (new test card reflected), convert team→club and back, convert blocked with 2 teams
+- [ ] Frozen club (set billing_status='frozen' in DB): banner on Teams, writes blocked with friendly message, billing screen reachable
+- [ ] Xcode: open project once, confirm Package Dependencies UI shows stripe-ios 26.0.0 (hand-authored pbxproj)
