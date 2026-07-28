@@ -89,7 +89,7 @@ fun EmptyStateScreen(
                 modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_create_team_or_club"),
                 shape = PillShape
             ) {
-                Text("Team oder Verein erstellen", style = MaterialTheme.typography.titleMedium)
+                Text("Create a team or club", style = MaterialTheme.typography.titleMedium)
             }
 
             // Join a team — invite redemption card

@@ -67,11 +67,11 @@ class CreateTeamOrClubViewModel(
     fun submit() {
         val current = _state.value
         if (current.name.isBlank()) {
-            _state.value = current.copy(error = "Name darf nicht leer sein")
+            _state.value = current.copy(error = "Name must not be empty")
             return
         }
         if (!current.billingEmail.contains("@")) {
-            _state.value = current.copy(error = "Ungültige E-Mail-Adresse")
+            _state.value = current.copy(error = "Invalid email address")
             return
         }
 
@@ -89,7 +89,7 @@ class CreateTeamOrClubViewModel(
                     _events.emit(CreateTeamOrClubEvent.ProceedToCard(created))
                 },
                 onFailure = { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Erstellung fehlgeschlagen")
+                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Creation failed")
                 }
             )
         }

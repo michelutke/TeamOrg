@@ -82,7 +82,7 @@ class CreateTeamOrClubViewModelTest {
             viewModel.submit()
             expectNoEvents()
         }
-        viewModel.state.value.error shouldBe "Name darf nicht leer sein"
+        viewModel.state.value.error shouldBe "Name must not be empty"
     }
 
     @Test
@@ -95,7 +95,7 @@ class CreateTeamOrClubViewModelTest {
             viewModel.submit()
             expectNoEvents()
         }
-        viewModel.state.value.error shouldBe "Ungültige E-Mail-Adresse"
+        viewModel.state.value.error shouldBe "Invalid email address"
     }
 
     // region — submit success

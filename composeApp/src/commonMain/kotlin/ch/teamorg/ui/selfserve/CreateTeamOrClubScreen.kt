@@ -63,7 +63,7 @@ fun CreateTeamOrClubScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "Team oder Verein erstellen",
+                    "Create a team or club",
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -74,14 +74,14 @@ fun CreateTeamOrClubScreen(
                 ) {
                     KindCard(
                         title = "Team",
-                        hint = "Für eine einzelne Mannschaft.",
+                        hint = "For a single squad.",
                         selected = state.kind == "team",
                         onClick = { viewModel.onKindChange("team") },
                         modifier = Modifier.weight(1f).testTag("card_kind_team")
                     )
                     KindCard(
-                        title = "Verein",
-                        hint = "Für mehrere Teams unter einem Dach.",
+                        title = "Club",
+                        hint = "For multiple teams under one roof.",
                         selected = state.kind == "club",
                         onClick = { viewModel.onKindChange("club") },
                         modifier = Modifier.weight(1f).testTag("card_kind_club")
@@ -89,7 +89,7 @@ fun CreateTeamOrClubScreen(
                 }
 
                 Text(
-                    "Du kannst später jederzeit zwischen Team und Verein wechseln.",
+                    "You can switch between team and club anytime later.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -105,21 +105,21 @@ fun CreateTeamOrClubScreen(
                 TeamorgTextField(
                     value = state.sportType,
                     onValueChange = viewModel::onSportTypeChange,
-                    label = "Sportart",
+                    label = "Sport",
                     modifier = Modifier.fillMaxWidth().testTag("tf_sport_type")
                 )
 
                 TeamorgTextField(
                     value = state.location,
                     onValueChange = viewModel::onLocationChange,
-                    label = "Ort (optional)",
+                    label = "Location (optional)",
                     modifier = Modifier.fillMaxWidth().testTag("tf_location")
                 )
 
                 TeamorgTextField(
                     value = state.billingEmail,
                     onValueChange = viewModel::onBillingEmailChange,
-                    label = "Rechnungs-E-Mail",
+                    label = "Billing email",
                     modifier = Modifier.fillMaxWidth().testTag("tf_billing_email"),
                     isError = state.error != null && !state.billingEmail.contains("@")
                 )
@@ -130,7 +130,7 @@ fun CreateTeamOrClubScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        "CHF 2 pro Mitglied und Jahr, jeweils im Januar abgerechnet.",
+                        "CHF 2 per member per year, billed each January.",
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
@@ -151,7 +151,7 @@ fun CreateTeamOrClubScreen(
                     enabled = !state.isLoading,
                     shape = PillShape
                 ) {
-                    Text("Weiter zur Zahlung", style = MaterialTheme.typography.titleMedium)
+                    Text("Continue to payment", style = MaterialTheme.typography.titleMedium)
                 }
             }
 
