@@ -46,6 +46,7 @@ class BillingManagementTest : IntegrationTestBase() {
         val body = Json.parseToJsonElement(res.bodyAsText()).jsonObject
         assertEquals("4242", body["cardLast4"]!!.jsonPrimitive.content)
         assertEquals(1, body["currentMemberCount"]!!.jsonPrimitive.int)
+        assertEquals("team", body["kind"]!!.jsonPrimitive.content)
 
         val stranger = client.register("nosy@x.ch")
         assertEquals(HttpStatusCode.Forbidden, client.get("/clubs/$clubId/billing") { bearerAuth(stranger) }.status)

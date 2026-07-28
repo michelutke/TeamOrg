@@ -18,6 +18,7 @@ export type BillingInfo = {
 	projectedBilledCount: number;
 	billingStatus: 'active' | 'past_due' | 'frozen';
 	billingMode: 'stripe' | 'manual' | 'free';
+	kind: 'club' | 'team';
 };
 
 export const createSelfServe = (token: string, body: SelfServeCreate) =>

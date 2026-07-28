@@ -21,6 +21,7 @@ export interface Dict {
 		adminArea: string;
 		manageArea: string;
 		club: string;
+		billing: string;
 		memberSection: string;
 		logout: string;
 	};
@@ -378,10 +379,17 @@ export interface Dict {
 		noCard: string;
 		memberCount: string;
 		projectedCount: string;
+		countBasisNote: string;
+		manualNote: string;
 		updateCard: string;
+		cardSubmit: string;
+		cardProcessing: string;
+		cardUpdateError: string;
+		currentKind: string;
 		convertToClub: string;
 		convertToTeam: string;
 		convertBlocked: string;
+		convertedToClubNote: string;
 		statusActive: string;
 		statusPastDue: string;
 		statusFrozen: string;
@@ -400,6 +408,7 @@ const de: Dict = {
 		adminArea: 'Admin-Bereich',
 		manageArea: 'Verein',
 		club: 'Club',
+		billing: 'Abrechnung',
 		memberSection: 'Meine Teilnahme',
 		logout: 'Abmelden'
 	},
@@ -762,10 +771,18 @@ const de: Dict = {
 		noCard: 'Keine Karte hinterlegt',
 		memberCount: 'Aktuelle Mitgliederzahl',
 		projectedCount: 'Voraussichtlich abgerechnete Mitglieder',
+		countBasisNote:
+			'Abgerechnet wird die höhere Zahl aus Mitgliederzahl per Jahresende und dem Mittelwert der Saison.',
+		manualNote: 'Die Abrechnung für diesen Verein wird manuell verwaltet.',
 		updateCard: 'Karte aktualisieren',
+		cardSubmit: 'Karte speichern',
+		cardProcessing: 'Wird verarbeitet…',
+		cardUpdateError: 'Karte konnte nicht gespeichert werden. Bitte versuche es erneut.',
+		currentKind: 'Aktuell',
 		convertToClub: 'Zu Verein wechseln',
 		convertToTeam: 'Zu Team wechseln',
 		convertBlocked: 'Wechsel derzeit nicht möglich.',
+		convertedToClubNote: 'Als Verein kannst du jetzt mehrere Teams verwalten.',
 		statusActive: 'Aktiv',
 		statusPastDue: 'Zahlung überfällig',
 		statusFrozen: 'Gesperrt',
@@ -784,6 +801,7 @@ const en: Dict = {
 		adminArea: 'Admin area',
 		manageArea: 'Club',
 		club: 'Club',
+		billing: 'Billing',
 		memberSection: 'My participation',
 		logout: 'Sign out'
 	},
@@ -1146,10 +1164,18 @@ const en: Dict = {
 		noCard: 'No card on file',
 		memberCount: 'Current member count',
 		projectedCount: 'Projected billed members',
+		countBasisNote:
+			'You are billed for whichever is higher: the member count at year-end or the median count across the season.',
+		manualNote: 'Billing for this club is managed manually.',
 		updateCard: 'Update card',
+		cardSubmit: 'Save card',
+		cardProcessing: 'Processing…',
+		cardUpdateError: 'Could not save the card. Please try again.',
+		currentKind: 'Currently',
 		convertToClub: 'Convert to club',
 		convertToTeam: 'Convert to team',
 		convertBlocked: 'Conversion is not possible right now.',
+		convertedToClubNote: 'As a club, you can now manage multiple teams.',
 		statusActive: 'Active',
 		statusPastDue: 'Past due',
 		statusFrozen: 'Frozen',
