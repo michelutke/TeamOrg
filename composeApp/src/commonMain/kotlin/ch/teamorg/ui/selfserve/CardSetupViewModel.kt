@@ -2,6 +2,7 @@ package ch.teamorg.ui.selfserve
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ch.teamorg.payments.setupIntentIdFrom
 import ch.teamorg.repository.BillingRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,7 @@ class CardSetupViewModel(
         // PaymentSheet's result callback doesn't return the SetupIntent id, but the id is
         // embedded in the client secret we already have, and the backend independently
         // verifies the intent against Stripe anyway, so a client-derived id is safe to trust.
-        val setupIntentId = clientSecret.substringBefore("_secret_")
+        val setupIntentId = setupIntentIdFrom(clientSecret)
 
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)

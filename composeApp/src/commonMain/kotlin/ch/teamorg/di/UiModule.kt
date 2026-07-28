@@ -1,6 +1,7 @@
 package ch.teamorg.di
 
 import ch.teamorg.auth.AuthViewModel
+import ch.teamorg.ui.billing.BillingViewModel
 import ch.teamorg.ui.club.ClubMembersViewModel
 import ch.teamorg.ui.club.ClubSetupViewModel
 import ch.teamorg.ui.events.CreateEditEventViewModel
@@ -27,6 +28,7 @@ val uiModule = module {
     factory { ClubSetupViewModel(get()) }
     factory { CreateTeamOrClubViewModel(get(), get()) }
     factory { CardSetupViewModel(get()) }
+    factory { BillingViewModel(get()) }
     factory { ClubMembersViewModel(get(), get()) }
     factory { TeamRosterViewModel(get(), get()) }
     factory { TeamsListViewModel(get(), get()) }

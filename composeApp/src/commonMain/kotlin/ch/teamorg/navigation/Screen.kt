@@ -67,4 +67,7 @@ sealed class Screen(val route: String) {
 
     @Serializable
     data class ClubMembers(val clubId: String) : Screen("club_members/{clubId}")
+
+    @Serializable
+    data class Billing(val clubId: String) : Screen("billing/{clubId}")
 }
