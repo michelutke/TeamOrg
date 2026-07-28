@@ -10,7 +10,8 @@
 		LogOut,
 		Building2,
 		Trophy,
-		Shield
+		Shield,
+		CreditCard
 	} from 'lucide-svelte';
 
 	interface NavUser {
@@ -42,7 +43,8 @@
 		activeClubId
 			? [
 					{ href: `/manage/${activeClubId}`, label: m.nav.club, icon: Building2, exact: true },
-					{ href: `/manage/${activeClubId}/teams`, label: m.nav.teams, icon: Trophy, exact: false }
+					{ href: `/manage/${activeClubId}/teams`, label: m.nav.teams, icon: Trophy, exact: false },
+					{ href: `/manage/${activeClubId}/billing`, label: m.nav.billing, icon: CreditCard, exact: false }
 				]
 			: []
 	);

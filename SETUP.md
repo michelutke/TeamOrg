@@ -41,6 +41,8 @@ cd admin && npm run check && npm run test
 
 Env vars (server): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`. All optional — empty-string fallbacks keep dev/test boot working without Stripe configured.
 
+Env vars (admin web app): `PUBLIC_STRIPE_PUBLISHABLE_KEY` — Stripe's publishable key (client-side, safe to expose, unlike the secret key above). Read via `$env/dynamic/public` in `admin/src/routes/create/billing/+page.server.ts`; tolerates an empty string, in which case the `/create/billing` page renders a "billing not configured" state instead of mounting Stripe Elements.
+
 - Dashboard → Products: create a per-unit price of CHF 2/year, copy its price id into `STRIPE_PRICE_ID`.
 - Dashboard → Developers → API keys: use `sk_test_...` in test mode, copy into `STRIPE_SECRET_KEY`.
 - Dashboard → Developers → Webhooks: add endpoint `https://<api-host>/stripe/webhook`, subscribe to `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`. Pin the endpoint's API version (Webhooks → endpoint → API version) to match the SDK's pinned version (`com.stripe.Stripe.API_VERSION` in stripe-java) — a mismatch can cause event deserialization to silently fail.

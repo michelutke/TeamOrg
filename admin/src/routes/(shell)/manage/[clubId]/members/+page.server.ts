@@ -1,5 +1,6 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from '$lib/server/api';
-import { assertClubAccess, ApiError } from '$lib/server/guards';
+import { assertClubAccess, ApiError, billingBlockedMessage } from '$lib/server/guards';
+import { getMessages, resolveLocale } from '$lib/i18n';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -18,14 +19,20 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-    addMember: async ({ request, params, locals }) => {
+    addMember: async ({ request, params, locals, cookies }) => {
         assertClubAccess(locals, params.clubId);
         const f = await request.formData();
         const teamId = f.get('teamId') as string;
         const userId = f.get('userId') as string;
         const role = f.get('role') as string;
         try { await apiPost(`/teams/${teamId}/members`, locals.token!, { userId, role }); return { ok: 'added' }; }
-        catch (e) { return fail(e instanceof ApiError ? e.status : 500, { error: 'addFailed' }); }
+        catch (e) {
+            const lang = resolveLocale(cookies.get('lang'));
+            const m = getMessages(lang);
+            const billingError = billingBlockedMessage(e, m);
+            if (billingError) return fail(402, { error: billingError });
+            return fail(e instanceof ApiError ? e.status : 500, { error: 'addFailed' });
+        }
     },
     changeRole: async ({ request, params, locals }) => {
         assertClubAccess(locals, params.clubId);

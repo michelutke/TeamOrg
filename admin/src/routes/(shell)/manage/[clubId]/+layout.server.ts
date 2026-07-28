@@ -1,5 +1,6 @@
 import { redirect, error } from '@sveltejs/kit';
 import { apiGet } from '$lib/server/api';
+import { getMessages, resolveLocale } from '$lib/i18n';
 import type { LayoutServerLoad } from './$types';
 
 interface Club {
@@ -9,9 +10,11 @@ interface Club {
 	location: string | null;
 	logoUrl: string | null;
 	status: string;
+	billingStatus: 'active' | 'past_due' | 'frozen';
+	billingMode: 'stripe' | 'manual' | 'free';
 }
 
-export const load: LayoutServerLoad = async ({ params, locals }) => {
+export const load: LayoutServerLoad = async ({ params, locals, cookies }) => {
 	if (!locals.user) throw redirect(302, '/login');
 
 	const { clubId } = params;
@@ -24,5 +27,7 @@ export const load: LayoutServerLoad = async ({ params, locals }) => {
 
 	const club = await apiGet<Club>(`/clubs/${clubId}`, locals.token!);
 
-	return { club, clubId };
+	const lang = resolveLocale(cookies.get('lang'));
+
+	return { club, clubId, lang, m: getMessages(lang) };
 };
