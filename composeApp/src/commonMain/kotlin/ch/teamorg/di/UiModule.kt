@@ -15,6 +15,7 @@ import ch.teamorg.ui.team.TeamsListViewModel
 import ch.teamorg.ui.emptystate.EmptyStateViewModel
 import ch.teamorg.ui.login.LoginViewModel
 import ch.teamorg.ui.register.RegisterViewModel
+import ch.teamorg.ui.selfserve.CardSetupViewModel
 import ch.teamorg.ui.selfserve.CreateTeamOrClubViewModel
 import org.koin.dsl.module
 
@@ -25,6 +26,7 @@ val uiModule = module {
     factory { EmptyStateViewModel(get(), get()) }
     factory { ClubSetupViewModel(get()) }
     factory { CreateTeamOrClubViewModel(get(), get()) }
+    factory { CardSetupViewModel(get()) }
     factory { ClubMembersViewModel(get(), get()) }
     factory { TeamRosterViewModel(get(), get()) }
     factory { TeamsListViewModel(get(), get()) }

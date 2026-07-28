@@ -32,6 +32,8 @@ import ch.teamorg.ui.inbox.NotificationSettingsViewModel
 import ch.teamorg.ui.placeholder.PlaceholderScreen
 import ch.teamorg.ui.register.RegisterScreen
 import ch.teamorg.ui.register.RegisterViewModel
+import ch.teamorg.ui.selfserve.CardSetupScreen
+import ch.teamorg.ui.selfserve.CardSetupViewModel
 import ch.teamorg.ui.selfserve.CreateTeamOrClubScreen
 import ch.teamorg.ui.selfserve.CreateTeamOrClubViewModel
 import ch.teamorg.ui.team.TeamRosterScreen
@@ -120,8 +122,14 @@ fun AppNavigation(
                 )
             }
             is Screen.CardSetup -> {
-                // Placeholder — Task 6 replaces this with the real card-setup screen/VM.
-                PlaceholderScreen("Card setup: clubId=${screen.clubId}")
+                val viewModel: CardSetupViewModel = viewModel { KoinPlatform.getKoin().get() }
+                CardSetupScreen(
+                    viewModel = viewModel,
+                    clubId = screen.clubId,
+                    clientSecret = screen.clientSecret,
+                    publishableKey = screen.publishableKey,
+                    onDone = { backStack.add(Screen.Teams) }
+                )
             }
             is Screen.TeamRoster -> {
                 val viewModel: TeamRosterViewModel = viewModel { KoinPlatform.getKoin().get() }

@@ -9,7 +9,7 @@ fun setSetupPresenter(presenter: (String, String, (String) -> Unit) -> Unit) {
 }
 
 @Composable
-actual fun rememberCardSetupSheet(onResult: (SetupResult) -> Unit): (String, String) -> Unit = { pk, secret ->
+actual fun rememberCardSetupSheet(onResult: (SetupResult) -> Unit): (publishableKey: String, setupIntentClientSecret: String) -> Unit = { pk, secret ->
     setupPresenter?.invoke(pk, secret) { code ->
         onResult(when (code) {
             "completed" -> SetupResult.Completed
