@@ -10,9 +10,9 @@
 
 	let { variant, clubId, m }: Props = $props();
 
-	const styles: Record<string, string> = {
+	const styles: Record<'frozen' | 'past_due', string> = {
 		frozen: 'bg-error-container text-error',
-		past_due: 'bg-[#FFF3CD] text-[#7A5B00]'
+		past_due: 'bg-warning-container text-on-warning-container'
 	};
 </script>
 
