@@ -1,52 +1,20 @@
 <script lang="ts">
 	import { Check } from 'lucide-svelte';
 	import PhoneMockup from './PhoneMockup.svelte';
+	import RosterPattern from './RosterPattern.svelte';
 	import type { Dict } from '$lib/i18n';
 
 	const eventsImg = '/mockups/events.png';
 	const detailImg = '/mockups/event-detail.png';
 
 	let { m }: { m: Dict['hero'] } = $props();
-
-	// "Tribüne" decorative pattern — rows of small rounded squares, alternating
-	// offset and color, opacity easing smoothly between rows.
-	const PATTERN_COLS = 34;
-	const PATTERN_ROWS = 14;
-	const X_PITCH = 48;
-	const Y_PITCH = 52;
-	const SQUARE = 20;
-	const OFFSET = 24;
-
-	type PatternRect = { x: number; y: number; color: string; opacity: number };
-
-	const patternRects: PatternRect[] = Array.from({ length: PATTERN_ROWS }, (_, row) => {
-		const isEven = row % 2 === 0;
-		const color = isEven ? '#64D8E8' : '#E2E4E8';
-		const xOffset = isEven ? 0 : OFFSET;
-		const opacity = +(0.08 + 0.42 * (0.5 + 0.5 * Math.sin(row * 0.7))).toFixed(3);
-		return Array.from({ length: PATTERN_COLS }, (_, col) => ({
-			x: xOffset + col * X_PITCH,
-			y: row * Y_PITCH,
-			color,
-			opacity
-		}));
-	}).flat();
 </script>
 
 <section
 	class="relative overflow-hidden bg-[#181C23]"
 	style="background-image: linear-gradient(to bottom right, #2C313B, #181C23);"
 >
-	<svg
-		class="pointer-events-none absolute inset-0 h-full w-full"
-		viewBox="0 0 1632 728"
-		preserveAspectRatio="xMidYMid slice"
-		aria-hidden="true"
-	>
-		{#each patternRects as r (r.x + ',' + r.y)}
-			<rect x={r.x} y={r.y} width={SQUARE} height={SQUARE} rx="6" fill={r.color} opacity={r.opacity} />
-		{/each}
-	</svg>
+	<RosterPattern />
 
 	<div
 		class="relative mx-auto flex max-w-content flex-col items-center gap-10 px-6 pb-16 pt-12 md:flex-row md:px-10 md:pb-20 md:pt-16"
