@@ -165,5 +165,31 @@ test.describe('/create wizard', () => {
 			await expect(paymentIframe.or(notConfigured)).toBeVisible({ timeout: 15_000 });
 			await ctx.close();
 		});
+
+		// Regression: the hidden confirm form must post the real setupIntentId.
+		// A bind:value flushed too late once posted `setupIntentId=` (empty) → the
+		// action failed with 400 and remounted the element with a consumed secret.
+		test('test-card happy path confirms billing and lands on /manage', async ({ browser }) => {
+			const { ctx, page, name } = await registerToDetails(browser, Date.now());
+			await page.locator('input[name="name"]').fill(name);
+			await page.getByRole('button', { name: 'Weiter zur Zahlung' }).click();
+			await page.waitForURL(/\/create\/billing$/, { timeout: 15_000 });
+
+			const pe = page.locator('iframe').first().contentFrame();
+			await pe.getByRole('textbox', { name: 'Kartennummer' }).fill('4242424242424242');
+			await pe.getByRole('textbox', { name: /Ablaufdatum/ }).fill('12/30');
+			await pe.getByRole('textbox', { name: 'Sicherheitscode' }).fill('123');
+
+			const confirmPost = page.waitForRequest(
+				(r) => r.url().includes('/create/billing?/confirm') && r.method() === 'POST',
+				{ timeout: 30_000 }
+			);
+			await page.getByRole('button', { name: 'Bestätigen' }).click();
+			const post = await confirmPost;
+			expect(post.postData()).toMatch(/setupIntentId=seti_/);
+
+			await page.waitForURL(/\/manage\/[0-9a-f-]+$/, { timeout: 30_000 });
+			await ctx.close();
+		});
 	});
 });
