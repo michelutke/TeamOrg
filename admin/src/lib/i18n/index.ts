@@ -32,6 +32,8 @@ export interface Dict {
 		password: string;
 		submit: string;
 		errRequired: string;
+		newHere: string;
+		startCta: string;
 	};
 	home: {
 		greeting: string; // prefix before first name, e.g. "Hallo"
@@ -419,7 +421,9 @@ const de: Dict = {
 		email: 'E-Mail',
 		password: 'Passwort',
 		submit: 'Anmelden',
-		errRequired: 'E-Mail und Passwort erforderlich'
+		errRequired: 'E-Mail und Passwort erforderlich',
+		newHere: 'Neu hier?',
+		startCta: 'Jetzt starten'
 	},
 	home: {
 		greeting: 'Hallo',
@@ -814,7 +818,9 @@ const en: Dict = {
 		email: 'Email',
 		password: 'Password',
 		submit: 'Sign in',
-		errRequired: 'Email and password required'
+		errRequired: 'Email and password required',
+		newHere: 'New here?',
+		startCta: 'Get started'
 	},
 	home: {
 		greeting: 'Hi',

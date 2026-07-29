@@ -131,7 +131,7 @@ const de: Dict = {
 		headlineA: 'Trainings, Spiele und Anwesenheit.',
 		headlineB: 'Alles im Griff.',
 		sub: 'teamorg ist die mobile App für Vereine: plane Trainings und Spiele, erfasse Zu- und Absagen in Echtzeit und halte dein ganzes Team auf dem Laufenden, online wie offline.',
-		ctaPrimary: 'Demo anfragen',
+		ctaPrimary: 'Jetzt kostenlos starten',
 		ctaSecondary: 'Funktionen ansehen',
 		trust: ['2 CHF / Mitglied / Jahr', 'Offline-fähig', 'Keine Einrichtungskosten']
 	},
@@ -211,8 +211,8 @@ const de: Dict = {
 			'J+S-Anwesenheitskontrolle',
 			'Persönlicher E-Mail-Support'
 		],
-		cta: 'Kontakt aufnehmen',
-		footnote: 'Nur für Vereine und Organisationen, keine Einzelpersonen.'
+		cta: 'Jetzt starten',
+		footnote: 'Team oder Verein direkt online erstellen — grössere Vereine richten wir auf Wunsch persönlich ein.'
 	},
 	contact: {
 		eyebrow: 'KONTAKT',
@@ -299,7 +299,7 @@ const en: Dict = {
 		headlineA: 'Training, matches and attendance.',
 		headlineB: 'All under control.',
 		sub: 'teamorg is the mobile app for clubs: plan trainings and matches, track confirmations and absences in real time, and keep your whole team in the loop, online and offline.',
-		ctaPrimary: 'Request a demo',
+		ctaPrimary: 'Get started for free',
 		ctaSecondary: 'See features',
 		trust: ['2 CHF / member / year', 'Works offline', 'No setup fees']
 	},
@@ -379,8 +379,8 @@ const en: Dict = {
 			'J+S attendance control',
 			'Personal email support'
 		],
-		cta: 'Get in touch',
-		footnote: 'For clubs and organisations only, not for individuals.'
+		cta: 'Get started',
+		footnote: 'Create your team or club online in minutes — larger clubs get personal onboarding on request.'
 	},
 	contact: {
 		eyebrow: 'CONTACT',

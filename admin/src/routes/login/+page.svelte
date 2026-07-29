@@ -64,6 +64,11 @@
 			>
 				{m.submit}
 			</button>
+
+			<p class="text-center text-[13px] text-on-surface-variant">
+				{m.newHere}
+				<a href="/start" class="font-bold text-primary hover:underline">{m.startCta}</a>
+			</p>
 		</form>
 	</div>
 </div>

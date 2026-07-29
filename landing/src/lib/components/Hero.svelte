@@ -47,7 +47,7 @@
 
 			<div data-reveal style="--reveal-delay:180ms" class="mt-7 flex flex-wrap gap-3.5">
 				<a
-					href="#kontakt"
+					href="https://app.teamorg.ch/start"
 					class="rounded-full bg-[#64D8E8] px-7 py-4 text-[15px] font-bold text-[#00363F] shadow-sm transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98]"
 					>{m.ctaPrimary}</a
 				>
