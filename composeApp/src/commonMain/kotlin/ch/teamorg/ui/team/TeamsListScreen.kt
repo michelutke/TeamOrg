@@ -26,7 +26,8 @@ import ch.teamorg.ui.theme.PillShape
 fun TeamsListScreen(
     viewModel: TeamsListViewModel,
     onTeamClick: (teamId: String) -> Unit,
-    onMembersClick: ((clubId: String) -> Unit)? = null
+    onMembersClick: ((clubId: String) -> Unit)? = null,
+    onBillingClick: ((clubId: String) -> Unit)? = null
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -86,6 +87,11 @@ fun TeamsListScreen(
                                             Text("Members")
                                         }
                                     }
+                                    if (clubId != null && onBillingClick != null) {
+                                        TextButton(onClick = { onBillingClick(clubId) }) {
+                                            Text("Billing")
+                                        }
+                                    }
                                     IconButton(onClick = { viewModel.showEditClubSheet() }) {
                                         Icon(
                                             Icons.Default.Edit,
@@ -94,6 +100,18 @@ fun TeamsListScreen(
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        val clubId = state.clubId
+                        if (clubId != null && onBillingClick != null &&
+                            (state.club?.billingStatus == "frozen" || state.club?.billingStatus == "past_due")
+                        ) {
+                            item {
+                                BillingBanner(
+                                    billingStatus = state.club?.billingStatus,
+                                    onClick = { onBillingClick(clubId) }
+                                )
                             }
                         }
 
@@ -148,6 +166,30 @@ fun TeamsListScreen(
             onDismiss = { viewModel.hideEditClubSheet() }
         )
     }
+}
+
+@Composable
+private fun BillingBanner(
+    billingStatus: String?,
+    onClick: () -> Unit
+) {
+    val message = when (billingStatus) {
+        "frozen" -> "This club's billing is frozen. Update your payment method to restore access."
+        "past_due" -> "This club's payment is past due."
+        else -> return
+    }
+    Text(
+        text = message,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .clickable(onClick = onClick)
+            .padding(16.dp)
+            .testTag("banner_billing_status"),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onErrorContainer
+    )
 }
 
 @Composable

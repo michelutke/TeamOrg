@@ -36,6 +36,8 @@ testcontainers = "1.21.0"
 kizitonwose-calendar = "2.7.0"
 onesignal = "5.7.6"
 googleServices = "4.4.2"
+stripe = "29.2.0"
+stripeAndroid = "23.13.1"
 
 [libraries]
 # Kotlin
@@ -115,6 +117,8 @@ postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" 
 simple-javaMail = { module = "org.simplejavamail:simple-java-mail", version.ref = "simple-java-mail" }
 poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+stripe-java = { module = "com.stripe:stripe-java", version.ref = "stripe" }
+stripe-android = { module = "com.stripe:stripe-android", version.ref = "stripeAndroid" }
 
 # Calendar
 kizitonwose-calendar-compose = { module = "com.kizitonwose.calendar:compose-multiplatform", version.ref = "kizitonwose-calendar" }

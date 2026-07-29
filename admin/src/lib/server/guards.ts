@@ -1,4 +1,5 @@
 import { redirect, error } from '@sveltejs/kit';
+import type { Dict } from '$lib/i18n';
 
 export class ApiError extends Error {
 	constructor(
@@ -8,6 +9,11 @@ export class ApiError extends Error {
 		super(message);
 		this.name = 'ApiError';
 	}
+}
+
+export function billingBlockedMessage(err: unknown, m: Dict): string | undefined {
+	if (err instanceof ApiError && err.status === 402) return m.billing.frozenBanner;
+	return undefined;
 }
 
 type User = NonNullable<App.Locals['user']>;

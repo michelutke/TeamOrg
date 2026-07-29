@@ -1,0 +1,1 @@
+ALTER TABLE invite_links ADD COLUMN short_code TEXT NULL UNIQUE;

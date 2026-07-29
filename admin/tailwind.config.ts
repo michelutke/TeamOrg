@@ -26,7 +26,9 @@ export default {
 				'on-error': '#FFFFFF',
 				'error-container': '#FFDAD6',
 				success: '#1F6B37',
-				'success-container': '#D7F0DC'
+				'success-container': '#D7F0DC',
+				'warning-container': '#FFF3CD',
+				'on-warning-container': '#7A5B00'
 			},
 			fontFamily: {
 				sans: ['Roboto Flex', 'Roboto', 'ui-sans-serif', 'system-ui', 'sans-serif'],

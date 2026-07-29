@@ -4,5 +4,6 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.user) throw redirect(302, landingPathFor(locals.user));
-	throw redirect(302, '/login');
+	// Anonymous visitors get the onboarding chooser, not a login dead-end.
+	throw redirect(302, '/start');
 };

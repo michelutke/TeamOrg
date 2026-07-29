@@ -75,6 +75,9 @@
 		</div>
 
 		{#if showEditForm}
+			{#if form?.error}
+				<p class="mb-3 text-[12px] font-medium text-error">{form.error}</p>
+			{/if}
 			<form method="POST" action="?/updateTeam">
 				<div class="mb-4 grid grid-cols-2 gap-4">
 					<div>

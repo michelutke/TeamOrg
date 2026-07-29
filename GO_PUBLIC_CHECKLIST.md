@@ -1,5 +1,9 @@
 # Go-Public Audit Checklist
 
+> **Status: COMPLETED — repo is public since 2026-07-23.**
+> History scans clean (gitleaks: 588 commits, trufflehog: 0 verified secrets). LICENSE + README present; keystore/certs/uploads never committed. gitleaks now also runs on every PR. Correction to §3: `shared/src/jvmMain/` is NOT an empty stub — it holds real JVM actuals used by the server and stays tracked.
+> Remaining optional toggles in GitHub settings: Dependency graph (required for the Dependency Review CI check), secret-scanning push protection, branch protection rules.
+
 Goal: make the repo public on GitHub so CI (including macOS/iOS runners) is free.
 Work through each section in order. Check off items as done.
 

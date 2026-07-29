@@ -66,7 +66,7 @@
 			</ul>
 
 			<a
-				href="#kontakt"
+				href="https://app.teamorg.ch/start"
 				class="mt-8 flex items-center justify-center rounded-full bg-primary py-4 text-[16px] font-bold text-on-primary transition-transform duration-150 hover:scale-[1.02] active:scale-[0.99]"
 				>{m.cta}</a
 			>

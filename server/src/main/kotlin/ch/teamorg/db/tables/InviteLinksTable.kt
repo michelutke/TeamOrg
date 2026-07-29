@@ -21,6 +21,7 @@ object InviteLinksTable : Table("invite_links") {
     val redeemedByUserId = uuid("redeemed_by_user_id").references(UsersTable.id).nullable()
     val ndsMemberId = uuid("nds_member_id").references(NdsMembersTable.id, onDelete = ReferenceOption.CASCADE).nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
+    val shortCode = text("short_code").nullable().uniqueIndex()
 
     override val primaryKey = PrimaryKey(id)
 }

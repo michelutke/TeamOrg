@@ -17,7 +17,8 @@ data class InviteLink(
     val redeemedAt: String?,
     val redeemedByUserId: String?,
     val createdAt: String,
-    val ndsMemberId: String? = null
+    val ndsMemberId: String? = null,
+    val shortCode: String? = null
 )
 
 @Serializable

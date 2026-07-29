@@ -3,6 +3,7 @@ package ch.teamorg.ui.emptystate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ch.teamorg.repository.AuthRepository
+import ch.teamorg.repository.InviteRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -19,12 +20,13 @@ data class EmptyStateUiState(
 )
 
 sealed class EmptyStateEvent {
-    data object NavigateToClubSetup : EmptyStateEvent()
+    data object NavigateToCreateTeamOrClub : EmptyStateEvent()
     data class NavigateToInvite(val token: String) : EmptyStateEvent()
 }
 
 class EmptyStateViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val inviteRepository: InviteRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(EmptyStateUiState())
@@ -72,6 +74,20 @@ class EmptyStateViewModel(
             return
         }
 
+        if (token.matches(Regex("[A-Za-z0-9]{8}"))) {
+            viewModelScope.launch {
+                inviteRepository.getInviteByCode(token).fold(
+                    onSuccess = { details ->
+                        _events.emit(EmptyStateEvent.NavigateToInvite(details.token))
+                    },
+                    onFailure = {
+                        _state.value = _state.value.copy(error = "Invalid invite code")
+                    }
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             _events.emit(EmptyStateEvent.NavigateToInvite(token))
         }
@@ -79,7 +95,7 @@ class EmptyStateViewModel(
 
     fun onCreateClubClick() {
         viewModelScope.launch {
-            _events.emit(EmptyStateEvent.NavigateToClubSetup)
+            _events.emit(EmptyStateEvent.NavigateToCreateTeamOrClub)
         }
     }
 

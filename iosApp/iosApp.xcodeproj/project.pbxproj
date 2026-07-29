@@ -44,6 +44,7 @@
 		B2C3D4E5F6A7B8C9D0E1F2A3F /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* SmokeTests.swift */; };
 		C3D4E5F6A7B8C9D0E1F2A3B4F /* LoginFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B4 /* LoginFlowTests.swift */; };
 		D4E5F6A7B8C9D0E1F2A3B4C5F /* RegisterFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* RegisterFlowTests.swift */; };
+		426FB15805AAB0203DE904CA /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = F5B343CD00C29B95C6E269F4 /* StripePaymentSheet */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +52,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				426FB15805AAB0203DE904CA /* StripePaymentSheet in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,6 +116,7 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				F5B343CD00C29B95C6E269F4 /* StripePaymentSheet */,
 			);
 			productName = iosApp;
 			productReference = 65C1056FB91CCCC1B0897A04 /* teamorg.app */;
@@ -183,6 +186,9 @@
 			);
 			mainGroup = 99F5EC99146AECA132E2D2EF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5291F0314F2EDAC0067DB90B /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BED009C1F2A8B791D1AEFEF3 /* Products */;
 			projectDirPath = "";
@@ -252,6 +258,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5291F0314F2EDAC0067DB90B /* XCRemoteSwiftPackageReference "stripe-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios-spm";
+			requirement = {
+				kind = exactVersion;
+				version = 26.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F5B343CD00C29B95C6E269F4 /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5291F0314F2EDAC0067DB90B /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = StripePaymentSheet;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0AD6457272A8887F875403BA /* Debug */ = {

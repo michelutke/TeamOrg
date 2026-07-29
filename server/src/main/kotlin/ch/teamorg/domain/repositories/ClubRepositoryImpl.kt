@@ -131,12 +131,70 @@ class ClubRepositoryImpl : ClubRepository {
         }.empty()
     }
 
+    override suspend fun createSelfServe(name: String, sportType: String, location: String?, kind: String, ownerUserId: UUID): UUID = transaction {
+        val clubId = ClubsTable.insert {
+            it[ClubsTable.name] = name
+            it[ClubsTable.sportType] = sportType
+            it[ClubsTable.location] = location
+            it[ClubsTable.status] = "pending"
+            it[ClubsTable.kind] = kind
+            it[ClubsTable.ownerUserId] = ownerUserId
+            it[ClubsTable.billingMode] = "stripe"
+            it[ClubsTable.billingStatus] = "active"
+        } get ClubsTable.id
+
+        ClubRolesTable.insert {
+            it[ClubRolesTable.clubId] = clubId
+            it[ClubRolesTable.userId] = ownerUserId
+            it[ClubRolesTable.role] = "club_manager"
+        }
+
+        clubId
+    }
+
+    override suspend fun findOwnerId(clubId: UUID): UUID? = transaction {
+        ClubsTable.selectAll().where { ClubsTable.id eq clubId }
+            .map { it[ClubsTable.ownerUserId] }
+            .singleOrNull()
+    }
+
+    override suspend fun findKind(clubId: UUID): String? = transaction {
+        ClubsTable.selectAll().where { ClubsTable.id eq clubId }
+            .map { it[ClubsTable.kind] }
+            .singleOrNull()
+    }
+
+    override suspend fun setStatus(clubId: UUID, status: String): Unit = transaction {
+        ClubsTable.update({ ClubsTable.id eq clubId }) {
+            it[ClubsTable.status] = status
+            it[ClubsTable.updatedAt] = java.time.Instant.now()
+        }
+    }
+
+    override suspend fun setKind(clubId: UUID, kind: String): Unit = transaction {
+        ClubsTable.update({ ClubsTable.id eq clubId }) {
+            it[ClubsTable.kind] = kind
+            it[ClubsTable.updatedAt] = java.time.Instant.now()
+        }
+    }
+
+    override suspend fun countActiveTeams(clubId: UUID): Int = transaction {
+        TeamsTable.selectAll().where { (TeamsTable.clubId eq clubId) and (TeamsTable.archivedAt.isNull()) }.count().toInt()
+    }
+
+    override suspend fun isFrozen(clubId: UUID): Boolean = transaction {
+        ClubsTable.selectAll().where { ClubsTable.id eq clubId }
+            .singleOrNull()?.get(ClubsTable.billingStatus) == "frozen"
+    }
+
     private fun rowToClub(row: ResultRow) = Club(
         id = row[ClubsTable.id].toString(),
         name = row[ClubsTable.name],
         sportType = row[ClubsTable.sportType],
         location = row[ClubsTable.location],
         logoUrl = row[ClubsTable.logoPath],
+        billingStatus = row[ClubsTable.billingStatus],
+        billingMode = row[ClubsTable.billingMode],
         createdAt = row[ClubsTable.createdAt].toString(),
         updatedAt = row[ClubsTable.updatedAt].toString()
     )

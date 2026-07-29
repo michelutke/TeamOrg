@@ -1,12 +1,14 @@
 <script lang="ts">
 	import LogoMark from './LogoMark.svelte';
+	import RosterPattern from './RosterPattern.svelte';
 	import type { Dict, Locale } from '$lib/i18n';
 
 	let { m, lang }: { m: Dict['footer']; lang: Locale } = $props();
 </script>
 
-<footer class="bg-inverse-surface">
-	<div class="mx-auto max-w-content px-6 py-14 md:px-10">
+<footer class="relative overflow-hidden bg-inverse-surface">
+	<RosterPattern intensity={0.12} />
+	<div class="relative mx-auto max-w-content px-6 py-14 md:px-10">
 		<div class="flex flex-col justify-between gap-10 md:flex-row">
 			<!-- Brand -->
 			<div class="max-w-[300px]">

@@ -1,12 +1,14 @@
 package ch.teamorg.routes
 
 import ch.teamorg.domain.models.TeamAppearance
+import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.EventRepository
 import ch.teamorg.domain.repositories.IntegrationRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.infra.SwissVolleySyncService
 import ch.teamorg.middleware.authenticateUser
+import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -53,6 +55,7 @@ fun Route.teamRoutes() {
     val integrationRepository by inject<IntegrationRepository>()
     val eventRepository by inject<EventRepository>()
     val syncService by inject<SwissVolleySyncService>()
+    val clubRepository by inject<ClubRepository>()
 
     authenticate("jwt") {
         route("/teams") {
@@ -71,6 +74,8 @@ fun Route.teamRoutes() {
                 patch {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@patch
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@patch
 
                     val request = call.receive<UpdateTeamRequest>()
                     val appearance = request.appearance
@@ -92,6 +97,8 @@ fun Route.teamRoutes() {
                 patch("/game-sync") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@patch
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@patch
 
                     val request = call.receive<GameSyncRequest>()
 
@@ -115,6 +122,8 @@ fun Route.teamRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     // archive only, and only club_manager
                     if (!call.requireTeamRole(teamId, "club_manager", teamRepository = teamRepository)) return@delete
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@delete
 
                     val team = teamRepository.archive(teamId)
                     call.respond(team)
@@ -123,6 +132,8 @@ fun Route.teamRoutes() {
                 post("/unarchive") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "club_manager", teamRepository = teamRepository)) return@post
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@post
 
                     val team = teamRepository.unarchive(teamId)
                     call.respond(team)
@@ -144,6 +155,8 @@ fun Route.teamRoutes() {
                 post("/members") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "club_manager", teamRepository = teamRepository)) return@post
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@post
                     val body = call.receive<AddMemberRequest>()
                     if (body.role !in listOf("player", "coach"))
                         return@post call.respond(HttpStatusCode.BadRequest, "Invalid role")
@@ -157,6 +170,8 @@ fun Route.teamRoutes() {
                 patch("/members/{userId}/role") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "club_manager", teamRepository = teamRepository)) return@patch
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@patch
                     val userId = UUID.fromString(call.parameters["userId"])
                     val request = call.receive<UpdateRoleRequest>()
                     val member = teamRepository.updateMemberRole(teamId, userId, request.role)
@@ -166,6 +181,8 @@ fun Route.teamRoutes() {
                 delete("/members/{userId}") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "club_manager", teamRepository = teamRepository)) return@delete
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@delete
                     val userId = UUID.fromString(call.parameters["userId"])
                     teamRepository.removeMember(teamId, userId)
                     call.respond(HttpStatusCode.NoContent)
@@ -175,6 +192,8 @@ fun Route.teamRoutes() {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     val userId = UUID.fromString(call.parameters["userId"])
                     if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@patch
+                    val clubId = teamRepository.getClubId(teamId)
+                    if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@patch
                     val request = call.receive<UpdateProfileRequest>()
                     val member = teamRepository.updateMemberProfile(teamId, userId, request.jerseyNumber, request.position)
                     call.respond(member)

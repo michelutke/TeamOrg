@@ -9,6 +9,7 @@ import ch.teamorg.mail.MailService
 import ch.teamorg.mail.buildInviteEmail
 import ch.teamorg.middleware.authenticateUser
 import ch.teamorg.middleware.requireClubRole
+import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -46,7 +47,7 @@ data class CreateClubInviteRequest(
 )
 
 @Serializable
-data class InviteResponse(val token: String, val inviteUrl: String, val expiresAt: String)
+data class InviteResponse(val token: String, val inviteUrl: String, val expiresAt: String, val shortCode: String? = null)
 
 @Serializable
 data class SetActiveRequest(val active: Boolean)
@@ -83,6 +84,8 @@ fun Route.inviteRoutes() {
                 if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) {
                     return@post
                 }
+                val clubId = teamRepository.getClubId(teamId)
+                if (clubId != null && !call.requireClubWritable(clubId, clubRepository)) return@post
 
                 val request = call.receive<CreateInviteRequest>()
                 if (request.role !in listOf("player", "coach")) {
@@ -143,7 +146,7 @@ fun Route.inviteRoutes() {
 
                     call.respond(
                         HttpStatusCode.Created,
-                        InviteResponse(invite.token, inviteUrlFor(invite.token), invite.expiresAt)
+                        InviteResponse(invite.token, inviteUrlFor(invite.token), invite.expiresAt, shortCode = invite.shortCode)
                     )
                 }
             }
@@ -159,6 +162,7 @@ fun Route.inviteRoutes() {
                 if (!call.requireClubRole(clubId, "club_manager", clubRepository)) {
                     return@post
                 }
+                if (!call.requireClubWritable(clubId, clubRepository)) return@post
 
                 val request = call.receive<CreateClubInviteRequest>()
                 if (request.role != "club_manager") {
@@ -205,6 +209,16 @@ fun Route.inviteRoutes() {
                     )
                 }
             }
+        }
+    }
+
+    route("/invites/code/{shortCode}") {
+        get {
+            val shortCode = call.parameters["shortCode"]?.uppercase()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing short code")
+            val details = inviteRepository.findByShortCode(shortCode)
+                ?: return@get call.respond(HttpStatusCode.NotFound, "Invite not found")
+            call.respond(details)
         }
     }
 

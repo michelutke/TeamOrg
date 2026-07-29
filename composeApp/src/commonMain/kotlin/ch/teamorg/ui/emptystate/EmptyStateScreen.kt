@@ -22,7 +22,7 @@ import ch.teamorg.ui.theme.PillShape
 @Composable
 fun EmptyStateScreen(
     viewModel: EmptyStateViewModel,
-    onNavigateToClubSetup: () -> Unit,
+    onNavigateToCreateTeamOrClub: () -> Unit,
     onNavigateToInvite: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -30,7 +30,7 @@ fun EmptyStateScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is EmptyStateEvent.NavigateToClubSetup -> onNavigateToClubSetup()
+                is EmptyStateEvent.NavigateToCreateTeamOrClub -> onNavigateToCreateTeamOrClub()
                 is EmptyStateEvent.NavigateToInvite -> onNavigateToInvite(event.token)
             }
         }
@@ -83,15 +83,13 @@ fun EmptyStateScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Create a club — primary CTA (super-admins only)
-            if (state.isSuperAdmin) {
-                Button(
-                    onClick = { viewModel.onCreateClubClick() },
-                    modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_setup_club"),
-                    shape = PillShape
-                ) {
-                    Text("Set up your club", style = MaterialTheme.typography.titleMedium)
-                }
+            // Create a team or club — primary CTA
+            Button(
+                onClick = { viewModel.onCreateClubClick() },
+                modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_create_team_or_club"),
+                shape = PillShape
+            ) {
+                Text("Create a team or club", style = MaterialTheme.typography.titleMedium)
             }
 
             // Join a team — invite redemption card

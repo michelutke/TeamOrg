@@ -10,6 +10,7 @@ import ch.teamorg.domain.AuthUser
 import ch.teamorg.repository.AuthRepository
 import ch.teamorg.ui.MainDispatcherRule
 import ch.teamorg.ui.fakes.FakeAuthRepository
+import ch.teamorg.ui.fakes.FakeInviteRepository
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,14 +29,14 @@ class EmptyStateScreenTest {
 
     private fun launchScreen(
         authRepository: AuthRepository = FakeAuthRepository(),
-        onNavigateToClubSetup: () -> Unit = {},
+        onNavigateToCreateTeamOrClub: () -> Unit = {},
         onNavigateToInvite: (String) -> Unit = {},
     ): EmptyStateViewModel {
-        val viewModel = EmptyStateViewModel(authRepository = authRepository)
+        val viewModel = EmptyStateViewModel(authRepository = authRepository, inviteRepository = FakeInviteRepository())
         composeTestRule.setContent {
             EmptyStateScreen(
                 viewModel = viewModel,
-                onNavigateToClubSetup = onNavigateToClubSetup,
+                onNavigateToCreateTeamOrClub = onNavigateToCreateTeamOrClub,
                 onNavigateToInvite = onNavigateToInvite,
             )
         }
@@ -64,7 +65,7 @@ class EmptyStateScreenTest {
     }
 
     @Test
-    fun emptyStateScreen_showsSetupClubButton_forSuperAdmin() {
+    fun emptyStateScreen_showsCreateTeamOrClubButton_forSuperAdmin() {
         val superAdmin = FakeAuthRepository().apply {
             getMeResult = Result.success(
                 AuthUser(
@@ -78,14 +79,14 @@ class EmptyStateScreenTest {
         }
         launchScreen(authRepository = superAdmin)
 
-        composeTestRule.onNodeWithTag("btn_setup_club").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("btn_create_team_or_club").assertIsDisplayed()
     }
 
     @Test
-    fun emptyStateScreen_hidesSetupClubButton_forNonSuperAdmin() {
+    fun emptyStateScreen_showsCreateTeamOrClubButton_forNonSuperAdmin() {
         launchScreen()
 
-        composeTestRule.onNodeWithTag("btn_setup_club").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("btn_create_team_or_club").assertIsDisplayed()
     }
 
     @Test

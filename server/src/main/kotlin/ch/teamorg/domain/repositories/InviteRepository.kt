@@ -34,6 +34,7 @@ interface InviteRepository {
 
     suspend fun findByToken(token: String): InviteLink?
     suspend fun getInviteDetails(token: String): InviteDetails?
+    suspend fun findByShortCode(shortCode: String): InviteDetails?
     suspend fun setActive(token: String, active: Boolean)
     suspend fun isMember(teamId: UUID, userId: UUID, role: String): Boolean
 

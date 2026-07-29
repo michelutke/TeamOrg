@@ -8,6 +8,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
+import ch.teamorg.ui.billing.BillingScreen
+import ch.teamorg.ui.billing.BillingViewModel
 import ch.teamorg.ui.club.ClubMembersScreen
 import ch.teamorg.ui.club.ClubMembersViewModel
 import ch.teamorg.ui.club.ClubSetupScreen
@@ -32,6 +34,10 @@ import ch.teamorg.ui.inbox.NotificationSettingsViewModel
 import ch.teamorg.ui.placeholder.PlaceholderScreen
 import ch.teamorg.ui.register.RegisterScreen
 import ch.teamorg.ui.register.RegisterViewModel
+import ch.teamorg.ui.selfserve.CardSetupScreen
+import ch.teamorg.ui.selfserve.CardSetupViewModel
+import ch.teamorg.ui.selfserve.CreateTeamOrClubScreen
+import ch.teamorg.ui.selfserve.CreateTeamOrClubViewModel
 import ch.teamorg.ui.team.TeamRosterScreen
 import ch.teamorg.ui.team.TeamRosterViewModel
 import ch.teamorg.ui.team.PlayerProfileScreen
@@ -95,7 +101,7 @@ fun AppNavigation(
                 val viewModel: EmptyStateViewModel = viewModel { KoinPlatform.getKoin().get() }
                 EmptyStateScreen(
                     viewModel = viewModel,
-                    onNavigateToClubSetup = { backStack.add(Screen.ClubSetup) },
+                    onNavigateToCreateTeamOrClub = { backStack.add(Screen.CreateTeamOrClub) },
                     onNavigateToInvite = { token -> backStack.add(Screen.Invite(token)) }
                 )
             }
@@ -105,6 +111,31 @@ fun AppNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeAt(backStack.lastIndex) },
                     onClubCreated = { _ -> backStack.add(Screen.Teams) }
+                )
+            }
+            Screen.CreateTeamOrClub -> {
+                val viewModel: CreateTeamOrClubViewModel = viewModel { KoinPlatform.getKoin().get() }
+                CreateTeamOrClubScreen(
+                    viewModel = viewModel,
+                    onBack = { backStack.removeAt(backStack.lastIndex) },
+                    onProceedToCard = { created ->
+                        backStack.add(Screen.CardSetup(created.clubId, created.setupIntentClientSecret, created.publishableKey))
+                    }
+                )
+            }
+            is Screen.CardSetup -> {
+                val viewModel: CardSetupViewModel = viewModel { KoinPlatform.getKoin().get() }
+                CardSetupScreen(
+                    viewModel = viewModel,
+                    clubId = screen.clubId,
+                    clientSecret = screen.clientSecret,
+                    publishableKey = screen.publishableKey,
+                    onDone = {
+                        backStack.removeAll {
+                            it is Screen.CreateTeamOrClub || it is Screen.CardSetup || it is Screen.EmptyState
+                        }
+                        backStack.add(Screen.Teams)
+                    }
                 )
             }
             is Screen.TeamRoster -> {
@@ -218,7 +249,8 @@ fun AppNavigation(
                 TeamsListScreen(
                     viewModel = viewModel,
                     onTeamClick = { teamId -> backStack.add(Screen.TeamRoster(teamId)) },
-                    onMembersClick = { clubId -> backStack.add(Screen.ClubMembers(clubId)) }
+                    onMembersClick = { clubId -> backStack.add(Screen.ClubMembers(clubId)) },
+                    onBillingClick = { clubId -> backStack.add(Screen.Billing(clubId)) }
                 )
             }
             Screen.Inbox -> {
@@ -281,6 +313,14 @@ fun AppNavigation(
                 ClubMembersScreen(
                     clubId = screen.clubId,
                     viewModel = viewModel,
+                    onBack = { backStack.removeAt(backStack.lastIndex) }
+                )
+            }
+            is Screen.Billing -> {
+                val viewModel: BillingViewModel = viewModel { KoinPlatform.getKoin().get() }
+                BillingScreen(
+                    viewModel = viewModel,
+                    clubId = screen.clubId,
                     onBack = { backStack.removeAt(backStack.lastIndex) }
                 )
             }

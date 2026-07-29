@@ -6,8 +6,10 @@ import ch.teamorg.repository.InviteRepository
 
 class FakeInviteRepository : InviteRepository {
     var getInviteDetailsResult: Result<InviteDetails> = Result.failure(RuntimeException("Not configured"))
+    var getInviteByCodeResult: Result<InviteDetails> = Result.failure(RuntimeException("Not configured"))
     var redeemInviteResult: RedeemResult = RedeemResult.Success
 
     override suspend fun getInviteDetails(token: String): Result<InviteDetails> = getInviteDetailsResult
+    override suspend fun getInviteByCode(code: String): Result<InviteDetails> = getInviteByCodeResult
     override suspend fun redeemInvite(token: String): RedeemResult = redeemInviteResult
 }

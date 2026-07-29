@@ -9,6 +9,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.encodeURLPathPart
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -29,6 +30,19 @@ class InviteRepositoryImpl(private val client: HttpClient) : InviteRepository {
                 Result.success(response.body())
             } else {
                 Result.failure(Exception("Failed to fetch invite details: ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getInviteByCode(code: String): Result<InviteDetails> {
+        return try {
+            val response = client.get("/invites/code/${code.encodeURLPathPart()}")
+            if (response.status == HttpStatusCode.OK) {
+                Result.success(response.body())
+            } else {
+                Result.failure(Exception("Failed to fetch invite by code: ${response.status}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
