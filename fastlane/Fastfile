@@ -133,15 +133,24 @@ lane :ios_testflight do
   end
   File.write(config_path, config)
 
+  # Signing must be scoped to the app target via the pbxproj: passing it as
+  # global xcargs applies to every target, and SPM targets (stripe-ios) refuse
+  # provisioning profiles, failing the archive.
+  update_code_signing_settings(
+    path: "iosApp/iosApp.xcodeproj",
+    targets: ["iosApp"],
+    use_automatic_signing: false,
+    team_id: ENV["APPLE_TEAM_ID"],
+    code_sign_identity: "Apple Distribution",
+    profile_name: profile_name
+  )
+
   build_app(
     workspace: XCODE_WORKSPACE,
     scheme: XCODE_SCHEME,
     configuration: "Release",
     export_method: "app-store",
     export_team_id: ENV["APPLE_TEAM_ID"],
-    xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Manual " \
-            "CODE_SIGN_IDENTITY=\"Apple Distribution\" " \
-            "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\"",
     export_options: {
       signingStyle: "manual",
       provisioningProfiles: { BUNDLE_ID => profile_name }
