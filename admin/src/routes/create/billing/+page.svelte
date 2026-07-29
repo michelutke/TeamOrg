@@ -18,13 +18,15 @@
 
 	let paymentElementDiv: HTMLDivElement;
 	let confirmFormEl: HTMLFormElement;
-	let confirmSetupIntentId = $state('');
+	let confirmInputEl: HTMLInputElement;
 
 	let stripe: Stripe | null = null;
 	let elements: StripeElements | null = null;
 
 	function submitConfirm(setupIntentId: string) {
-		confirmSetupIntentId = setupIntentId;
+		// Set the DOM value directly: a bind:value flushes asynchronously, so the
+		// synchronous requestSubmit() would serialize the form with an empty id.
+		confirmInputEl.value = setupIntentId;
 		confirmFormEl.requestSubmit();
 	}
 
@@ -128,7 +130,7 @@
 		{/if}
 
 		<form method="POST" action="?/confirm" bind:this={confirmFormEl} class="hidden">
-			<input type="hidden" name="setupIntentId" bind:value={confirmSetupIntentId} />
+			<input type="hidden" name="setupIntentId" bind:this={confirmInputEl} />
 		</form>
 	</div>
 </div>
