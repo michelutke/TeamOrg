@@ -27,6 +27,7 @@ import ch.teamorg.ui.attendance.AddAbsenceSheet
 import ch.teamorg.ui.attendance.AttendanceStatsBar
 import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.theme.PillShape
+import ch.teamorg.ui.util.rememberCameraCaptureLauncher
 import ch.teamorg.ui.util.rememberImagePickerLauncher
 import coil3.compose.AsyncImage
 
@@ -116,6 +117,35 @@ fun PlayerProfileScreen(
                             val pickImage = rememberImagePickerLauncher { bytes, ext ->
                                 viewModel.uploadAvatar(teamId, userId, bytes, ext)
                             }
+                            val takePhoto = rememberCameraCaptureLauncher { bytes, ext ->
+                                viewModel.uploadAvatar(teamId, userId, bytes, ext)
+                            }
+                            var showAvatarSourceDialog by remember { mutableStateOf(false) }
+                            // With no camera available, tap goes straight to the gallery.
+                            val onAvatarClick = if (takePhoto != null) {
+                                { showAvatarSourceDialog = true }
+                            } else {
+                                pickImage
+                            }
+                            if (showAvatarSourceDialog && takePhoto != null) {
+                                AlertDialog(
+                                    onDismissRequest = { showAvatarSourceDialog = false },
+                                    title = { Text("Profile photo") },
+                                    text = { Text("Take a new photo or choose one from your library.") },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            showAvatarSourceDialog = false
+                                            takePhoto()
+                                        }) { Text("Take photo") }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = {
+                                            showAvatarSourceDialog = false
+                                            pickImage()
+                                        }) { Text("Choose from library") }
+                                    }
+                                )
+                            }
                             val avatarContainer = if (isNavProfile) {
                                 MaterialTheme.colorScheme.tertiaryContainer
                             } else {
@@ -136,7 +166,7 @@ fun PlayerProfileScreen(
                                         .clip(CircleShape)
                                         .background(avatarContainer)
                                         .then(
-                                            if (state.isOwnProfile) Modifier.clickable { pickImage() } else Modifier
+                                            if (state.isOwnProfile) Modifier.clickable { onAvatarClick() } else Modifier
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
