@@ -10,10 +10,7 @@
 	let { m }: { m: Dict['hero'] } = $props();
 </script>
 
-<section
-	class="relative overflow-hidden bg-[#181C23]"
-	style="background-image: linear-gradient(to bottom right, #2C313B, #181C23);"
->
+<section class="relative overflow-hidden bg-surface">
 	<RosterPattern />
 
 	<div
@@ -32,15 +29,15 @@
 			<h1
 				data-reveal
 				style="--reveal-delay:60ms"
-				class="font-display mt-5 text-[34px] font-extrabold leading-[1.05] tracking-tight text-[#E2E4E8] md:text-[52px]"
+				class="font-display mt-5 text-[34px] font-extrabold leading-[1.05] tracking-tight text-on-surface md:text-[52px]"
 			>
-				{m.headlineA}<br /><span class="text-[#64D8E8]">{m.headlineB}</span>
+				{m.headlineA}<br /><span class="text-accent">{m.headlineB}</span>
 			</h1>
 
 			<p
 				data-reveal
 				style="--reveal-delay:120ms"
-				class="mt-5 max-w-[520px] text-[17px] leading-[1.5] text-[#9AA3AD] md:text-[18px]"
+				class="mt-5 max-w-[520px] text-[17px] leading-[1.5] text-body md:text-[18px]"
 			>
 				{m.sub}
 			</p>
@@ -48,20 +45,20 @@
 			<div data-reveal style="--reveal-delay:180ms" class="mt-7 flex flex-wrap gap-3.5">
 				<a
 					href="https://app.teamorg.ch/start"
-					class="rounded-full bg-[#64D8E8] px-7 py-4 text-[15px] font-bold text-[#00363F] shadow-sm transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98]"
+					class="rounded-full bg-accent px-7 py-4 text-[15px] font-bold text-on-accent shadow-sm transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98]"
 					>{m.ctaPrimary}</a
 				>
 				<a
 					href="#funktionen"
-					class="rounded-full border-[1.5px] border-[#E2E4E8] px-7 py-4 text-[15px] font-bold text-[#E2E4E8] transition-colors hover:bg-white/5"
+					class="rounded-full border-[1.5px] border-on-surface px-7 py-4 text-[15px] font-bold text-on-surface transition-colors hover:bg-surface-low"
 					>{m.ctaSecondary}</a
 				>
 			</div>
 
 			<ul data-reveal style="--reveal-delay:240ms" class="mt-7 flex flex-wrap gap-x-6 gap-y-2.5">
 				{#each m.trust as item (item)}
-					<li class="flex items-center gap-2 text-[13px] font-medium text-[#9AA3AD]">
-						<Check class="h-4 w-4 text-[#64D8E8]" strokeWidth={2.5} />
+					<li class="flex items-center gap-2 text-[13px] font-medium text-body">
+						<Check class="h-4 w-4 text-accent" strokeWidth={2.5} />
 						{item}
 					</li>
 				{/each}
@@ -71,7 +68,7 @@
 		<!-- Device stage -->
 		<div class="relative flex w-full flex-1 items-center justify-center md:justify-end">
 			<div
-				class="pointer-events-none absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#64D8E8]/25 blur-[90px]"
+				class="pointer-events-none absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/25 blur-[90px]"
 			></div>
 
 			<!-- Desktop: two phones side by side, horizontally overlapping -->

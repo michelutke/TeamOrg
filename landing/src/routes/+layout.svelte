@@ -55,6 +55,7 @@
 </script>
 
 <svelte:head>
+	{@html `<script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;})()</script>`}
 	<title>{data.m.meta.title}</title>
 	<meta name="description" content={data.m.meta.description} />
 	<meta property="og:title" content={data.m.meta.title} />
