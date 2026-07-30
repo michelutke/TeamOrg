@@ -30,7 +30,7 @@
 			<p
 				data-reveal
 				style="--reveal-delay:120ms"
-				class="mx-auto mt-4 max-w-[560px] text-[15px] leading-[1.5] text-on-surface-variant md:text-[17px]"
+				class="mx-auto mt-4 max-w-[560px] text-[15px] leading-[1.5] text-body md:text-[17px]"
 			>
 				{m.sub}
 			</p>
@@ -49,7 +49,7 @@
 					<h3 class="font-display mt-5 text-[22px] font-extrabold tracking-tight text-on-surface">
 						{step.title}
 					</h3>
-					<p class="mt-2 text-[15px] leading-[1.52] text-on-surface-variant">{step.body}</p>
+					<p class="mt-2 text-[15px] leading-[1.52] text-body">{step.body}</p>
 				</div>
 			{/each}
 		</div>

@@ -1,10 +1,24 @@
 <script lang="ts">
-	import { Menu, X } from 'lucide-svelte';
+	import { browser } from '$app/environment';
+	import { Menu, X, Moon, Sun } from 'lucide-svelte';
 	import LogoMark from './LogoMark.svelte';
 	import type { Dict, Locale } from '$lib/i18n';
 
 	let { m, lang, appUrl }: { m: Dict['nav']; lang: Locale; appUrl: string } = $props();
 	let open = $state(false);
+	let theme = $state(browser ? (document.documentElement.dataset.theme ?? 'light') : 'light');
+
+	function toggleTheme() {
+		const el = document.documentElement;
+		const next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+		el.dataset.theme = next;
+		try {
+			localStorage.setItem('theme', next);
+		} catch {
+			/* storage unavailable */
+		}
+		theme = next;
+	}
 
 	const loginUrl = $derived(`${appUrl}/login`);
 
@@ -21,7 +35,7 @@
 	<nav class="mx-auto flex h-[68px] max-w-content items-center justify-between px-5 md:px-10">
 		<!-- Logo -->
 		<a href="/" class="flex items-center gap-2.5" aria-label="teamorg">
-			<LogoMark size={28} />
+			<LogoMark size={28} blocks="var(--color-accent)" stem="var(--color-on-surface)" />
 			<span class="font-display text-[22px] font-extrabold tracking-tight"
 				><span class="text-on-surface">Team</span><span class="text-primary">Org</span></span
 			>
@@ -62,6 +76,19 @@
 						: 'text-on-surface-variant hover:text-on-surface'}">EN</a
 				>
 			</div>
+
+			<button
+				type="button"
+				onclick={toggleTheme}
+				aria-label={m.themeToggle}
+				class="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-on-surface hover:bg-surface-low"
+			>
+				{#if theme === 'dark'}
+					<Sun class="h-[18px] w-[18px]" strokeWidth={2} />
+				{:else}
+					<Moon class="h-[18px] w-[18px]" strokeWidth={2} />
+				{/if}
+			</button>
 
 			<a
 				href={loginUrl}
@@ -109,25 +136,39 @@
 				</li>
 			</ul>
 			<div class="mt-3 flex items-center justify-between">
-				<div
-					class="flex items-center rounded-full border border-outline-variant p-0.5 text-[13px] font-medium"
-				>
-					<a
-						href="?lang=de"
-				data-sveltekit-reload
-				data-sveltekit-preload-data="off"
-						class="rounded-full px-3 py-1.5 {lang === 'de'
-							? 'bg-primary font-bold text-on-primary'
-							: 'text-on-surface-variant'}">DE</a
+				<div class="flex items-center gap-2">
+					<div
+						class="flex items-center rounded-full border border-outline-variant p-0.5 text-[13px] font-medium"
 					>
-					<a
-						href="?lang=en"
-				data-sveltekit-reload
-				data-sveltekit-preload-data="off"
-						class="rounded-full px-3 py-1.5 {lang === 'en'
-							? 'bg-primary font-bold text-on-primary'
-							: 'text-on-surface-variant'}">EN</a
+						<a
+							href="?lang=de"
+					data-sveltekit-reload
+					data-sveltekit-preload-data="off"
+							class="rounded-full px-3 py-1.5 {lang === 'de'
+								? 'bg-primary font-bold text-on-primary'
+								: 'text-on-surface-variant'}">DE</a
+						>
+						<a
+							href="?lang=en"
+					data-sveltekit-reload
+					data-sveltekit-preload-data="off"
+							class="rounded-full px-3 py-1.5 {lang === 'en'
+								? 'bg-primary font-bold text-on-primary'
+								: 'text-on-surface-variant'}">EN</a
+						>
+					</div>
+					<button
+						type="button"
+						onclick={toggleTheme}
+						aria-label={m.themeToggle}
+						class="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-on-surface hover:bg-surface-low"
 					>
+						{#if theme === 'dark'}
+							<Sun class="h-[18px] w-[18px]" strokeWidth={2} />
+						{:else}
+							<Moon class="h-[18px] w-[18px]" strokeWidth={2} />
+						{/if}
+					</button>
 				</div>
 				<a
 					href="/#kontakt"

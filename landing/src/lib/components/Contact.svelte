@@ -2,7 +2,6 @@
 	import { enhance } from '$app/forms';
 	import { Mail, Clock, Building2, Check } from 'lucide-svelte';
 	import MorphShape from './MorphShape.svelte';
-	import RosterPattern from './RosterPattern.svelte';
 	import type { Dict } from '$lib/i18n';
 
 	type ContactForm = {
@@ -37,43 +36,39 @@
 	{/if}
 </svelte:head>
 
-<section
-	id="kontakt"
-	class="relative scroll-mt-20 overflow-hidden bg-gradient-to-br from-[#2C313B] to-[#14171D]"
->
-	<RosterPattern intensity={0.22} />
+<section id="kontakt" class="relative scroll-mt-20">
 	<div
 		class="relative mx-auto flex max-w-content flex-col gap-12 px-6 py-20 md:flex-row md:items-center md:gap-16 md:px-10 md:py-24"
 	>
 		<!-- Info -->
 		<div data-reveal class="md:flex-1">
 			<span
-				class="inline-block rounded-full bg-white/[0.16] px-3.5 py-1.5 text-[12px] font-bold tracking-[0.16em] text-white"
+				class="inline-block rounded-full bg-primary-container px-3.5 py-1.5 text-[12px] font-bold tracking-[0.16em] text-on-primary-container"
 				>{m.eyebrow}</span
 			>
 			<h2
-				class="font-display mt-4 max-w-[480px] text-[28px] font-extrabold leading-[1.1] tracking-tight text-white md:text-[40px]"
+				class="font-display mt-4 max-w-[480px] text-[28px] font-extrabold leading-[1.1] tracking-tight text-on-surface md:text-[40px]"
 			>
 				{m.title}
 			</h2>
-			<p class="mt-4 max-w-[440px] text-[15px] leading-[1.52] text-white/90 md:text-[17px]">
+			<p class="mt-4 max-w-[440px] text-[15px] leading-[1.52] text-body md:text-[17px]">
 				{m.sub}
 			</p>
 			<ul class="mt-7 flex flex-col gap-3.5">
-				<li class="flex items-center gap-3 text-[16px] font-medium text-white">
-					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.16]">
+				<li class="flex items-center gap-3 text-[16px] font-medium text-on-surface">
+					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent">
 						<Mail class="h-4 w-4" strokeWidth={2} />
 					</span>
 					<a href="mailto:info@teamorg.ch" class="hover:underline">{m.infoEmail}</a>
 				</li>
-				<li class="flex items-center gap-3 text-[16px] font-medium text-white/95">
-					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.16]">
+				<li class="flex items-center gap-3 text-[16px] font-medium text-on-surface">
+					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent">
 						<Clock class="h-4 w-4" strokeWidth={2} />
 					</span>
 					{m.infoReply}
 				</li>
-				<li class="flex items-center gap-3 text-[16px] font-medium text-white/95">
-					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.16]">
+				<li class="flex items-center gap-3 text-[16px] font-medium text-on-surface">
+					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent">
 						<Building2 class="h-4 w-4" strokeWidth={2} />
 					</span>
 					{m.infoFor}
@@ -85,7 +80,7 @@
 		<div
 			data-reveal
 			style="--reveal-delay:80ms"
-			class="w-full rounded-[1.75rem] bg-surface p-7 shadow-[0_24px_60px_-10px_rgba(20,10,40,0.3)] md:max-w-[500px] md:p-9"
+			class="w-full rounded-[24px] bg-panel p-7 shadow-[0_24px_60px_-10px_rgba(20,10,40,0.3)] md:max-w-[500px] md:p-9"
 		>
 			{#if form?.success}
 				<div class="flex flex-col items-center py-8 text-center">
@@ -204,7 +199,7 @@
 					</label>
 
 					{#if siteKey}
-						<div class="cf-turnstile" data-sitekey={siteKey} data-theme="light"></div>
+						<div class="cf-turnstile" data-sitekey={siteKey} data-theme="auto"></div>
 					{/if}
 
 					<p class="text-[12px] leading-[1.4] text-on-surface-variant">{m.consent}</p>
