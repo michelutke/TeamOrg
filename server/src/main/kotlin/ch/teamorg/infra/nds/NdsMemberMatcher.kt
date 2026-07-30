@@ -80,7 +80,7 @@ object NdsMemberMatcher {
         val normFirstCand = normalize(user.firstName)
 
         var score: String? = null
-        if (normLastRow + normFirstRow == normLastCand + normFirstCand) {
+        if (normLastRow == normLastCand && normFirstRow == normFirstCand) {
             score = HIGH
         } else {
             val lastExact = normLastRow == normLastCand
