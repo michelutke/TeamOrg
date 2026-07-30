@@ -23,7 +23,14 @@ export interface Step {
 
 export interface Dict {
 	meta: { title: string; description: string };
-	nav: { features: string; pricing: string; contact: string; cta: string; login: string };
+	nav: {
+		features: string;
+		pricing: string;
+		contact: string;
+		cta: string;
+		login: string;
+		themeToggle: string;
+	};
 	hero: {
 		eyebrow: string;
 		headlineA: string;
@@ -122,7 +129,8 @@ const de: Dict = {
 		pricing: 'Preise',
 		contact: 'Kontakt',
 		cta: 'Demo anfragen',
-		login: 'Anmelden'
+		login: 'Anmelden',
+		themeToggle: 'Helles oder dunkles Design'
 	},
 	hero: {
 		eyebrow: 'Für Schweizer Sportvereine · J+S-tauglich',
@@ -286,7 +294,8 @@ const en: Dict = {
 		pricing: 'Pricing',
 		contact: 'Contact',
 		cta: 'Request a demo',
-		login: 'Log in'
+		login: 'Log in',
+		themeToggle: 'Switch light/dark theme'
 	},
 	hero: {
 		eyebrow: 'For Swiss sports clubs · J+S-ready',

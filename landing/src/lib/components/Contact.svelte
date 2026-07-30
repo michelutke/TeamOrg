@@ -43,7 +43,7 @@
 		<!-- Info -->
 		<div data-reveal class="md:flex-1">
 			<span
-				class="inline-block rounded-full bg-surface px-3.5 py-1.5 text-[12px] font-bold tracking-[0.16em] text-on-surface"
+				class="inline-block rounded-full bg-primary-container px-3.5 py-1.5 text-[12px] font-bold tracking-[0.16em] text-on-primary-container"
 				>{m.eyebrow}</span
 			>
 			<h2
@@ -199,7 +199,7 @@
 					</label>
 
 					{#if siteKey}
-						<div class="cf-turnstile" data-sitekey={siteKey} data-theme="light"></div>
+						<div class="cf-turnstile" data-sitekey={siteKey} data-theme="auto"></div>
 					{/if}
 
 					<p class="text-[12px] leading-[1.4] text-on-surface-variant">{m.consent}</p>

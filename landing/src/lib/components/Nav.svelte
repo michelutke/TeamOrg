@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { Menu, X, Moon, Sun } from 'lucide-svelte';
 	import LogoMark from './LogoMark.svelte';
 	import type { Dict, Locale } from '$lib/i18n';
 
 	let { m, lang, appUrl }: { m: Dict['nav']; lang: Locale; appUrl: string } = $props();
 	let open = $state(false);
-	let theme = $state('light');
-
-	onMount(() => {
-		theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-	});
+	let theme = $state(browser ? (document.documentElement.dataset.theme ?? 'light') : 'light');
 
 	function toggleTheme() {
 		const el = document.documentElement;
 		const next = el.dataset.theme === 'dark' ? 'light' : 'dark';
 		el.dataset.theme = next;
-		localStorage.setItem('theme', next);
+		try {
+			localStorage.setItem('theme', next);
+		} catch {
+			/* storage unavailable */
+		}
 		theme = next;
 	}
 
@@ -80,7 +80,7 @@
 			<button
 				type="button"
 				onclick={toggleTheme}
-				aria-label="Theme wechseln"
+				aria-label={m.themeToggle}
 				class="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-on-surface hover:bg-surface-low"
 			>
 				{#if theme === 'dark'}
@@ -160,7 +160,7 @@
 					<button
 						type="button"
 						onclick={toggleTheme}
-						aria-label="Theme wechseln"
+						aria-label={m.themeToggle}
 						class="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-on-surface hover:bg-surface-low"
 					>
 						{#if theme === 'dark'}
