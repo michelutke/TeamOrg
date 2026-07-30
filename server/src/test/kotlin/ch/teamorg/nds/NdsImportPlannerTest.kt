@@ -7,6 +7,7 @@ import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
+import ch.teamorg.domain.models.NdsSeriesTime
 import ch.teamorg.domain.models.ParsedActivity
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
 import ch.teamorg.infra.nds.NdsEventImporter
@@ -170,7 +171,9 @@ class NdsImportPlannerTest : IntegrationTestBase() {
         }
         val parsed = ParsedAnwesenheitsliste(angebotId = "dual-symbol-1", kursName = "Dual", activities = activities, members = emptyList())
 
-        NdsEventImporter(NdsImportPlanner()).import(teamId, parsed, attendanceMode = "discard", createdBy = createdBy)
+        val planner = NdsImportPlanner()
+        val seriesTimes = planner.series(activities).associate { it.seriesKey to NdsSeriesTime(it.seriesKey, "18:00", "19:30") }
+        NdsEventImporter(planner).import(teamId, parsed, attendanceMode = "discard", createdBy = createdBy, seriesTimes = seriesTimes)
 
         val events = transaction {
             val ids = EventTeamsTable.select(EventTeamsTable.eventId)

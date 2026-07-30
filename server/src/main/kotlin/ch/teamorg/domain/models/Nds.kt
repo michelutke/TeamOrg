@@ -106,6 +106,26 @@ data class NdsConflictDate(
 @Serializable
 data class NdsConflictGroup(val seriesKey: String, val dates: List<NdsConflictDate>)
 
+/** One member-row decision from the wizard's Mitglieder-Zuordnung step. */
+@Serializable
+data class NdsMapping(val rowKey: String, val action: String /* map|create|skip */, val userId: String? = null)
+
+/** Wizard-set start/end/location for one series (or one-off) importing events. */
+@Serializable
+data class NdsSeriesTime(val seriesKey: String, val startTime: String /* HH:mm */, val endTime: String, val location: String? = null)
+
+/** Per-date override of a conflict group's default keep decision. */
+@Serializable
+data class NdsConflictOverride(@Serializable(with = LocalDateSerializer::class) val date: LocalDate, val keep: String /* teamorg|nds */)
+
+/** The wizard's resolution for one conflict group, with optional per-date overrides. */
+@Serializable
+data class NdsConflictResolution(
+    val seriesKey: String,
+    val keep: String /* teamorg|nds */,
+    val overrides: List<NdsConflictOverride> = emptyList()
+)
+
 /** Response of `POST /clubs/{clubId}/nds/parse` — file subsets, match suggestions, series + conflicts. */
 @Serializable
 data class NdsParseResponse(

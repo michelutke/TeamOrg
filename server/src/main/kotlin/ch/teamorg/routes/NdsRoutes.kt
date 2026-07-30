@@ -1,19 +1,22 @@
 package ch.teamorg.routes
 
 import ch.teamorg.domain.models.MemberSuggestionDto
+import ch.teamorg.domain.models.NdsConflictResolution
+import ch.teamorg.domain.models.NdsMapping
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.NdsParseResponse
+import ch.teamorg.domain.models.NdsSeriesTime
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
 import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.InviteRepository
+import ch.teamorg.domain.repositories.NdsMappingConflictException
 import ch.teamorg.domain.repositories.NdsRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.infra.nds.AnwesenheitslisteParser
 import ch.teamorg.infra.nds.MemberSuggestion
 import ch.teamorg.infra.nds.NdsEventImporter
-import ch.teamorg.infra.nds.NdsImportCounts
 import ch.teamorg.infra.nds.NdsImportPlanner
 import ch.teamorg.infra.nds.NdsExportService
 import ch.teamorg.infra.nds.NdsMemberMatcher
@@ -35,6 +38,7 @@ import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 
 @Serializable
@@ -42,12 +46,19 @@ data class NdsImportRequest(
     val teamId: String? = null,
     val createTeamName: String? = null,
     val nutzergruppe: String? = null,
-    val parsed: ParsedAnwesenheitsliste,
+    // Null for a persons-only import (no Anwesenheitsliste in this wizard run).
+    val parsed: ParsedAnwesenheitsliste? = null,
     // Persons from the dedicated NDS exports (Teilnehmende CSV / Leiter xlsx); carry PERSONENNUMMER.
-    // Applied BEFORE the Anwesenheitsliste roster so names merge and person numbers are preserved.
+    // Merged with the Anwesenheitsliste roster (by rowKey) before any writes.
     val persons: List<NdsMemberInput> = emptyList(),
     val importEvents: Boolean = false,
-    val attendanceMode: String = "discard" // 'keep' | 'discard'
+    val attendanceMode: String = "discard", // 'keep' | 'discard'
+    // Wizard decisions — Mitglieder-Zuordnung / Events & Konflikte steps. All default to empty,
+    // which preserves the pre-wizard behavior (every row auto-created, 18:00 placeholder removed
+    // upstream — a series importing events without a matching seriesTimes entry is now a 400).
+    val mappings: List<NdsMapping> = emptyList(),
+    val seriesTimes: List<NdsSeriesTime> = emptyList(),
+    val conflictResolutions: List<NdsConflictResolution> = emptyList()
 )
 
 @Serializable
@@ -237,67 +248,166 @@ fun Route.ndsRoutes() {
             }
         }
 
-        // Commit a (possibly edited) parsed list: create/link team + import roster (+ events).
+        // Commit a (possibly edited) parsed list: create/link team + import roster (+ events),
+        // driven by the wizard's mappings/seriesTimes/conflictResolutions. Member application,
+        // event/series creation and attendance all happen in ONE transaction inside
+        // ndsEventImporter.import — any failure rolls back the whole import.
         post("/clubs/{clubId}/nds/import") {
             val clubId = UUID.fromString(call.parameters["clubId"])
-            if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
-
             val callerId = call.principal<JWTPrincipal>()?.payload?.subject?.let { UUID.fromString(it) }
                 ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid token")
             val request = call.receive<NdsImportRequest>()
             val parsed = request.parsed
 
+            // Auth: identical to parse — coach of the target team OR club_manager. A team that
+            // doesn't belong to this club is rejected outright, before any role check.
+            val requestedTeamId = request.teamId?.let {
+                runCatching { UUID.fromString(it) }.getOrNull()
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, "Ungültige teamId")
+            }
+            if (requestedTeamId != null && teamRepository.getClubId(requestedTeamId) != clubId) {
+                return@post call.respond(HttpStatusCode.Forbidden, "Team gehört nicht zu diesem Club")
+            }
+            val isClubManager = clubRepository.hasRole(callerId, clubId, "club_manager")
+            val authorized = isClubManager || (requestedTeamId != null && teamRepository.hasRole(callerId, requestedTeamId, "coach"))
+            if (!authorized) return@post call.respond(HttpStatusCode.Forbidden, "Keine Berechtigung für diesen Import")
+
             // Resolve target team.
             val teamId: UUID = when {
-                request.teamId != null -> {
-                    val tid = UUID.fromString(request.teamId)
-                    if (teamRepository.getClubId(tid) != clubId) {
-                        return@post call.respond(HttpStatusCode.Forbidden, "Team gehört nicht zu diesem Club")
-                    }
-                    tid
-                }
+                requestedTeamId != null -> requestedTeamId
                 !request.createTeamName.isNullOrBlank() -> {
+                    if (!isClubManager) {
+                        return@post call.respond(HttpStatusCode.Forbidden, "Nur Club-Manager dürfen ein neues Team erstellen")
+                    }
                     // The Angebot may only be linked to a single team — check BEFORE creating,
                     // otherwise every rejected re-import attempt leaves an orphan empty team.
-                    val existing = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
-                    if (existing != null) {
-                        val name = teamRepository.findById(existing)?.name ?: "einem anderen Team"
-                        return@post call.respond(
-                            HttpStatusCode.Conflict,
-                            "Angebot ${parsed.angebotId} ist bereits mit «$name» verknüpft — " +
-                                "der Import aktualisiert dieses Team (Datei erneut hochladen)."
-                        )
+                    if (parsed != null) {
+                        val existing = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
+                        if (existing != null) {
+                            val name = teamRepository.findById(existing)?.name ?: "einem anderen Team"
+                            return@post call.respond(
+                                HttpStatusCode.Conflict,
+                                "Angebot ${parsed.angebotId} ist bereits mit «$name» verknüpft — " +
+                                    "der Import aktualisiert dieses Team (Datei erneut hochladen)."
+                            )
+                        }
                     }
                     UUID.fromString(teamRepository.create(clubId, request.createTeamName.trim(), null).id)
                 }
                 else -> return@post call.respond(HttpStatusCode.BadRequest, "teamId oder createTeamName erforderlich")
             }
 
-            // The Angebot may only be linked to a single team within this club (scoped per-club so
-            // another club's link never blocks this import).
-            val existingForAngebot = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
-            if (existingForAngebot != null && existingForAngebot != teamId) {
-                return@post call.respond(
-                    HttpStatusCode.Conflict,
-                    "Angebot ${parsed.angebotId} ist bereits mit einem anderen Team verknüpft"
+            if (parsed != null) {
+                // The Angebot may only be linked to a single team within this club (scoped per-club
+                // so another club's link never blocks this import).
+                val existingForAngebot = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
+                if (existingForAngebot != null && existingForAngebot != teamId) {
+                    return@post call.respond(
+                        HttpStatusCode.Conflict,
+                        "Angebot ${parsed.angebotId} ist bereits mit einem anderen Team verknüpft"
+                    )
+                }
+            }
+
+            // ---- Validation BEFORE any writes ----
+            val mergedRows = mergeMemberRows(parsed, request.persons)
+            val rowKeys = mergedRows.map { NdsMemberMatcher.rowKey(it.funktion, it.lastName, it.firstName) }.toSet()
+
+            val seenMappedUserIds = HashSet<UUID>()
+            for (mapping in request.mappings) {
+                if (mapping.rowKey !in rowKeys) {
+                    return@post call.respond(HttpStatusCode.BadRequest, "Unbekannter Datensatz: ${mapping.rowKey}")
+                }
+                when (mapping.action) {
+                    "map" -> {
+                        val uid = mapping.userId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                            ?: return@post call.respond(HttpStatusCode.BadRequest, "userId erforderlich für Zuordnung von ${mapping.rowKey}")
+                        if (!clubRepository.isMember(uid, clubId)) {
+                            return@post call.respond(HttpStatusCode.BadRequest, "Nutzer ist kein Mitglied dieses Clubs")
+                        }
+                        if (!seenMappedUserIds.add(uid)) {
+                            return@post call.respond(HttpStatusCode.BadRequest, "Nutzer ist mehrfach zugeordnet")
+                        }
+                    }
+                    "create", "skip" -> {}
+                    else -> return@post call.respond(HttpStatusCode.BadRequest, "Ungültige Aktion: ${mapping.action}")
+                }
+            }
+
+            val timePattern = Regex("^([01]\\d|2[0-3]):[0-5]\\d$")
+            for (t in request.seriesTimes) {
+                if (!timePattern.matches(t.startTime) || !timePattern.matches(t.endTime)) {
+                    return@post call.respond(HttpStatusCode.BadRequest, "Ungültige Uhrzeit für Serie ${t.seriesKey}")
+                }
+                if (!LocalTime.parse(t.endTime).isAfter(LocalTime.parse(t.startTime))) {
+                    return@post call.respond(HttpStatusCode.BadRequest, "Endzeit muss nach der Startzeit liegen (${t.seriesKey})")
+                }
+            }
+
+            // Conflicts + series/time requirements only matter when events are actually imported.
+            var effectiveResolutionByDate: Map<LocalDate, String> = emptyMap()
+            if (request.importEvents && parsed != null) {
+                val series = ndsImportPlanner.series(parsed.activities)
+                // Recomputed fresh — never trust the client's conflict list.
+                val freshConflicts = if (series.isNotEmpty()) ndsImportPlanner.conflicts(teamId, series) else emptyList()
+                val resolutionBySeriesKey = request.conflictResolutions.associateBy { it.seriesKey }
+
+                for (group in freshConflicts) {
+                    val resolution = resolutionBySeriesKey[group.seriesKey]
+                        ?: return@post call.respond(HttpStatusCode.BadRequest, "Konflikt für Serie ${group.seriesKey} nicht aufgelöst")
+                    if (resolution.keep !in setOf("teamorg", "nds")) {
+                        return@post call.respond(HttpStatusCode.BadRequest, "Ungültige Konfliktentscheidung für ${group.seriesKey}")
+                    }
+                    if (resolution.overrides.any { it.keep !in setOf("teamorg", "nds") }) {
+                        return@post call.respond(HttpStatusCode.BadRequest, "Ungültige Konfliktentscheidung für ${group.seriesKey}")
+                    }
+                }
+
+                val resolved = HashMap<LocalDate, String>()
+                for (group in freshConflicts) {
+                    val resolution = resolutionBySeriesKey.getValue(group.seriesKey)
+                    val overridesByDate = resolution.overrides.associateBy { it.date }
+                    for (d in group.dates) {
+                        resolved[d.date] = overridesByDate[d.date]?.keep ?: resolution.keep
+                    }
+                }
+                effectiveResolutionByDate = resolved
+
+                val seriesTimeByKey = request.seriesTimes.associateBy { it.seriesKey }
+                for (s in series) {
+                    val importsAnyEvent = s.dates.any { d -> (resolved[d] ?: "nds") != "teamorg" }
+                    if (importsAnyEvent && seriesTimeByKey[s.seriesKey] == null) {
+                        return@post call.respond(HttpStatusCode.BadRequest, "Uhrzeit fehlt für Serie ${s.seriesKey}")
+                    }
+                }
+            }
+            // ---- End validation ----
+
+            if (parsed != null) {
+                ndsRepository.linkTeam(
+                    teamId = teamId,
+                    angebotId = parsed.angebotId,
+                    kursName = parsed.kursName,
+                    hauptsportart = parsed.hauptsportart,
+                    nutzergruppe = request.nutzergruppe
                 )
             }
 
-            ndsRepository.linkTeam(
-                teamId = teamId,
-                angebotId = parsed.angebotId,
-                kursName = parsed.kursName,
-                hauptsportart = parsed.hauptsportart,
-                nutzergruppe = request.nutzergruppe
-            )
-
-            // Persons first (PERSONENNUMMER), then the Anwesenheitsliste roster merges by name.
-            if (request.persons.isNotEmpty()) ndsRepository.upsertMembers(teamId, request.persons)
-            ndsRepository.importRoster(teamId, parsed.members)
-
-            val counts = if (request.importEvents)
-                ndsEventImporter.import(teamId, parsed, request.attendanceMode, callerId)
-            else NdsImportCounts(0, 0)
+            val counts = try {
+                ndsEventImporter.import(
+                    teamId = teamId,
+                    parsed = parsed,
+                    attendanceMode = request.attendanceMode,
+                    createdBy = callerId,
+                    importEvents = request.importEvents,
+                    mergedMemberRows = mergedRows,
+                    mappingsByRowKey = request.mappings.associateBy { it.rowKey },
+                    seriesTimes = request.seriesTimes.associateBy { it.seriesKey },
+                    resolutions = effectiveResolutionByDate
+                )
+            } catch (ex: NdsMappingConflictException) {
+                return@post call.respond(HttpStatusCode.Conflict, ex.message ?: "Konflikt")
+            }
 
             call.respond(
                 HttpStatusCode.OK,

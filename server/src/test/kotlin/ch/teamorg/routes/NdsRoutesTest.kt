@@ -1,16 +1,25 @@
 package ch.teamorg.routes
 
 import ch.teamorg.db.tables.AttendanceResponsesTable
+import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
+import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
+import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.deriveCheckInStatus
+import ch.teamorg.domain.models.NdsConflictOverride
+import ch.teamorg.domain.models.NdsConflictResolution
+import ch.teamorg.domain.models.NdsMapping
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.NdsParseResponse
+import ch.teamorg.domain.models.NdsSeries
+import ch.teamorg.domain.models.NdsSeriesTime
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
+import ch.teamorg.infra.nds.NdsMemberMatcher
 import ch.teamorg.infra.nds.NdsPreflightReport
 import ch.teamorg.nds.NdsTestFixtures
 import ch.teamorg.test.IntegrationTestBase
@@ -21,6 +30,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -64,9 +74,18 @@ class NdsRoutesTest : IntegrationTestBase() {
             }))
         }
 
+    // Full parse response — for tests that also need the detected series (to build seriesTimes).
+    private suspend fun ApplicationTestBuilder.parseFull(token: String, clubId: String, bytes: ByteArray, teamId: String? = null): NdsParseResponse =
+        parseFileRaw(token, clubId, bytes, teamId).body()
+
     // Convenience for the many existing tests that only care about the parsed Anwesenheitsliste.
     private suspend fun ApplicationTestBuilder.parseFile(token: String, clubId: String, bytes: ByteArray): ParsedAnwesenheitsliste =
-        parseFileRaw(token, clubId, bytes).body<NdsParseResponse>().anwesenheitsliste!!
+        parseFull(token, clubId, bytes).anwesenheitsliste!!
+
+    // Wizard-set times for every detected series — 18:00-19:30 matches the old 90min placeholder,
+    // keeping pre-existing assertions (export times, event counts) unchanged.
+    private fun defaultSeriesTimes(series: List<NdsSeries>): List<NdsSeriesTime> =
+        series.map { NdsSeriesTime(it.seriesKey, "18:00", "19:30") }
 
     private fun unzip(bytes: ByteArray): Map<String, String> {
         val out = HashMap<String, String>()
@@ -101,16 +120,17 @@ class NdsRoutesTest : IntegrationTestBase() {
         ng: String? = "NG2"
     ): NdsImportResponse {
         val angebot = "753813-${UUID.randomUUID().toString().take(6)}"
-        val parsed = parseFile(token, clubId, NdsTestFixtures.anwesenheitslisteBytes(angebot))
+        val parseResponse = parseFull(token, clubId, NdsTestFixtures.anwesenheitslisteBytes(angebot))
         return createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(NdsImportRequest(
                 createTeamName = "NDS Team",
                 nutzergruppe = ng,
-                parsed = parsed,
+                parsed = parseResponse.anwesenheitsliste,
                 importEvents = true,
-                attendanceMode = "keep"
+                attendanceMode = "keep",
+                seriesTimes = defaultSeriesTimes(parseResponse.series)
             ))
         }.body()
     }
@@ -188,11 +208,13 @@ class NdsRoutesTest : IntegrationTestBase() {
         val angebot = "idem-${UUID.randomUUID().toString().take(6)}"
         val bytes = NdsTestFixtures.anwesenheitslisteBytes(angebot)
 
-        val parsed = parseFile(mgr.token, clubId, bytes)
+        val parseResponse = parseFull(mgr.token, clubId, bytes)
+        val parsed = parseResponse.anwesenheitsliste!!
+        val seriesTimes = defaultSeriesTimes(parseResponse.series)
         val first = createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
             contentType(ContentType.Application.Json)
-            setBody(NdsImportRequest(createTeamName = "Idem", parsed = parsed, importEvents = true, attendanceMode = "keep"))
+            setBody(NdsImportRequest(createTeamName = "Idem", parsed = parsed, importEvents = true, attendanceMode = "keep", seriesTimes = seriesTimes))
         }.body<NdsImportResponse>()
         val teamId = first.teamId
 
@@ -200,7 +222,7 @@ class NdsRoutesTest : IntegrationTestBase() {
         val second = createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
             contentType(ContentType.Application.Json)
-            setBody(NdsImportRequest(teamId = teamId, parsed = parsed, importEvents = true, attendanceMode = "keep"))
+            setBody(NdsImportRequest(teamId = teamId, parsed = parsed, importEvents = true, attendanceMode = "keep", seriesTimes = seriesTimes))
         }.body<NdsImportResponse>()
 
         assertEquals(3, second.membersImported)
@@ -345,13 +367,17 @@ class NdsRoutesTest : IntegrationTestBase() {
     fun `large realistic import writes the expected confirmed response total`() = withTeamorgTestApplication {
         val mgr = register("nds_large@example.com"); promoteToSuperAdmin(mgr.userId)
         val clubId = createClub(mgr.token, "LargeClub")
-        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.largeAnwesenheitslisteBytes("large-1"))
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.largeAnwesenheitslisteBytes("large-1"))
+        val parsed = parseResponse.anwesenheitsliste!!
         val expected = parsed.members.sumOf { it.attendedDates.size }
         assertTrue(expected > 20, "fixture should have many marks; got $expected")
         val res = createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
             contentType(ContentType.Application.Json)
-            setBody(NdsImportRequest(createTeamName = "Large", nutzergruppe = "NG2", parsed = parsed, importEvents = true, attendanceMode = "keep"))
+            setBody(NdsImportRequest(
+                createTeamName = "Large", nutzergruppe = "NG2", parsed = parsed, importEvents = true, attendanceMode = "keep",
+                seriesTimes = defaultSeriesTimes(parseResponse.series)
+            ))
         }.body<NdsImportResponse>()
         // attendanceImported counts confirmed responses only (one per attended date).
         assertEquals(expected, res.attendanceImported)
@@ -394,11 +420,15 @@ class NdsRoutesTest : IntegrationTestBase() {
                 it[endAt] = java.time.Instant.now().minusSeconds(82_800)
             }
         }
-        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes())
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes())
+        val parsed = parseResponse.anwesenheitsliste!!
         createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
             contentType(ContentType.Application.Json)
-            setBody(NdsImportRequest(teamId = res.teamId, parsed = parsed, importEvents = true, attendanceMode = "keep"))
+            setBody(NdsImportRequest(
+                teamId = res.teamId, parsed = parsed, importEvents = true, attendanceMode = "keep",
+                seriesTimes = defaultSeriesTimes(parseResponse.series)
+            ))
         }
 
         val now = java.time.Instant.now()
@@ -513,7 +543,8 @@ class NdsRoutesTest : IntegrationTestBase() {
             assertEquals(1, coaches.size)
 
             // Step 3: Anwesenheitsliste + the persons in one import.
-            val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("persons-1"))
+            val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("persons-1"))
+            val parsed = parseResponse.anwesenheitsliste!!
             val res = createJsonClient().post("/clubs/$clubId/nds/import") {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
                 contentType(ContentType.Application.Json)
@@ -523,7 +554,8 @@ class NdsRoutesTest : IntegrationTestBase() {
                     parsed = parsed,
                     persons = players + coaches,
                     importEvents = true,
-                    attendanceMode = "keep"
+                    attendanceMode = "keep",
+                    seriesTimes = defaultSeriesTimes(parseResponse.series)
                 ))
             }.body<NdsImportResponse>()
             val teamId = UUID.fromString(res.teamId)
@@ -607,7 +639,10 @@ class NdsRoutesTest : IntegrationTestBase() {
             val first: NdsImportResponse = createJsonClient().post("/clubs/$clubId/nds/import") {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
                 contentType(ContentType.Application.Json)
-                setBody(NdsImportRequest(createTeamName = "NDS Team", parsed = parsed, importEvents = true, attendanceMode = "keep"))
+                setBody(NdsImportRequest(
+                    createTeamName = "NDS Team", parsed = parsed, importEvents = true, attendanceMode = "keep",
+                    seriesTimes = defaultSeriesTimes(parseResponse.series)
+                ))
             }.body()
 
             // Second parse now reports the linked team (same club) …
@@ -620,7 +655,10 @@ class NdsRoutesTest : IntegrationTestBase() {
             val second = createJsonClient().post("/clubs/$clubId/nds/import") {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
                 contentType(ContentType.Application.Json)
-                setBody(NdsImportRequest(teamId = reparseResponse.linkedTeamId, parsed = reparsed, importEvents = true, attendanceMode = "keep"))
+                setBody(NdsImportRequest(
+                    teamId = reparseResponse.linkedTeamId, parsed = reparsed, importEvents = true, attendanceMode = "keep",
+                    seriesTimes = defaultSeriesTimes(reparseResponse.series)
+                ))
             }
             assertEquals(HttpStatusCode.OK, second.status)
             val res: NdsImportResponse = second.body()
@@ -734,5 +772,529 @@ class NdsRoutesTest : IntegrationTestBase() {
         val leiterRowKey = body.memberSuggestions.map { it.rowKey }.first { it.startsWith("L:") }
         val suggestion = body.memberSuggestions.single { it.rowKey == leiterRowKey }
         assertEquals(anna.userId, suggestion.preselectedUserId)
+    }
+
+    // ---- Task 3: import v2 — mappings, wizard times, conflict resolution ----
+
+    private fun rowKeyFor(parsed: ParsedAnwesenheitsliste, lastName: String): String {
+        val m = parsed.members.single { it.lastName == lastName }
+        return NdsMemberMatcher.rowKey(m.funktion, m.lastName, m.firstName)
+    }
+
+    private suspend fun ApplicationTestBuilder.makeClubMember(mgrToken: String, clubId: String, userId: String): String {
+        val holdingTeam = createTeam(mgrToken, clubId, "Holding Team")
+        addTeamMember(mgrToken, holdingTeam, userId, "player")
+        return holdingTeam
+    }
+
+    @Test
+    fun `map action links user adds role overwrites NDS fields and leaves profile untouched`() = withTeamorgTestApplication {
+        val mgr = register("nds_map1@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "MapClub")
+        val teamId = createTeam(mgr.token, clubId, "Map Team")
+
+        val real = register("map_real@example.com")
+        makeClubMember(mgr.token, clubId, real.userId)
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-0"))
+        val parsed = parseResponse.anwesenheitsliste!!
+        val rowKey = rowKeyFor(parsed, "Trainer")
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                persons = listOf(NdsMemberInput("Trainer", "Anna", null, "999999999", "Leiter/in")),
+                importEvents = true,
+                attendanceMode = "discard",
+                mappings = listOf(NdsMapping(rowKey = rowKey, action = "map", userId = real.userId)),
+                seriesTimes = defaultSeriesTimes(parseResponse.series)
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+
+        val members = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>()
+        val trainer = members.single { it.lastName == "Trainer" }
+        assertEquals(real.userId, trainer.userId.toString())
+        assertTrue(trainer.claimed)
+        assertEquals("999999999", trainer.personNumber) // overwritten from the mapped row
+
+        val role = transaction {
+            TeamRolesTable.selectAll()
+                .where { (TeamRolesTable.userId eq UUID.fromString(real.userId)) and (TeamRolesTable.teamId eq UUID.fromString(teamId)) }
+                .map { it[TeamRolesTable.role] }.singleOrNull()
+        }
+        assertEquals("coach", role) // funktion "Leiter/in" → coach
+
+        val displayNameAfter = transaction {
+            UsersTable.select(UsersTable.displayName).where { UsersTable.id eq UUID.fromString(real.userId) }
+                .single()[UsersTable.displayName]
+        }
+        assertEquals("User map_real@example.com", displayNameAfter) // profile untouched
+    }
+
+    @Test
+    fun `map to a user already on the team keeps the existing role row`() = withTeamorgTestApplication {
+        val mgr = register("nds_map2@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "MapClub2")
+        val teamId = createTeam(mgr.token, clubId, "Map Team 2")
+
+        val real = register("map_real2@example.com")
+        addTeamMember(mgr.token, teamId, real.userId, "coach") // already a coach on THIS team
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-1"))
+        val parsed = parseResponse.anwesenheitsliste!!
+        val rowKey = rowKeyFor(parsed, "Müller") // Teilnehmer/in → would default to "player"
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = false,
+                mappings = listOf(NdsMapping(rowKey = rowKey, action = "map", userId = real.userId))
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+
+        val roles = transaction {
+            TeamRolesTable.selectAll()
+                .where { (TeamRolesTable.userId eq UUID.fromString(real.userId)) and (TeamRolesTable.teamId eq UUID.fromString(teamId)) }
+                .map { it[TeamRolesTable.role] }
+        }
+        assertEquals(listOf("coach"), roles) // no additional "player" role added
+    }
+
+    @Test
+    fun `skip writes nothing for that row`() = withTeamorgTestApplication {
+        val mgr = register("nds_skip@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "SkipClub")
+        val teamId = createTeam(mgr.token, clubId, "Skip Team")
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-2"))
+        val parsed = parseResponse.anwesenheitsliste!!
+        val rowKey = rowKeyFor(parsed, "Meier")
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = false,
+                mappings = listOf(NdsMapping(rowKey = rowKey, action = "skip"))
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+
+        val skippedRowExists = transaction {
+            !NdsMembersTable.selectAll()
+                .where { (NdsMembersTable.teamId eq UUID.fromString(teamId)) and (NdsMembersTable.lastName eq "Meier") }
+                .empty()
+        }
+        assertFalse(skippedRowExists)
+        // The other two rows (not skipped) were still created.
+        val memberCount = transaction {
+            NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq UUID.fromString(teamId) }.count()
+        }
+        assertEquals(2, memberCount)
+    }
+
+    @Test
+    fun `two mappings to the same userId is rejected`() = withTeamorgTestApplication {
+        val mgr = register("nds_dupmap@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "DupMapClub")
+        val teamId = createTeam(mgr.token, clubId, "DupMap Team")
+
+        val real = register("dupmap_real@example.com")
+        makeClubMember(mgr.token, clubId, real.userId)
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-3"))
+        val parsed = parseResponse.anwesenheitsliste!!
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = false,
+                mappings = listOf(
+                    NdsMapping(rowKey = rowKeyFor(parsed, "Trainer"), action = "map", userId = real.userId),
+                    NdsMapping(rowKey = rowKeyFor(parsed, "Müller"), action = "map", userId = real.userId)
+                )
+            ))
+        }
+        assertEquals(HttpStatusCode.BadRequest, resp.status)
+    }
+
+    @Test
+    fun `mapping to a user outside the club is rejected`() = withTeamorgTestApplication {
+        val mgr = register("nds_foreign@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "ForeignClub")
+        val teamId = createTeam(mgr.token, clubId, "Foreign Team")
+
+        val outsider = register("foreign_outsider@example.com") // no club/team relation at all
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-4"))
+        val parsed = parseResponse.anwesenheitsliste!!
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = false,
+                mappings = listOf(NdsMapping(rowKey = rowKeyFor(parsed, "Trainer"), action = "map", userId = outsider.userId))
+            ))
+        }
+        assertEquals(HttpStatusCode.BadRequest, resp.status)
+    }
+
+    @Test
+    fun `missing seriesTime for an importing series is rejected`() = withTeamorgTestApplication {
+        val mgr = register("nds_notime@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "NoTimeClub")
+        val teamId = createTeam(mgr.token, clubId, "NoTime Team")
+
+        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-5"))
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(teamId = teamId, parsed = parsed, importEvents = true, attendanceMode = "discard"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, resp.status)
+    }
+
+    @Test
+    fun `persons-only import creates members and zero events`() = withTeamorgTestApplication {
+        val mgr = register("nds_personsonly@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "PersonsOnlyImportClub")
+        val teamId = createTeam(mgr.token, clubId, "PersonsOnly Team")
+
+        val res = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = null,
+                persons = listOf(
+                    NdsMemberInput("Trainer", "Anna", null, "111", "Leiter/in"),
+                    NdsMemberInput("Müller", "Lara", null, "222", "Teilnehmer/in")
+                ),
+                importEvents = false
+            ))
+        }.body<NdsImportResponse>()
+        assertEquals(2, res.membersImported)
+        assertEquals(0, res.eventsCreated)
+    }
+
+    // Pre-creates a conflicting TeamOrg training event on the given Monday activity date (series
+    // "0-T-90") and returns its id.
+    private fun createConflictingEvent(
+        teamId: String,
+        date: java.time.LocalDate,
+        createdBy: String,
+        title: String = "Bestehendes Training"
+    ): UUID = transaction {
+        val eventId = EventsTable.insert {
+            it[EventsTable.title] = title
+            it[EventsTable.type] = ch.teamorg.db.tables.EventType.training
+            it[EventsTable.startAt] = date.atTime(19, 0).toInstant(java.time.ZoneOffset.UTC)
+            it[EventsTable.endAt] = date.atTime(20, 0).toInstant(java.time.ZoneOffset.UTC)
+            it[EventsTable.createdBy] = UUID.fromString(createdBy)
+        } get EventsTable.id
+        EventTeamsTable.insert {
+            it[EventTeamsTable.eventId] = eventId
+            it[EventTeamsTable.teamId] = UUID.fromString(teamId)
+        }
+        eventId
+    }
+
+    @Test
+    fun `conflict keep-teamorg skips the new event and attaches attendance to the existing one`() = withTeamorgTestApplication {
+        val mgr = register("nds_conflict_keep@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "ConflictKeepClub")
+        val teamId = createTeam(mgr.token, clubId, "ConflictKeep Team")
+
+        val real = register("conflictkeep_real@example.com")
+        makeClubMember(mgr.token, clubId, real.userId)
+
+        val existingEventId = createConflictingEvent(teamId, NdsTestFixtures.MONDAYS[0], mgr.userId)
+        // A manual RSVP that must survive the import untouched (insertIgnore semantics).
+        transaction {
+            AttendanceResponsesTable.insert {
+                it[AttendanceResponsesTable.eventId] = existingEventId
+                it[AttendanceResponsesTable.userId] = UUID.fromString(real.userId)
+                it[AttendanceResponsesTable.status] = "declined"
+                it[AttendanceResponsesTable.unexcused] = true
+                it[AttendanceResponsesTable.manualOverride] = true
+            }
+        }
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-6"), teamId)
+        val parsed = parseResponse.anwesenheitsliste!!
+        val conflictGroup = parseResponse.conflicts.single { it.dates.any { d -> d.date == NdsTestFixtures.MONDAYS[0] } }
+        assertEquals(existingEventId.toString(), conflictGroup.dates.single { it.date == NdsTestFixtures.MONDAYS[0] }.existingEventId)
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = true,
+                attendanceMode = "keep",
+                mappings = listOf(NdsMapping(rowKey = rowKeyFor(parsed, "Trainer"), action = "map", userId = real.userId)),
+                seriesTimes = defaultSeriesTimes(parseResponse.series),
+                conflictResolutions = listOf(NdsConflictResolution(seriesKey = conflictGroup.seriesKey, keep = "teamorg"))
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+        val res = resp.body<NdsImportResponse>()
+        assertEquals(7, res.eventsCreated) // 8 activities minus the 1 kept-TeamOrg date
+
+        // No new NDS event on the conflict date; the existing event is still active.
+        val newEventOnConflictDate = transaction {
+            (EventsTable innerJoin EventTeamsTable).selectAll()
+                .where {
+                    (EventTeamsTable.teamId eq UUID.fromString(teamId)) and
+                        (EventsTable.externalSource eq "nds") and
+                        (EventsTable.startAt eq NdsTestFixtures.MONDAYS[0].atTime(18, 0).toInstant(java.time.ZoneOffset.UTC))
+                }
+                .count()
+        }
+        assertEquals(0, newEventOnConflictDate)
+        val existingStatus = transaction {
+            EventsTable.selectAll().where { EventsTable.id eq existingEventId }.single()[EventsTable.status]
+        }
+        assertEquals(EventStatus.active, existingStatus)
+
+        // The pre-existing manual RSVP is untouched despite Anna's J-mark on this date.
+        val survivingStatus = transaction {
+            AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId eq existingEventId) and (AttendanceResponsesTable.userId eq UUID.fromString(real.userId)) }
+                .single()[AttendanceResponsesTable.status]
+        }
+        assertEquals("declined", survivingStatus)
+    }
+
+    @Test
+    fun `conflict keep-nds cancels the existing event and creates the new one with wizard time`() = withTeamorgTestApplication {
+        val mgr = register("nds_conflict_nds@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "ConflictNdsClub")
+        val teamId = createTeam(mgr.token, clubId, "ConflictNds Team")
+
+        val existingEventId = createConflictingEvent(teamId, NdsTestFixtures.MONDAYS[0], mgr.userId)
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-7"), teamId)
+        val parsed = parseResponse.anwesenheitsliste!!
+        val conflictGroup = parseResponse.conflicts.single { it.dates.any { d -> d.date == NdsTestFixtures.MONDAYS[0] } }
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = true,
+                attendanceMode = "discard",
+                seriesTimes = defaultSeriesTimes(parseResponse.series),
+                conflictResolutions = listOf(NdsConflictResolution(seriesKey = conflictGroup.seriesKey, keep = "nds"))
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+        val res = resp.body<NdsImportResponse>()
+        assertEquals(8, res.eventsCreated) // all 8, including the conflict date
+
+        val existingStatus = transaction {
+            EventsTable.selectAll().where { EventsTable.id eq existingEventId }.single()[EventsTable.status]
+        }
+        assertEquals(EventStatus.cancelled, existingStatus)
+
+        val newEvent = transaction {
+            (EventsTable innerJoin EventTeamsTable).selectAll()
+                .where {
+                    (EventTeamsTable.teamId eq UUID.fromString(teamId)) and
+                        (EventsTable.externalSource eq "nds") and
+                        (EventsTable.startAt eq NdsTestFixtures.MONDAYS[0].atTime(18, 0).toInstant(java.time.ZoneOffset.UTC))
+                }
+                .toList()
+        }
+        assertEquals(1, newEvent.size)
+    }
+
+    @Test
+    fun `a per-date override wins over the group keep decision`() = withTeamorgTestApplication {
+        val mgr = register("nds_override@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "OverrideClub")
+        val teamId = createTeam(mgr.token, clubId, "Override Team")
+
+        // Two conflicting existing events on the SAME series (both Mondays).
+        createConflictingEvent(teamId, NdsTestFixtures.MONDAYS[0], mgr.userId, "Bestehendes 1")
+        createConflictingEvent(teamId, NdsTestFixtures.MONDAYS[1], mgr.userId, "Bestehendes 2")
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-8"), teamId)
+        val parsed = parseResponse.anwesenheitsliste!!
+        val conflictGroup = parseResponse.conflicts.single { it.seriesKey.startsWith("0-T-") }
+        assertEquals(2, conflictGroup.dates.size)
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = true,
+                attendanceMode = "discard",
+                seriesTimes = defaultSeriesTimes(parseResponse.series),
+                conflictResolutions = listOf(
+                    NdsConflictResolution(
+                        seriesKey = conflictGroup.seriesKey,
+                        keep = "teamorg",
+                        overrides = listOf(NdsConflictOverride(date = NdsTestFixtures.MONDAYS[0], keep = "nds"))
+                    )
+                )
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+        val res = resp.body<NdsImportResponse>()
+        // 8 total - 1 (MONDAYS[1] kept TeamOrg) = 7.
+        assertEquals(7, res.eventsCreated)
+
+        val newEventOnOverriddenDate = transaction {
+            (EventsTable innerJoin EventTeamsTable).selectAll()
+                .where {
+                    (EventTeamsTable.teamId eq UUID.fromString(teamId)) and
+                        (EventsTable.externalSource eq "nds") and
+                        (EventsTable.startAt eq NdsTestFixtures.MONDAYS[0].atTime(18, 0).toInstant(java.time.ZoneOffset.UTC))
+                }
+                .count()
+        }
+        assertEquals(1, newEventOnOverriddenDate) // override → nds created here
+        val newEventOnGroupDate = transaction {
+            (EventsTable innerJoin EventTeamsTable).selectAll()
+                .where {
+                    (EventTeamsTable.teamId eq UUID.fromString(teamId)) and
+                        (EventsTable.externalSource eq "nds") and
+                        (EventsTable.startAt eq NdsTestFixtures.MONDAYS[1].atTime(18, 0).toInstant(java.time.ZoneOffset.UTC))
+                }
+                .count()
+        }
+        assertEquals(0, newEventOnGroupDate) // group default teamorg → not created here
+    }
+
+    @Test
+    fun `re-import preserves a previously applied mapping`() = withTeamorgTestApplication {
+        val mgr = register("nds_reimport_map@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "ReimportMapClub")
+        val teamId = createTeam(mgr.token, clubId, "ReimportMap Team")
+
+        val real = register("reimportmap_real@example.com")
+        makeClubMember(mgr.token, clubId, real.userId)
+
+        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-9"))
+        val rowKey = rowKeyFor(parsed, "Trainer")
+
+        val first = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId, parsed = parsed, importEvents = false,
+                mappings = listOf(NdsMapping(rowKey = rowKey, action = "map", userId = real.userId))
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, first.status)
+
+        // Re-import the SAME file with NO mappings — the earlier mapping must not be reset.
+        val second = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(teamId = teamId, parsed = parsed, importEvents = false))
+        }
+        assertEquals(HttpStatusCode.OK, second.status)
+
+        val trainerUserId = transaction {
+            NdsMembersTable.selectAll()
+                .where { (NdsMembersTable.teamId eq UUID.fromString(teamId)) and (NdsMembersTable.lastName eq "Trainer") }
+                .single()[NdsMembersTable.userId]
+        }
+        assertEquals(real.userId, trainerUserId.toString())
+    }
+
+    @Test
+    fun `a mid-import mapping conflict rolls back the whole import`() = withTeamorgTestApplication {
+        val mgr = register("nds_rollback@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "RollbackClub")
+        val teamId = createTeam(mgr.token, clubId, "Rollback Team")
+
+        val real = register("rollback_real@example.com")
+        makeClubMember(mgr.token, clubId, real.userId)
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-10"))
+        val parsed = parseResponse.anwesenheitsliste!!
+
+        // First import (no events) links `real` to the Trainer row.
+        val setup = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId, parsed = parsed, importEvents = false,
+                mappings = listOf(NdsMapping(rowKey = rowKeyFor(parsed, "Trainer"), action = "map", userId = real.userId))
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, setup.status)
+        val memberCountBefore = transaction {
+            NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq UUID.fromString(teamId) }.count()
+        }
+        // Lara already got a provisional user from `setup`'s default "create" action.
+        val laraUserIdBefore = transaction {
+            NdsMembersTable.selectAll()
+                .where { (NdsMembersTable.teamId eq UUID.fromString(teamId)) and (NdsMembersTable.lastName eq "Müller") }
+                .single()[NdsMembersTable.userId]
+        }
+        val eventCountBefore = transaction {
+            EventTeamsTable.select(EventTeamsTable.eventId).where { EventTeamsTable.teamId eq UUID.fromString(teamId) }.count()
+        }
+        assertEquals(0L, eventCountBefore)
+
+        // Second import attempts to also map `real` to a DIFFERENT identity (Müller/Lara) — conflict.
+        // importEvents=true with valid seriesTimes so a successful run WOULD create 8 events.
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId,
+                parsed = parsed,
+                importEvents = true,
+                attendanceMode = "discard",
+                mappings = listOf(NdsMapping(rowKey = rowKeyFor(parsed, "Müller"), action = "map", userId = real.userId)),
+                seriesTimes = defaultSeriesTimes(parseResponse.series)
+            ))
+        }
+        assertEquals(HttpStatusCode.Conflict, resp.status)
+
+        val eventCountAfter = transaction {
+            EventTeamsTable.select(EventTeamsTable.eventId).where { EventTeamsTable.teamId eq UUID.fromString(teamId) }.count()
+        }
+        assertEquals(0L, eventCountAfter, "the whole import (including events) must roll back")
+
+        val memberCountAfter = transaction {
+            NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq UUID.fromString(teamId) }.count()
+        }
+        assertEquals(memberCountBefore, memberCountAfter)
+
+        val laraUserIdAfter = transaction {
+            NdsMembersTable.selectAll()
+                .where { (NdsMembersTable.teamId eq UUID.fromString(teamId)) and (NdsMembersTable.lastName eq "Müller") }
+                .single()[NdsMembersTable.userId]
+        }
+        assertEquals(laraUserIdBefore, laraUserIdAfter) // the attempted (failed) mapping never committed
     }
 }
