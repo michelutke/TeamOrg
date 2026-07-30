@@ -31,7 +31,7 @@ class InboxViewModel(
 
     fun loadNotifications() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = it.notifications.isEmpty(), error = null) }
             notificationRepository.getNotifications(50, 0)
                 .onSuccess { notifications ->
                     _state.update { it.copy(notifications = notifications, isLoading = false) }
@@ -96,9 +96,21 @@ class InboxViewModel(
     }
 
     fun deleteAll() {
+        val previous = _state.value.notifications
+        val previousUnread = _state.value.unreadCount
         _state.update { it.copy(notifications = emptyList(), unreadCount = 0, hasUnread = false) }
         viewModelScope.launch {
             notificationRepository.deleteAll()
+                .onFailure {
+                    _state.update { s ->
+                        s.copy(
+                            notifications = previous,
+                            unreadCount = previousUnread,
+                            hasUnread = previousUnread > 0,
+                            error = "Could not delete. Try again."
+                        )
+                    }
+                }
         }
     }
 

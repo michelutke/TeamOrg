@@ -27,6 +27,8 @@ fun InboxScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) { viewModel.refresh() }
+
     LaunchedEffect(state.isLoading) {
         if (!state.isLoading) isRefreshing = false
     }
