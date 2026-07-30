@@ -61,7 +61,9 @@ class EventListViewModel(
 
     fun loadEvents() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            // Silent refresh when cached events exist — the full-screen loader is
+            // only for the first load, so tab switches show content immediately.
+            _state.update { it.copy(isLoading = it.allEvents.isEmpty(), error = null) }
             eventRepository.getMyEvents().onSuccess { events ->
                 val sorted = events.sortedBy { it.event.startAt }
                 val teams = sorted.flatMap { it.matchedTeams }.distinctBy { it.id }
