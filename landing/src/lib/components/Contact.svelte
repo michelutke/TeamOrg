@@ -2,7 +2,6 @@
 	import { enhance } from '$app/forms';
 	import { Mail, Clock, Building2, Check } from 'lucide-svelte';
 	import MorphShape from './MorphShape.svelte';
-	import RosterPattern from './RosterPattern.svelte';
 	import type { Dict } from '$lib/i18n';
 
 	type ContactForm = {
@@ -37,8 +36,7 @@
 	{/if}
 </svelte:head>
 
-<section id="kontakt" class="relative scroll-mt-20 overflow-hidden bg-surface-low">
-	<RosterPattern intensity={0.22} />
+<section id="kontakt" class="relative scroll-mt-20">
 	<div
 		class="relative mx-auto flex max-w-content flex-col gap-12 px-6 py-20 md:flex-row md:items-center md:gap-16 md:px-10 md:py-24"
 	>
@@ -58,19 +56,19 @@
 			</p>
 			<ul class="mt-7 flex flex-col gap-3.5">
 				<li class="flex items-center gap-3 text-[16px] font-medium text-on-surface">
-					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface">
+					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent">
 						<Mail class="h-4 w-4" strokeWidth={2} />
 					</span>
 					<a href="mailto:info@teamorg.ch" class="hover:underline">{m.infoEmail}</a>
 				</li>
 				<li class="flex items-center gap-3 text-[16px] font-medium text-on-surface">
-					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface">
+					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent">
 						<Clock class="h-4 w-4" strokeWidth={2} />
 					</span>
 					{m.infoReply}
 				</li>
 				<li class="flex items-center gap-3 text-[16px] font-medium text-on-surface">
-					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface">
+					<span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent">
 						<Building2 class="h-4 w-4" strokeWidth={2} />
 					</span>
 					{m.infoFor}
@@ -82,7 +80,7 @@
 		<div
 			data-reveal
 			style="--reveal-delay:80ms"
-			class="w-full rounded-[1.75rem] bg-surface p-7 shadow-[0_24px_60px_-10px_rgba(20,10,40,0.3)] md:max-w-[500px] md:p-9"
+			class="w-full rounded-[24px] bg-panel p-7 shadow-[0_24px_60px_-10px_rgba(20,10,40,0.3)] md:max-w-[500px] md:p-9"
 		>
 			{#if form?.success}
 				<div class="flex flex-col items-center py-8 text-center">

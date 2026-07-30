@@ -1,13 +1,12 @@
 <script lang="ts">
 	import LogoMark from './LogoMark.svelte';
-	import RosterPattern from './RosterPattern.svelte';
 	import type { Dict, Locale } from '$lib/i18n';
 
 	let { m, lang }: { m: Dict['footer']; lang: Locale } = $props();
 </script>
 
-<footer class="relative overflow-hidden bg-surface">
-	<RosterPattern intensity={0.12} />
+<footer class="relative">
+	<div class="absolute inset-0" style="background: var(--color-surface); opacity: 0.62"></div>
 	<div class="relative mx-auto max-w-content px-6 py-14 md:px-10">
 		<div class="flex flex-col justify-between gap-10 md:flex-row">
 			<!-- Brand -->
@@ -25,31 +24,31 @@
 			<!-- Link columns -->
 			<div class="flex gap-12 md:gap-[72px]">
 				<div class="flex flex-col gap-3.5">
-					<p class="text-[13px] font-bold tracking-[0.12em] text-placeholder">{m.colProduct}</p>
-					<a href="/#funktionen" class="text-[14px] font-medium text-body hover:text-on-surface"
+					<p class="text-[13px] font-bold tracking-[0.12em] text-accent">{m.colProduct}</p>
+					<a href="/#funktionen" class="text-[14px] font-medium text-on-surface hover:text-accent"
 						>{m.links.features}</a
 					>
-					<a href="/#preise" class="text-[14px] font-medium text-body hover:text-on-surface"
+					<a href="/#preise" class="text-[14px] font-medium text-on-surface hover:text-accent"
 						>{m.links.pricing}</a
 					>
-					<a href="/#kontakt" class="text-[14px] font-medium text-body hover:text-on-surface"
+					<a href="/#kontakt" class="text-[14px] font-medium text-on-surface hover:text-accent"
 						>{m.links.contact}</a
 					>
 				</div>
 				<div class="flex flex-col gap-3.5">
-					<p class="text-[13px] font-bold tracking-[0.12em] text-placeholder">{m.colLegal}</p>
-					<a href="/datenschutz" class="text-[14px] font-medium text-body hover:text-on-surface"
+					<p class="text-[13px] font-bold tracking-[0.12em] text-accent">{m.colLegal}</p>
+					<a href="/datenschutz" class="text-[14px] font-medium text-on-surface hover:text-accent"
 						>{m.legal.privacy}</a
 					>
-					<a href="/impressum" class="text-[14px] font-medium text-body hover:text-on-surface"
+					<a href="/impressum" class="text-[14px] font-medium text-on-surface hover:text-accent"
 						>{m.legal.imprint}</a
 					>
 				</div>
 				<div class="flex flex-col gap-3.5">
-					<p class="text-[13px] font-bold tracking-[0.12em] text-placeholder">{m.colContact}</p>
+					<p class="text-[13px] font-bold tracking-[0.12em] text-accent">{m.colContact}</p>
 					<a
 						href="mailto:info@teamorg.ch"
-						class="text-[14px] font-medium text-body hover:text-on-surface">info@teamorg.ch</a
+						class="text-[14px] font-medium text-on-surface hover:text-accent">info@teamorg.ch</a
 					>
 				</div>
 			</div>

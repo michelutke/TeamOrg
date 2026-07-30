@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
@@ -67,4 +68,6 @@
 <main>
 	{@render children()}
 </main>
-<Footer m={data.m.footer} lang={data.lang} />
+{#if $page.route.id !== '/'}
+	<Footer m={data.m.footer} lang={data.lang} />
+{/if}
