@@ -272,44 +272,41 @@ fun Route.ndsRoutes() {
             val authorized = isClubManager || (requestedTeamId != null && teamRepository.hasRole(callerId, requestedTeamId, "coach"))
             if (!authorized) return@post call.respond(HttpStatusCode.Forbidden, "Keine Berechtigung für diesen Import")
 
-            // Resolve target team.
-            val teamId: UUID = when {
-                requestedTeamId != null -> requestedTeamId
+            // Resolve the target team WITHOUT creating anything yet — team creation is deferred
+            // until after all validation passes (see below), otherwise a request that ultimately
+            // fails validation would leave an orphan empty team behind (the same failure mode the
+            // Angebot-conflict guards below exist to prevent).
+            when {
+                requestedTeamId != null -> {}
                 !request.createTeamName.isNullOrBlank() -> {
                     if (!isClubManager) {
                         return@post call.respond(HttpStatusCode.Forbidden, "Nur Club-Manager dürfen ein neues Team erstellen")
                     }
-                    // The Angebot may only be linked to a single team — check BEFORE creating,
-                    // otherwise every rejected re-import attempt leaves an orphan empty team.
-                    if (parsed != null) {
-                        val existing = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
-                        if (existing != null) {
-                            val name = teamRepository.findById(existing)?.name ?: "einem anderen Team"
-                            return@post call.respond(
-                                HttpStatusCode.Conflict,
-                                "Angebot ${parsed.angebotId} ist bereits mit «$name» verknüpft — " +
-                                    "der Import aktualisiert dieses Team (Datei erneut hochladen)."
-                            )
-                        }
-                    }
-                    UUID.fromString(teamRepository.create(clubId, request.createTeamName.trim(), null).id)
                 }
                 else -> return@post call.respond(HttpStatusCode.BadRequest, "teamId oder createTeamName erforderlich")
             }
 
             if (parsed != null) {
                 // The Angebot may only be linked to a single team within this club (scoped per-club
-                // so another club's link never blocks this import).
+                // so another club's link never blocks this import) — checked against whichever team
+                // this request targets: the existing one, or (for createTeamName) any team already
+                // holding this Angebot, so a rejected create-new-team attempt never orphans a team.
                 val existingForAngebot = ndsRepository.findTeamIdByAngebot(parsed.angebotId, clubId)
-                if (existingForAngebot != null && existingForAngebot != teamId) {
+                if (existingForAngebot != null && existingForAngebot != requestedTeamId) {
+                    val name = teamRepository.findById(existingForAngebot)?.name ?: "einem anderen Team"
                     return@post call.respond(
                         HttpStatusCode.Conflict,
-                        "Angebot ${parsed.angebotId} ist bereits mit einem anderen Team verknüpft"
+                        if (requestedTeamId == null)
+                            "Angebot ${parsed.angebotId} ist bereits mit «$name» verknüpft — " +
+                                "der Import aktualisiert dieses Team (Datei erneut hochladen)."
+                        else
+                            "Angebot ${parsed.angebotId} ist bereits mit einem anderen Team verknüpft"
                     )
                 }
             }
 
-            // ---- Validation BEFORE any writes ----
+            // ---- Validation BEFORE any writes ---- (uses requestedTeamId; for a not-yet-created
+            // team there can be no existing events/members, so conflicts are necessarily empty)
             val mergedRows = mergeMemberRows(parsed, request.persons)
             val rowKeys = mergedRows.map { NdsMemberMatcher.rowKey(it.funktion, it.lastName, it.firstName) }.toSet()
 
@@ -348,8 +345,11 @@ fun Route.ndsRoutes() {
             var effectiveResolutionByDate: Map<LocalDate, String> = emptyMap()
             if (request.importEvents && parsed != null) {
                 val series = ndsImportPlanner.series(parsed.activities)
-                // Recomputed fresh — never trust the client's conflict list.
-                val freshConflicts = if (series.isNotEmpty()) ndsImportPlanner.conflicts(teamId, series) else emptyList()
+                // Recomputed fresh — never trust the client's conflict list. A not-yet-created team
+                // (requestedTeamId == null) cannot have existing events, so conflicts are empty.
+                val freshConflicts = if (requestedTeamId != null && series.isNotEmpty())
+                    ndsImportPlanner.conflicts(requestedTeamId, series)
+                else emptyList()
                 val resolutionBySeriesKey = request.conflictResolutions.associateBy { it.seriesKey }
 
                 for (group in freshConflicts) {
@@ -382,6 +382,10 @@ fun Route.ndsRoutes() {
                 }
             }
             // ---- End validation ----
+
+            // Validation passed — only now do we create the team (if this is a new one).
+            val teamId: UUID = requestedTeamId
+                ?: UUID.fromString(teamRepository.create(clubId, request.createTeamName!!.trim(), null).id)
 
             if (parsed != null) {
                 ndsRepository.linkTeam(

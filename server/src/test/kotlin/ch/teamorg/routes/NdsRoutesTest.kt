@@ -934,6 +934,44 @@ class NdsRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `createTeamName with a failing validation creates no orphan team`() = withTeamorgTestApplication {
+        val mgr = register("nds_orphan@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "OrphanClub")
+
+        val real = register("orphan_real@example.com")
+        makeClubMember(mgr.token, clubId, real.userId)
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-t3-orphan"))
+        val parsed = parseResponse.anwesenheitsliste!!
+
+        val teamsBefore = transaction {
+            TeamsTable.selectAll().where { TeamsTable.clubId eq UUID.fromString(clubId) }.count()
+        }
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                createTeamName = "Orphan Team",
+                parsed = parsed,
+                importEvents = false,
+                // Double-map — the same validation failure as the existing-team test above, but here
+                // there is no teamId yet: the team must never get created before this check fails.
+                mappings = listOf(
+                    NdsMapping(rowKey = rowKeyFor(parsed, "Trainer"), action = "map", userId = real.userId),
+                    NdsMapping(rowKey = rowKeyFor(parsed, "Müller"), action = "map", userId = real.userId)
+                )
+            ))
+        }
+        assertEquals(HttpStatusCode.BadRequest, resp.status)
+
+        val teamsAfter = transaction {
+            TeamsTable.selectAll().where { TeamsTable.clubId eq UUID.fromString(clubId) }.count()
+        }
+        assertEquals(teamsBefore, teamsAfter, "a failed validation must not create an orphan team")
+    }
+
+    @Test
     fun `mapping to a user outside the club is rejected`() = withTeamorgTestApplication {
         val mgr = register("nds_foreign@example.com"); promoteToSuperAdmin(mgr.userId)
         val clubId = createClub(mgr.token, "ForeignClub")

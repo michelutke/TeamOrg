@@ -195,8 +195,6 @@ interface NdsRepository {
     suspend fun importRoster(teamId: UUID, members: List<ParsedMember>): List<NdsMember>
     /** Upsert members from a dedicated person export (carries PERSONENNUMMER); merges by name. */
     suspend fun upsertMembers(teamId: UUID, members: List<NdsMemberInput>): List<NdsMember>
-    /** Apply a `map` decision from the import wizard. See [NdsMemberOps.applyMappingSync]. */
-    suspend fun applyMapping(teamId: UUID, member: NdsMemberInput, userId: UUID)
     suspend fun listMembers(teamId: UUID): List<NdsMember>
     /** Team roster joined with any already-linked nds_members identity, for match suggestions. */
     suspend fun listTeamUsersForMatching(teamId: UUID): List<MatchCandidateUser>
@@ -269,10 +267,6 @@ class NdsRepositoryImpl : NdsRepository {
             NdsMemberOps.ensureUserAndRoleSync(memberId, teamId, m.funktion, m.firstName, m.lastName)
             NdsMembersTable.selectAll().where { NdsMembersTable.id eq memberId }.single().toNdsMember()
         }
-    }
-
-    override suspend fun applyMapping(teamId: UUID, member: NdsMemberInput, userId: UUID): Unit = transaction {
-        NdsMemberOps.applyMappingSync(teamId, member, userId)
     }
 
     override suspend fun listMembers(teamId: UUID): List<NdsMember> = transaction {
