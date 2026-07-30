@@ -38,15 +38,13 @@ export interface Dict {
 	pricing: {
 		eyebrow: string;
 		title: string;
-		sub: string;
-		planLabel: string;
 		price: string;
 		per: string;
-		fine: string;
 		example: string;
+		fine: string;
+		includesTitle: string;
 		includes: string[];
 		cta: string;
-		footnote: string;
 	};
 	contact: {
 		eyebrow: string;
@@ -197,22 +195,18 @@ const de: Dict = {
 	pricing: {
 		eyebrow: 'PREISE',
 		title: 'Ein Preis. Keine Überraschungen.',
-		sub: 'Fair und planbar: du zahlst nur für aktive Mitglieder.',
-		planLabel: 'PRO VEREIN',
 		price: '2 CHF',
 		per: '/ Mitglied / Jahr',
-		fine: 'Jährliche Abrechnung. Mindestlaufzeit eine Saison. Du zahlst nur für aktive Mitglieder.',
 		example: 'Beispiel: 40 Mitglieder = 40 CHF pro Jahr',
+		fine: 'Jährliche Abrechnung. Nur aktive Mitglieder zählen.',
+		includesTitle: 'ALLES INKLUSIVE',
 		includes: [
-			'Unbegrenzte Teams, Events und Mitglieder',
+			'Unbegrenzte Teams & Mitglieder',
 			'Anwesenheit in Echtzeit & Statistiken',
-			'Push-Benachrichtigungen & Erinnerungen',
-			'Offline-Modus mit automatischer Synchronisation',
-			'J+S-Anwesenheitskontrolle',
-			'Persönlicher E-Mail-Support'
+			'Offline-Modus mit Auto-Sync',
+			'J+S-Anwesenheitskontrolle'
 		],
-		cta: 'Jetzt starten',
-		footnote: 'Team oder Verein direkt online erstellen — grössere Vereine richten wir auf Wunsch persönlich ein.'
+		cta: 'Jetzt starten'
 	},
 	contact: {
 		eyebrow: 'KONTAKT',
@@ -365,22 +359,18 @@ const en: Dict = {
 	pricing: {
 		eyebrow: 'PRICING',
 		title: 'One price. No surprises.',
-		sub: 'Fair and predictable: you only pay for active members.',
-		planLabel: 'PER CLUB',
-		price: '2 CHF',
+		price: 'CHF 2',
 		per: '/ member / year',
-		fine: 'Billed annually. Minimum term one season. You only pay for active members.',
-		example: 'Example: 40 members = 40 CHF per year',
+		example: 'Example: 40 members = CHF 40 per year',
+		fine: 'Billed yearly. Only active members count.',
+		includesTitle: 'EVERYTHING INCLUDED',
 		includes: [
-			'Unlimited teams, events and members',
-			'Real-time attendance & statistics',
-			'Push notifications & reminders',
-			'Offline mode with automatic sync',
-			'J+S attendance control',
-			'Personal email support'
+			'Unlimited teams & members',
+			'Real-time attendance & stats',
+			'Offline mode with auto-sync',
+			'J+S attendance reports'
 		],
-		cta: 'Get started',
-		footnote: 'Create your team or club online in minutes — larger clubs get personal onboarding on request.'
+		cta: 'Get started'
 	},
 	contact: {
 		eyebrow: 'CONTACT',
