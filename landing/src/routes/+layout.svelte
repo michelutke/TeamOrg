@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
@@ -55,6 +56,7 @@
 </script>
 
 <svelte:head>
+	{@html `<script>(function(){var t;try{t=localStorage.getItem('theme');}catch(e){}if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;})()</script>`}
 	<title>{data.m.meta.title}</title>
 	<meta name="description" content={data.m.meta.description} />
 	<meta property="og:title" content={data.m.meta.title} />
@@ -66,4 +68,6 @@
 <main>
 	{@render children()}
 </main>
-<Footer m={data.m.footer} lang={data.lang} />
+{#if $page.route.id !== '/'}
+	<Footer m={data.m.footer} lang={data.lang} />
+{/if}
