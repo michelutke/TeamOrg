@@ -11,6 +11,7 @@ import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.ParsedMember
+import ch.teamorg.infra.nds.MatchCandidateUser
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
@@ -53,6 +54,8 @@ interface NdsRepository {
     /** Upsert members from a dedicated person export (carries PERSONENNUMMER); merges by name. */
     suspend fun upsertMembers(teamId: UUID, members: List<NdsMemberInput>): List<NdsMember>
     suspend fun listMembers(teamId: UUID): List<NdsMember>
+    /** Team roster joined with any already-linked nds_members identity, for match suggestions. */
+    suspend fun listTeamUsersForMatching(teamId: UUID): List<MatchCandidateUser>
     suspend fun getMember(memberId: UUID): NdsMember?
     suspend fun updateMember(
         memberId: UUID,
@@ -199,6 +202,34 @@ class NdsRepositoryImpl : NdsRepository {
         NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq teamId }
             .orderBy(NdsMembersTable.funktion to SortOrder.ASC, NdsMembersTable.lastName to SortOrder.ASC)
             .map { it.toNdsMember() }
+    }
+
+    override suspend fun listTeamUsersForMatching(teamId: UUID): List<MatchCandidateUser> = transaction {
+        val ndsByUser = NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq teamId }
+            .filter { it[NdsMembersTable.userId] != null }
+            .associateBy { it[NdsMembersTable.userId]!! }
+
+        val userIds = TeamRolesTable.select(TeamRolesTable.userId)
+            .where { TeamRolesTable.teamId eq teamId }
+            .mapNotNull { it[TeamRolesTable.userId] }
+            .distinct()
+        if (userIds.isEmpty()) return@transaction emptyList()
+
+        UsersTable.selectAll().where { UsersTable.id inList userIds }
+            .map { user ->
+                val userId = user[UsersTable.id]
+                val displayName = user[UsersTable.displayName]
+                val linked = ndsByUser[userId]
+                MatchCandidateUser(
+                    userId = userId,
+                    firstName = displayName.substringBefore(" "),
+                    lastName = displayName.substringAfter(" ", ""),
+                    birthDate = linked?.get(NdsMembersTable.birthDate),
+                    linkedNdsIdentity = linked?.let {
+                        Triple(it[NdsMembersTable.lastName], it[NdsMembersTable.firstName], it[NdsMembersTable.birthDate])
+                    }
+                )
+            }
     }
 
     override suspend fun getMember(memberId: UUID): NdsMember? = transaction {

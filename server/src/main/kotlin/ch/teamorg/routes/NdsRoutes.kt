@@ -1,7 +1,9 @@
 package ch.teamorg.routes
 
+import ch.teamorg.domain.models.MemberSuggestionDto
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
+import ch.teamorg.domain.models.NdsParseResponse
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
 import ch.teamorg.domain.repositories.ClubRepository
 import ch.teamorg.domain.repositories.InviteRepository
@@ -9,9 +11,12 @@ import ch.teamorg.domain.repositories.NdsRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.infra.nds.AnwesenheitslisteParser
+import ch.teamorg.infra.nds.MemberSuggestion
 import ch.teamorg.infra.nds.NdsEventImporter
 import ch.teamorg.infra.nds.NdsImportCounts
+import ch.teamorg.infra.nds.NdsImportPlanner
 import ch.teamorg.infra.nds.NdsExportService
+import ch.teamorg.infra.nds.NdsMemberMatcher
 import ch.teamorg.infra.nds.NdsParseException
 import ch.teamorg.infra.nds.RosterFileParser
 import ch.teamorg.mail.MailService
@@ -75,6 +80,7 @@ fun Route.ndsRoutes() {
     val userRepository by inject<UserRepository>()
     val mailService by inject<MailService>()
     val ndsEventImporter by inject<NdsEventImporter>()
+    val ndsImportPlanner by inject<NdsImportPlanner>()
     val ndsExportService by inject<NdsExportService>()
 
     val inviteBaseUrl = application.environment.config
@@ -83,46 +89,126 @@ fun Route.ndsRoutes() {
     fun inviteUrlFor(token: String) = "$inviteBaseUrl/i/$token"
 
     authenticate("jwt") {
-        // Parse an uploaded Anwesenheitsliste xlsx → preview JSON (no DB writes).
+        // Parse uploaded NDS file(s) → preview JSON (no DB writes). Multipart part NAMES select the
+        // parser: "anwesenheitsliste" (xlsx), "teilnehmende" (csv), "leiter" (xlsx); any other file
+        // part name is treated as the Anwesenheitsliste (keeps the legacy single-file upload working).
+        // Optional form field "teamId" scopes match suggestions + conflicts to that team and lets a
+        // team coach (not just the club manager) run the parse.
         post("/clubs/{clubId}/nds/parse") {
             val clubId = UUID.fromString(call.parameters["clubId"])
-            if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
+            val callerId = call.principal<JWTPrincipal>()?.payload?.subject?.let { UUID.fromString(it) }
+                ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid token")
 
-            var parsed: ParsedAnwesenheitsliste? = null
-            var parseError: String? = null
-            val multipart = call.receiveMultipart()
-            multipart.forEachPart { part ->
-                if (part is PartData.FileItem && parsed == null && parseError == null) {
-                    try {
-                        parsed = part.provider().toInputStream().use { AnwesenheitslisteParser.parse(it) }
-                    } catch (ex: NdsParseException) {
-                        parseError = ex.message ?: "Datei konnte nicht gelesen werden"
-                        call.application.log.info("NDS parse rejected: ${ex.message}")
+            var teamIdParam: UUID? = null
+            var teamIdInvalid = false
+            var anwesenheitslisteBytes: ByteArray? = null
+            var teilnehmendeBytes: ByteArray? = null
+            var leiterBytes: ByteArray? = null
+
+            call.receiveMultipart().forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "teamId") {
+                            val value = part.value.trim()
+                            if (value.isNotEmpty()) {
+                                teamIdParam = runCatching { UUID.fromString(value) }.getOrNull()
+                                if (teamIdParam == null) teamIdInvalid = true
+                            }
+                        }
                     }
+                    is PartData.FileItem -> {
+                        val bytes = part.provider().toInputStream().use { it.readBytes() }
+                        when (part.name) {
+                            "teilnehmende" -> teilnehmendeBytes = bytes
+                            "leiter" -> leiterBytes = bytes
+                            else -> if (anwesenheitslisteBytes == null) anwesenheitslisteBytes = bytes
+                        }
+                    }
+                    else -> {}
                 }
                 part.dispose()
             }
 
-            val result = parsed
-            when {
-                parseError != null -> call.respond(HttpStatusCode.UnprocessableEntity, parseError)
-                result == null -> call.respond(HttpStatusCode.BadRequest, "Keine Datei hochgeladen")
-                else -> {
-                    // Surface an existing Angebot→team link (same club only) so the import
-                    // dialog re-imports into that team instead of creating a new one.
-                    val linkedTeam = ndsRepository.findTeamIdByAngebot(result.angebotId, clubId)
-                        ?.let { teamRepository.findById(it) }
-                    call.respond(
-                        if (linkedTeam != null)
-                            result.copy(linkedTeamId = linkedTeam.id, linkedTeamName = linkedTeam.name)
-                        else result
-                    )
-                }
+            if (teamIdInvalid) return@post call.respond(HttpStatusCode.BadRequest, "Ungültige teamId")
+            if (anwesenheitslisteBytes == null && teilnehmendeBytes == null && leiterBytes == null) {
+                return@post call.respond(HttpStatusCode.BadRequest, "Keine Datei hochgeladen")
             }
+
+            val teamId = teamIdParam
+            // A teamId that doesn't belong to this club is rejected outright — it is never a valid
+            // scope for this request, regardless of which role granted access below.
+            if (teamId != null && teamRepository.getClubId(teamId) != clubId) {
+                return@post call.respond(HttpStatusCode.Forbidden, "Team gehört nicht zu diesem Club")
+            }
+            val isClubManager = clubRepository.hasRole(callerId, clubId, "club_manager")
+            val authorized = isClubManager || (teamId != null && teamRepository.hasRole(callerId, teamId, "coach"))
+            if (!authorized) return@post call.respond(HttpStatusCode.Forbidden, "Keine Berechtigung für diesen Import")
+
+            var parseError: String? = null
+            val anwesenheitsliste = try {
+                anwesenheitslisteBytes?.let { AnwesenheitslisteParser.parse(it.inputStream()) }
+            } catch (ex: NdsParseException) {
+                parseError = ex.message ?: "Datei konnte nicht gelesen werden"
+                call.application.log.info("NDS parse rejected: ${ex.message}")
+                null
+            }
+
+            val teilnehmendePersons = if (parseError == null) {
+                try {
+                    teilnehmendeBytes?.let { RosterFileParser.parseTeilnehmendeCsv(it.inputStream()) } ?: emptyList()
+                } catch (ex: NdsParseException) {
+                    parseError = ex.message ?: "Datei konnte nicht gelesen werden"
+                    emptyList()
+                }
+            } else emptyList()
+
+            val leiterPersons = if (parseError == null) {
+                try {
+                    leiterBytes?.let { RosterFileParser.parseLeiterXlsx(it.inputStream()) } ?: emptyList()
+                } catch (ex: NdsParseException) {
+                    parseError = ex.message ?: "Datei konnte nicht gelesen werden"
+                    emptyList()
+                }
+            } else emptyList()
+
+            if (parseError != null) return@post call.respond(HttpStatusCode.UnprocessableEntity, parseError)
+
+            val persons = teilnehmendePersons + leiterPersons
+
+            // Surface an existing Angebot→team link (same club only) so the import dialog
+            // re-imports into that team instead of creating a new one.
+            val linkedTeam = anwesenheitsliste?.let { ndsRepository.findTeamIdByAngebot(it.angebotId, clubId) }
+                ?.let { teamRepository.findById(it) }
+
+            val targetTeamId = teamId ?: linkedTeam?.let { UUID.fromString(it.id) }
+
+            val memberSuggestions = if (targetTeamId != null) {
+                val rows = mergeMemberRows(anwesenheitsliste, persons)
+                val teamUsers = ndsRepository.listTeamUsersForMatching(targetTeamId)
+                NdsMemberMatcher.suggest(rows, teamUsers).map { it.toDto() }
+            } else emptyList()
+
+            val series = anwesenheitsliste?.let { ndsImportPlanner.series(it.activities) } ?: emptyList()
+            val conflicts = if (targetTeamId != null && series.isNotEmpty())
+                ndsImportPlanner.conflicts(targetTeamId, series)
+            else emptyList()
+
+            call.respond(
+                NdsParseResponse(
+                    anwesenheitsliste = anwesenheitsliste,
+                    persons = persons,
+                    memberSuggestions = memberSuggestions,
+                    series = series,
+                    conflicts = conflicts,
+                    linkedTeamId = linkedTeam?.id,
+                    linkedTeamName = linkedTeam?.name
+                )
+            )
         }
 
-        // Parse a dedicated person export (Teilnehmende .csv / Leiter .xlsx) → person list (no writes).
-        // The parser is chosen by file extension.
+        // Deprecated: kept only for backward compatibility with older clients that upload the
+        // dedicated person exports (Teilnehmende .csv / Leiter .xlsx) separately. New clients
+        // should send those as the "teilnehmende"/"leiter" parts of POST .../nds/parse instead.
         post("/clubs/{clubId}/nds/parse-roster") {
             val clubId = UUID.fromString(call.parameters["clubId"])
             if (!call.requireClubRole(clubId, "club_manager", clubRepository)) return@post
@@ -384,3 +470,31 @@ fun Route.ndsRoutes() {
         }
     }
 }
+
+/**
+ * Union of the Anwesenheitsliste roster and the dedicated person exports for match suggestions,
+ * deduped by [NdsMemberMatcher.rowKey]. The Anwesenheitsliste wins on birthdate (it is the freshest
+ * export); the person export's PERSONENNUMMER is preserved when the Anwesenheitsliste row lacks one.
+ */
+private fun mergeMemberRows(awl: ParsedAnwesenheitsliste?, persons: List<NdsMemberInput>): List<NdsMemberInput> {
+    val merged = LinkedHashMap<String, NdsMemberInput>()
+    for (p in persons) merged[NdsMemberMatcher.rowKey(p.funktion, p.lastName, p.firstName)] = p
+    awl?.members?.forEach { m ->
+        val input = NdsMemberInput(m.lastName, m.firstName, m.birthDate, null, m.funktion)
+        val key = NdsMemberMatcher.rowKey(input.funktion, input.lastName, input.firstName)
+        val existing = merged[key]
+        merged[key] = if (existing != null) {
+            input.copy(personNumber = existing.personNumber ?: input.personNumber, birthDate = input.birthDate ?: existing.birthDate)
+        } else input
+    }
+    return merged.values.toList()
+}
+
+private fun MemberSuggestion.toDto() = MemberSuggestionDto(
+    rowKey = rowKey,
+    candidates = candidates.map {
+        MemberSuggestionDto.CandidateDto(it.userId.toString(), it.displayName, it.score, it.birthdateMatch)
+    },
+    preselectedUserId = preselectedUserId?.toString(),
+    alreadyLinkedUserId = alreadyLinkedUserId?.toString()
+)

@@ -35,7 +35,7 @@ data class NdsImportCounts(val eventsCreated: Int, val attendanceImported: Int)
  * must set the real time + location before exporting (pre-flight flags this). Times use the app's
  * UTC-as-local convention (matching EventRepositoryImpl).
  */
-class NdsEventImporter {
+class NdsEventImporter(private val planner: NdsImportPlanner) {
 
     // Placeholder start time for imported activities (no time in the sheet).
     private val PLACEHOLDER_START: LocalTime = LocalTime.of(18, 0)
@@ -53,12 +53,16 @@ class NdsEventImporter {
         val toCreate = parsed.activities.filter { (it.date to it.symbol.uppercase()) !in existingKeys }
 
         // Group into weekly series candidates only on a fresh import (avoids duplicate series).
+        // Grouping itself comes from NdsImportPlanner.series so parse and import agree.
         val seriesGroups: List<List<ParsedActivity>>
         val singles: List<ParsedActivity>
         if (firstImport) {
-            val groups = toCreate.groupBy { Triple(weekdayShort(it.date), it.symbol.uppercase(), it.durationMin) }
-            seriesGroups = groups.values.filter { it.size >= MIN_OCCURRENCES_FOR_SERIES }
-            singles = groups.values.filter { it.size < MIN_OCCURRENCES_FOR_SERIES }.flatten()
+            val dateToActivity = toCreate.associateBy { it.date }
+            val ndsSeries = planner.series(toCreate)
+            seriesGroups = ndsSeries.filter { it.count >= MIN_OCCURRENCES_FOR_SERIES }
+                .map { s -> s.dates.mapNotNull { dateToActivity[it] } }
+            singles = ndsSeries.filter { it.count < MIN_OCCURRENCES_FOR_SERIES }
+                .flatMap { s -> s.dates.mapNotNull { dateToActivity[it] } }
         } else {
             seriesGroups = emptyList()
             singles = toCreate

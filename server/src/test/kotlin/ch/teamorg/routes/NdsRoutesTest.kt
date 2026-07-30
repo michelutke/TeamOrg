@@ -9,6 +9,7 @@ import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.deriveCheckInStatus
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
+import ch.teamorg.domain.models.NdsParseResponse
 import ch.teamorg.domain.models.ParsedAnwesenheitsliste
 import ch.teamorg.infra.nds.NdsPreflightReport
 import ch.teamorg.nds.NdsTestFixtures
@@ -45,16 +46,27 @@ class NdsRoutesTest : IntegrationTestBase() {
             setBody(CreateClubRequest("$name Club"))
         }.body<Club>().id
 
-    private suspend fun ApplicationTestBuilder.parseFile(token: String, clubId: String, bytes: ByteArray) =
+    // Raw response — for tests asserting the status code (auth, missing files, …).
+    private suspend fun ApplicationTestBuilder.parseFileRaw(
+        token: String,
+        clubId: String,
+        bytes: ByteArray,
+        teamId: String? = null
+    ) =
         createJsonClient().post("/clubs/$clubId/nds/parse") {
             header(HttpHeaders.Authorization, "Bearer $token")
             setBody(MultiPartFormDataContent(formData {
-                append("file", bytes, Headers.build {
+                if (teamId != null) append("teamId", teamId)
+                append("anwesenheitsliste", bytes, Headers.build {
                     append(HttpHeaders.ContentDisposition, "filename=\"liste.xlsx\"")
                     append(HttpHeaders.ContentType, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                 })
             }))
         }
+
+    // Convenience for the many existing tests that only care about the parsed Anwesenheitsliste.
+    private suspend fun ApplicationTestBuilder.parseFile(token: String, clubId: String, bytes: ByteArray): ParsedAnwesenheitsliste =
+        parseFileRaw(token, clubId, bytes).body<NdsParseResponse>().anwesenheitsliste!!
 
     private fun unzip(bytes: ByteArray): Map<String, String> {
         val out = HashMap<String, String>()
@@ -89,7 +101,7 @@ class NdsRoutesTest : IntegrationTestBase() {
         ng: String? = "NG2"
     ): NdsImportResponse {
         val angebot = "753813-${UUID.randomUUID().toString().take(6)}"
-        val parsed = parseFile(token, clubId, NdsTestFixtures.anwesenheitslisteBytes(angebot)).body<ParsedAnwesenheitsliste>()
+        val parsed = parseFile(token, clubId, NdsTestFixtures.anwesenheitslisteBytes(angebot))
         return createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
@@ -107,7 +119,7 @@ class NdsRoutesTest : IntegrationTestBase() {
     fun `parse returns metadata roster and activities`() = withTeamorgTestApplication {
         val mgr = register("nds_parse@example.com"); promoteToSuperAdmin(mgr.userId)
         val clubId = createClub(mgr.token, "ParseClub")
-        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes()).body<ParsedAnwesenheitsliste>()
+        val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes())
         assertEquals("753813", parsed.angebotId)
         assertEquals(8, parsed.activities.size)
         assertEquals(3, parsed.members.size)
@@ -176,7 +188,7 @@ class NdsRoutesTest : IntegrationTestBase() {
         val angebot = "idem-${UUID.randomUUID().toString().take(6)}"
         val bytes = NdsTestFixtures.anwesenheitslisteBytes(angebot)
 
-        val parsed = parseFile(mgr.token, clubId, bytes).body<ParsedAnwesenheitsliste>()
+        val parsed = parseFile(mgr.token, clubId, bytes)
         val first = createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
             contentType(ContentType.Application.Json)
@@ -334,7 +346,6 @@ class NdsRoutesTest : IntegrationTestBase() {
         val mgr = register("nds_large@example.com"); promoteToSuperAdmin(mgr.userId)
         val clubId = createClub(mgr.token, "LargeClub")
         val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.largeAnwesenheitslisteBytes("large-1"))
-            .body<ParsedAnwesenheitsliste>()
         val expected = parsed.members.sumOf { it.attendedDates.size }
         assertTrue(expected > 20, "fixture should have many marks; got $expected")
         val res = createJsonClient().post("/clubs/$clubId/nds/import") {
@@ -384,7 +395,6 @@ class NdsRoutesTest : IntegrationTestBase() {
             }
         }
         val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes())
-            .body<ParsedAnwesenheitsliste>()
         createJsonClient().post("/clubs/$clubId/nds/import") {
             header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
             contentType(ContentType.Application.Json)
@@ -504,7 +514,6 @@ class NdsRoutesTest : IntegrationTestBase() {
 
             // Step 3: Anwesenheitsliste + the persons in one import.
             val parsed = parseFile(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("persons-1"))
-                .body<ParsedAnwesenheitsliste>()
             val res = createJsonClient().post("/clubs/$clubId/nds/import") {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
                 contentType(ContentType.Application.Json)
@@ -560,7 +569,7 @@ class NdsRoutesTest : IntegrationTestBase() {
             val clubId = createClub(mgr.token, "ReimportConflictClub")
             val angebot = "753813-conflict"
             val bytes = NdsTestFixtures.anwesenheitslisteBytes(angebot)
-            val parsed = parseFile(mgr.token, clubId, bytes).body<ParsedAnwesenheitsliste>()
+            val parsed = parseFile(mgr.token, clubId, bytes)
             val first = createJsonClient().post("/clubs/$clubId/nds/import") {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
                 contentType(ContentType.Application.Json)
@@ -592,8 +601,9 @@ class NdsRoutesTest : IntegrationTestBase() {
             val clubId = createClub(mgr.token, "ReimportOkClub")
             val angebot = "753813-relink"
             val bytes = NdsTestFixtures.anwesenheitslisteBytes(angebot)
-            val parsed = parseFile(mgr.token, clubId, bytes).body<ParsedAnwesenheitsliste>()
-            assertEquals(null, parsed.linkedTeamId, "unlinked Angebot must not report a linked team")
+            val parseResponse = parseFileRaw(mgr.token, clubId, bytes).body<NdsParseResponse>()
+            assertEquals(null, parseResponse.linkedTeamId, "unlinked Angebot must not report a linked team")
+            val parsed = parseResponse.anwesenheitsliste!!
             val first: NdsImportResponse = createJsonClient().post("/clubs/$clubId/nds/import") {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
                 contentType(ContentType.Application.Json)
@@ -601,18 +611,128 @@ class NdsRoutesTest : IntegrationTestBase() {
             }.body()
 
             // Second parse now reports the linked team (same club) …
-            val reparsed = parseFile(mgr.token, clubId, bytes).body<ParsedAnwesenheitsliste>()
-            assertEquals(first.teamId, reparsed.linkedTeamId)
-            assertEquals("NDS Team", reparsed.linkedTeamName)
+            val reparseResponse = parseFileRaw(mgr.token, clubId, bytes).body<NdsParseResponse>()
+            assertEquals(first.teamId, reparseResponse.linkedTeamId)
+            assertEquals("NDS Team", reparseResponse.linkedTeamName)
+            val reparsed = reparseResponse.anwesenheitsliste!!
 
             // … and importing with that teamId succeeds (the re-import path).
             val second = createJsonClient().post("/clubs/$clubId/nds/import") {
                 header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
                 contentType(ContentType.Application.Json)
-                setBody(NdsImportRequest(teamId = reparsed.linkedTeamId, parsed = reparsed, importEvents = true, attendanceMode = "keep"))
+                setBody(NdsImportRequest(teamId = reparseResponse.linkedTeamId, parsed = reparsed, importEvents = true, attendanceMode = "keep"))
             }
             assertEquals(HttpStatusCode.OK, second.status)
             val res: NdsImportResponse = second.body()
             assertEquals(first.teamId, res.teamId)
         }
+
+    private suspend fun ApplicationTestBuilder.createTeam(token: String, clubId: String, name: String): String =
+        createJsonClient().post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest(name))
+        }.body<ch.teamorg.domain.models.Team>().id
+
+    private suspend fun ApplicationTestBuilder.addTeamMember(mgrToken: String, teamId: String, userId: String, role: String) {
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer $mgrToken")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId, role))
+        }
+    }
+
+    @Test
+    fun `parse with only a teilnehmende CSV returns persons and no series`() = withTeamorgTestApplication {
+        val mgr = register("nds_parse_persons_only@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "PersonsOnlyClub")
+
+        val response = createJsonClient().post("/clubs/$clubId/nds/parse") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            setBody(MultiPartFormDataContent(formData {
+                append("teilnehmende", NdsTestFixtures.teilnehmendeCsvBytes(), Headers.build {
+                    append(HttpHeaders.ContentDisposition, "filename=\"teilnehmende.csv\"")
+                })
+            }))
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.body<NdsParseResponse>()
+        assertEquals(null, body.anwesenheitsliste)
+        assertEquals(2, body.persons.size)
+        assertTrue(body.series.isEmpty())
+    }
+
+    @Test
+    fun `parse with no files returns 400`() = withTeamorgTestApplication {
+        val mgr = register("nds_parse_nofile@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "NoFileClub")
+
+        val response = createJsonClient().post("/clubs/$clubId/nds/parse") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            setBody(MultiPartFormDataContent(formData {}))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `coach of the target team can parse with teamId`() = withTeamorgTestApplication {
+        val mgr = register("nds_parse_coach_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "CoachParseClub")
+        val teamId = createTeam(mgr.token, clubId, "Coach Team")
+        val coach = register("nds_parse_coach@example.com")
+        addTeamMember(mgr.token, teamId, coach.userId, "coach")
+
+        val response = parseFileRaw(coach.token, clubId, NdsTestFixtures.anwesenheitslisteBytes(), teamId = teamId)
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun `coach of a different team is forbidden from parsing with that teamId`() = withTeamorgTestApplication {
+        val mgr = register("nds_parse_other_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "OtherTeamClub")
+        val teamA = createTeam(mgr.token, clubId, "Team A")
+        val teamB = createTeam(mgr.token, clubId, "Team B")
+        val coach = register("nds_parse_other_coach@example.com")
+        addTeamMember(mgr.token, teamA, coach.userId, "coach")
+
+        val response = parseFileRaw(coach.token, clubId, NdsTestFixtures.anwesenheitslisteBytes(), teamId = teamB)
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `cross-club teamId is forbidden even for a club manager`() = withTeamorgTestApplication {
+        val mgrA = register("nds_parse_crossclub_a@example.com"); promoteToSuperAdmin(mgrA.userId)
+        val clubA = createClub(mgrA.token, "CrossClubA")
+        val mgrB = register("nds_parse_crossclub_b@example.com"); promoteToSuperAdmin(mgrB.userId)
+        val clubB = createClub(mgrB.token, "CrossClubB")
+        val teamB = createTeam(mgrB.token, clubB, "Team In B")
+
+        // mgrA is club_manager of clubA only; teamB belongs to clubB → cross-club, must be forbidden
+        // even though the path clubId is clubA and mgrA has no role on teamB at all.
+        val response = parseFileRaw(mgrA.token, clubA, NdsTestFixtures.anwesenheitslisteBytes(), teamId = teamB)
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `parse with teamId returns a preselected suggestion for an exact-name roster member`() = withTeamorgTestApplication {
+        val mgr = register("nds_parse_suggest_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "SuggestClub")
+        val teamId = createTeam(mgr.token, clubId, "Suggest Team")
+
+        // Register a real user whose display name exactly matches the fixture coach ("Anna Trainer")
+        // and add them to the team, so the matcher should surface a unique HIGH/preselected candidate.
+        val anna = createJsonClient().post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("anna_trainer@example.com", "password123", "Anna Trainer"))
+        }.body<AuthResponse>()
+        addTeamMember(mgr.token, teamId, anna.userId, "coach")
+
+        val response = parseFileRaw(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes(), teamId = teamId)
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.body<NdsParseResponse>()
+
+        val leiterRowKey = body.memberSuggestions.map { it.rowKey }.first { it.startsWith("L:") }
+        val suggestion = body.memberSuggestions.single { it.rowKey == leiterRowKey }
+        assertEquals(anna.userId, suggestion.preselectedUserId)
+    }
 }
