@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Check } from 'lucide-svelte';
 	import PhoneMockup from './PhoneMockup.svelte';
-	import RosterPattern from './RosterPattern.svelte';
+	import TessellationPattern from './TessellationPattern.svelte';
 	import type { Dict } from '$lib/i18n';
 
 	const eventsImg = '/mockups/events.png';
@@ -11,13 +11,20 @@
 </script>
 
 <section class="relative overflow-hidden bg-surface">
-	<RosterPattern />
+	<TessellationPattern rows={6} opacityScale={0.35} />
+	<!-- smooth fade into next section -->
+	<div
+		class="pointer-events-none absolute inset-x-0 bottom-0 h-[55%]"
+		style="background: linear-gradient(to bottom, transparent, var(--color-surface))"
+	></div>
 
 	<div
 		class="relative mx-auto flex max-w-content flex-col items-center gap-10 px-6 pb-16 pt-12 md:flex-row md:px-10 md:pb-20 md:pt-16"
 	>
 		<!-- Copy -->
-		<div class="w-full md:max-w-[560px]">
+		<div
+			class="w-full rounded-[32px] bg-panel p-8 shadow-[0px_8px_32px_0px_rgba(0,0,0,0.18)] md:max-w-[560px] md:p-11"
+		>
 			<span
 				data-reveal
 				class="inline-flex items-center gap-2 rounded-full bg-primary-container px-3.5 py-1.5 text-[13px] font-bold text-on-primary-container"
@@ -50,7 +57,7 @@
 				>
 				<a
 					href="#funktionen"
-					class="rounded-full border-[1.5px] border-on-surface px-7 py-4 text-[15px] font-bold text-on-surface transition-colors hover:bg-surface-low"
+					class="rounded-full border-[1.5px] border-outline-variant px-7 py-4 text-[15px] font-bold text-on-surface transition-colors hover:bg-surface-low"
 					>{m.ctaSecondary}</a
 				>
 			</div>
