@@ -24,14 +24,9 @@ fun InboxScreen(
     onNavigate: (Screen) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
-    var isRefreshing by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { viewModel.refresh() }
-
-    LaunchedEffect(state.isLoading) {
-        if (!state.isLoading) isRefreshing = false
-    }
+    LaunchedEffect(Unit) { viewModel.loadNotifications() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -102,17 +97,14 @@ fun InboxScreen(
             )
         }
         PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = {
-                isRefreshing = true
-                viewModel.refresh()
-            },
+            isRefreshing = state.isRefreshing,
+            onRefresh = { viewModel.refresh() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
             when {
-                state.isLoading && !isRefreshing && state.notifications.isEmpty() -> {
+                state.isLoading && !state.isRefreshing && state.notifications.isEmpty() -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()

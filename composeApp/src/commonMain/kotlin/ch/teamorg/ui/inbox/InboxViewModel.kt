@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 data class InboxState(
     val notifications: List<Notification> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val hasUnread: Boolean = false,
     val unreadCount: Long = 0
@@ -43,6 +44,7 @@ class InboxViewModel(
                 .onSuccess { count ->
                     _state.update { it.copy(unreadCount = count, hasUnread = count > 0) }
                 }
+            _state.update { it.copy(isRefreshing = false) }
         }
     }
 
@@ -115,6 +117,7 @@ class InboxViewModel(
     }
 
     fun refresh() {
+        _state.update { it.copy(isRefreshing = true) }
         loadNotifications()
     }
 
