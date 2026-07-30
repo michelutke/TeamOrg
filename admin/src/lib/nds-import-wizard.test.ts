@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	assemblePayload,
 	defaultMappings,
+	mergeRows,
 	rowKey,
 	step3Gate,
 	type ConflictResolutionInput,
@@ -15,6 +16,70 @@ describe('rowKey', () => {
 	it('prefixes leaders with L: and participants with T:', () => {
 		expect(rowKey('Leiter/in', 'Müller', 'Anna')).toBe('L:mueller|anna');
 		expect(rowKey('Teilnehmer/in', 'Meier', 'Tom')).toBe('T:meier|tom');
+	});
+});
+
+describe('mergeRows', () => {
+	it('returns AWL rows when there are no person files (AWL-only import)', () => {
+		const rows = mergeRows(
+			[{ funktion: 'Teilnehmer/in', lastName: 'Meier', firstName: 'Tom', birthDate: '2010-01-01' }],
+			[]
+		);
+		expect(rows).toEqual([
+			{
+				lastName: 'Meier',
+				firstName: 'Tom',
+				birthDate: '2010-01-01',
+				personNumber: null,
+				funktion: 'Teilnehmer/in'
+			}
+		]);
+	});
+
+	it('dedupes by rowKey, AWL birthdate wins, person-file personNumber is preserved', () => {
+		const rows = mergeRows(
+			[{ funktion: 'Teilnehmer/in', lastName: 'Meier', firstName: 'Tom', birthDate: '2010-01-01' }],
+			[
+				{
+					funktion: 'Teilnehmer/in',
+					lastName: 'Meier',
+					firstName: 'Tom',
+					birthDate: null,
+					personNumber: '123456'
+				}
+			]
+		);
+		expect(rows).toEqual([
+			{
+				lastName: 'Meier',
+				firstName: 'Tom',
+				birthDate: '2010-01-01',
+				personNumber: '123456',
+				funktion: 'Teilnehmer/in'
+			}
+		]);
+	});
+
+	it('keeps person-file-only rows not present in the AWL', () => {
+		const rows = mergeRows(undefined, [
+			{ funktion: 'Leiter/in', lastName: 'Huber', firstName: 'Sara', birthDate: null, personNumber: '999' }
+		]);
+		expect(rows).toEqual([
+			{ funktion: 'Leiter/in', lastName: 'Huber', firstName: 'Sara', birthDate: null, personNumber: '999' }
+		]);
+	});
+
+	it('produces rowKeys that match defaultMappings keys', () => {
+		const rows = mergeRows(
+			[{ funktion: 'Teilnehmer/in', lastName: 'Meier', firstName: 'Tom', birthDate: '2010-01-01' }],
+			[]
+		);
+		const key = rowKey(rows[0].funktion, rows[0].lastName, rows[0].firstName);
+		const suggestions: MemberSuggestionDto[] = [
+			{ rowKey: key, candidates: [], preselectedUserId: null, alreadyLinkedUserId: null }
+		];
+		const mappings = defaultMappings(suggestions);
+		expect(mappings.has(key)).toBe(true);
 	});
 });
 

@@ -97,6 +97,45 @@ export function rowKey(funktion: string, lastName: string, firstName: string): s
 	return `${prefix}${normalizeName(lastName)}|${normalizeName(firstName)}`;
 }
 
+/**
+ * Union of the Anwesenheitsliste roster and the dedicated person exports, deduped by rowKey —
+ * mirrors the server's `mergeMemberRows` (NdsRoutes.kt) exactly, since the parse response's
+ * `persons` field only ever carries the Teilnehmende/Leiter file rows, never the AWL roster.
+ * The AWL row wins on birthdate (freshest export); the person export's PERSONENNUMMER is kept
+ * when the AWL row lacks one.
+ */
+export function mergeRows(
+	awlMembers: ParsedMember[] | undefined,
+	persons: NdsMemberInput[]
+): NdsMemberInput[] {
+	const merged = new Map<string, NdsMemberInput>();
+	for (const p of persons) {
+		merged.set(rowKey(p.funktion, p.lastName, p.firstName), p);
+	}
+	for (const m of awlMembers ?? []) {
+		const input: NdsMemberInput = {
+			lastName: m.lastName,
+			firstName: m.firstName,
+			birthDate: m.birthDate,
+			personNumber: null,
+			funktion: m.funktion
+		};
+		const key = rowKey(input.funktion, input.lastName, input.firstName);
+		const existing = merged.get(key);
+		merged.set(
+			key,
+			existing
+				? {
+						...input,
+						personNumber: existing.personNumber ?? input.personNumber,
+						birthDate: input.birthDate ?? existing.birthDate
+					}
+				: input
+		);
+	}
+	return Array.from(merged.values());
+}
+
 // ── Step 2: Mitglieder-Zuordnung ──
 
 export type MappingAction = 'map' | 'create' | 'skip';

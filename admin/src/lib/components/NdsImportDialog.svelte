@@ -7,6 +7,7 @@
 		assemblePayload,
 		conflictCounts,
 		defaultMappings,
+		mergeRows,
 		step3Gate,
 		type ConflictResolutionInput,
 		type MappingChoice,
@@ -79,6 +80,12 @@
 
 	const hasAwl = $derived(!!parsed?.anwesenheitsliste);
 	const importEvents = $derived(hasAwl);
+	// Mapping-table rows: the parse response's `persons` only carries the Teilnehmende/Leiter file
+	// rows — the AWL roster is merged in server-side for suggestions but never returned as rows —
+	// so the table union-merges them client-side (mirrors the server's own mergeMemberRows).
+	const mappingRows = $derived(
+		parsed ? mergeRows(parsed.anwesenheitsliste?.members, parsed.persons) : []
+	);
 
 	async function fetchTeamMembers(teamId: string): Promise<TeamMemberOption[]> {
 		if (fixedTeamId) return teamMembers;
@@ -313,7 +320,7 @@
 			</form>
 		{:else if step === 'mapping' && parsed}
 			<NdsMappingStep
-				persons={parsed.persons}
+				persons={mappingRows}
 				suggestions={parsed.memberSuggestions}
 				teamMembers={resolvedTeamMembers}
 				bind:mappings
