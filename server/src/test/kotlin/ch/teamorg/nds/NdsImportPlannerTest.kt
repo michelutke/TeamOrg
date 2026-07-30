@@ -8,9 +8,15 @@ import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.ParsedActivity
+import ch.teamorg.domain.models.ParsedAnwesenheitsliste
+import ch.teamorg.infra.nds.NdsEventImporter
 import ch.teamorg.infra.nds.NdsImportPlanner
 import ch.teamorg.test.IntegrationTestBase
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.time.LocalDate
@@ -118,5 +124,68 @@ class NdsImportPlannerTest : IntegrationTestBase() {
         assertEquals(1, group.dates.size)
         assertEquals(date, group.dates.single().date)
         assertEquals(activeEventId.toString(), group.dates.single().existingEventId)
+    }
+
+    // Regression: NdsEventImporter used to key its ParsedActivity lookup by date alone when
+    // reconstructing planner.series() groups back into concrete activities. Two activity columns
+    // on the SAME date with different symbols (e.g. a Training and a Wettkampf the same day) made
+    // that lookup collide and silently drop/misassign one of them.
+    @Test
+    fun `import handles two same-date activities with different symbols without cross-assigning types`() = withTeamorgTestApplication {
+        startApplication()
+        val mondays = listOf(
+            LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 12),
+            LocalDate.of(2026, 10, 19), LocalDate.of(2026, 10, 26)
+        )
+        val (teamId, createdBy) = transaction {
+            val userId = UUID.randomUUID()
+            UsersTable.insert {
+                it[id] = userId
+                it[email] = "importer-owner-${UUID.randomUUID()}@example.com"
+                it[passwordHash] = "!"
+                it[displayName] = "Importer Owner"
+            }
+            val clubId = UUID.randomUUID()
+            ch.teamorg.db.tables.ClubsTable.insert {
+                it[id] = clubId
+                it[name] = "Importer Club"
+                it[sportType] = "volleyball"
+            }
+            val teamId = UUID.randomUUID()
+            TeamsTable.insert {
+                it[id] = teamId
+                it[TeamsTable.clubId] = clubId
+                it[name] = "Importer Team"
+            }
+            teamId to userId
+        }
+
+        // Each Monday gets both a Training ('T') and a Wettkampf ('W') activity column, four times
+        // over → both symbols independently qualify as a weekly series (count == 4).
+        val activities = mondays.flatMapIndexed { i, date ->
+            listOf(
+                ParsedActivity(date = date, weekday = "MO", kw = null, symbol = "T", durationMin = 90, fokus = null, columnIndex = i * 2),
+                ParsedActivity(date = date, weekday = "MO", kw = null, symbol = "W", durationMin = 60, fokus = null, columnIndex = i * 2 + 1)
+            )
+        }
+        val parsed = ParsedAnwesenheitsliste(angebotId = "dual-symbol-1", kursName = "Dual", activities = activities, members = emptyList())
+
+        NdsEventImporter(NdsImportPlanner()).import(teamId, parsed, attendanceMode = "discard", createdBy = createdBy)
+
+        val events = transaction {
+            val ids = EventTeamsTable.select(EventTeamsTable.eventId)
+                .where { EventTeamsTable.teamId eq teamId }
+                .map { it[EventTeamsTable.eventId] }
+            EventsTable.selectAll().where { EventsTable.id inList ids }.toList()
+        }
+        assertEquals(8, events.size)
+
+        val byDate = events.groupBy { it[EventsTable.startAt].atZone(ZoneOffset.UTC).toLocalDate() }
+        for (date in mondays) {
+            val dayEvents = byDate.getValue(date)
+            assertEquals(2, dayEvents.size, "expected both activities for $date")
+            assertEquals(setOf(EventType.training, EventType.match), dayEvents.map { it[EventsTable.type] }.toSet())
+            assertEquals(setOf("T", "W"), dayEvents.map { it[EventsTable.ndsSymbol] }.toSet())
+        }
     }
 }

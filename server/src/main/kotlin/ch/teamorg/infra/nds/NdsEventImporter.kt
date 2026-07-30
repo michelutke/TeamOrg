@@ -57,12 +57,14 @@ class NdsEventImporter(private val planner: NdsImportPlanner) {
         val seriesGroups: List<List<ParsedActivity>>
         val singles: List<ParsedActivity>
         if (firstImport) {
-            val dateToActivity = toCreate.associateBy { it.date }
+            // Keyed by date+symbol, not date alone: two activity columns can share a date with
+            // different symbols (e.g. a Training and a Wettkampf on the same day).
+            val dateSymbolToActivity = toCreate.associateBy { it.date to it.symbol.uppercase() }
             val ndsSeries = planner.series(toCreate)
             seriesGroups = ndsSeries.filter { it.count >= MIN_OCCURRENCES_FOR_SERIES }
-                .map { s -> s.dates.mapNotNull { dateToActivity[it] } }
+                .map { s -> s.dates.mapNotNull { dateSymbolToActivity[it to s.symbol] } }
             singles = ndsSeries.filter { it.count < MIN_OCCURRENCES_FOR_SERIES }
-                .flatMap { s -> s.dates.mapNotNull { dateToActivity[it] } }
+                .flatMap { s -> s.dates.mapNotNull { dateSymbolToActivity[it to s.symbol] } }
         } else {
             seriesGroups = emptyList()
             singles = toCreate
