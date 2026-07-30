@@ -1,31 +1,26 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { X } from 'lucide-svelte';
+	import NdsMappingStep from './NdsMappingStep.svelte';
+	import NdsEventsStep from './NdsEventsStep.svelte';
+	import {
+		assemblePayload,
+		conflictCounts,
+		defaultMappings,
+		step3Gate,
+		type ConflictResolutionInput,
+		type MappingChoice,
+		type NdsParseResponse,
+		type SeriesTimeInput
+	} from '$lib/nds-import-wizard';
 
-	interface ParsedActivity {
-		date: string;
-		weekday: string | null;
-		symbol: string;
-		durationMin: number | null;
+	interface TeamOption {
+		id: string;
+		name: string;
 	}
-	interface ParsedMember {
-		funktion: string;
-		lastName: string;
-		firstName: string;
-		birthDate: string | null;
-	}
-	interface Parsed {
-		angebotId: string;
-		kursName: string | null;
-		hauptsportart: string | null;
-		gruppengroesse: string | null;
-		activities: ParsedActivity[];
-		members: ParsedMember[];
-		// Set by the parse endpoint when this Angebot is already linked to a club team:
-		// the import then updates that team instead of creating a new one.
-		linkedTeamId?: string | null;
-		linkedTeamName?: string | null;
+	interface TeamMemberOption {
+		userId: string;
+		displayName: string;
 	}
 	interface ImportResult {
 		teamId: string;
@@ -33,93 +28,166 @@
 		eventsCreated: number;
 		attendanceImported: number;
 	}
-	interface PersonInput {
-		lastName: string;
-		firstName: string;
-		birthDate: string | null;
-		personNumber: string | null;
-		funktion: string;
-	}
 
 	interface Props {
 		clubId: string;
 		onClose: () => void;
+		// Manage-page entry: club's existing teams for the picker + "Neues Team" option.
+		teams?: TeamOption[];
+		// Team-page entry: fixed target team, roster already loaded by the page.
+		fixedTeamId?: string;
+		fixedTeamName?: string;
+		teamMembers?: TeamMemberOption[];
 	}
-	let { clubId, onClose }: Props = $props();
 
-	type Step = 'upload' | 'preview' | 'done';
-	let step = $state<Step>('upload');
-	let teilnehmendeFile = $state<File | null>(null);
-	let leiterFile = $state<File | null>(null);
-	let listeFile = $state<File | null>(null);
+	let { clubId, onClose, teams = [], fixedTeamId, fixedTeamName, teamMembers = [] }: Props = $props();
+
+	const parseUrl = fixedTeamId ? `/app/teams/${fixedTeamId}/nds/parse` : `/manage/${clubId}/nds/parse`;
+	const importUrl = fixedTeamId
+		? `/app/teams/${fixedTeamId}/nds/import`
+		: `/manage/${clubId}/nds/import`;
+
+	type Step = 'files' | 'mapping' | 'events' | 'confirm' | 'done';
+	let step = $state<Step>('files');
 	let busy = $state(false);
 	let errorMsg = $state<string | null>(null);
 
-	let parsed = $state<Parsed | null>(null);
-	let persons = $state<PersonInput[]>([]);
-	let teamName = $state('');
-	let nutzergruppe = $state('');
-	let importEvents = $state(true);
-	let attendanceMode = $state<'keep' | 'discard'>('keep');
-	let result = $state<ImportResult | null>(null);
-	let showNgHelp = $state(false);
+	// Step 1 — Dateien
+	let teilnehmendeFile = $state<File | null>(null);
+	let leiterFile = $state<File | null>(null);
+	let listeFile = $state<File | null>(null);
+	let teamMode = $state<'existing' | 'new'>(teams.length > 0 ? 'existing' : 'new');
+	let selectedTeamId = $state('');
+	let newTeamName = $state('');
 
-	const leaders = $derived(parsed?.members.filter((m) => m.funktion === 'Leiter/in') ?? []);
-	const players = $derived(parsed?.members.filter((m) => m.funktion !== 'Leiter/in') ?? []);
-	const withPn = $derived(persons.filter((p) => p.personNumber).length);
-
-	const payload = $derived(
-		parsed
-			? JSON.stringify({
-					// Re-import: the Angebot is already linked to a club team → update that team.
-					// First import: create a new team from the course name.
-					...(parsed.linkedTeamId
-						? { teamId: parsed.linkedTeamId }
-						: { createTeamName: teamName.trim() || parsed.kursName || `NDS ${parsed.angebotId}` }),
-					nutzergruppe: nutzergruppe || null,
-					parsed,
-					persons,
-					importEvents,
-					attendanceMode
-				})
-			: ''
+	const hasFile = $derived(!!teilnehmendeFile || !!leiterFile || !!listeFile);
+	const teamChosen = $derived(
+		!!fixedTeamId ||
+			(teamMode === 'existing' ? selectedTeamId !== '' : newTeamName.trim() !== '')
 	);
 
-	async function parseRoster(f: File): Promise<PersonInput[]> {
-		const form = new FormData();
-		form.append('file', f);
-		const res = await fetch(`/manage/${clubId}/nds/parse-roster`, { method: 'POST', body: form });
-		if (!res.ok) throw new Error('roster');
-		return (await res.json()) as PersonInput[];
+	// Resolved once parse succeeds.
+	let parsed = $state<NdsParseResponse | null>(null);
+	let resolvedTeamId = $state<string | null>(null);
+	let resolvedTeamMembers = $state<TeamMemberOption[]>([]);
+	let mappings = $state<Map<string, MappingChoice>>(new Map());
+	let seriesTimes = $state<Map<string, SeriesTimeInput>>(new Map());
+	let resolutions = $state<Map<string, ConflictResolutionInput>>(new Map());
+	let nutzergruppe = $state('');
+	let attendanceMode = $state<'keep' | 'discard'>('keep');
+	let result = $state<ImportResult | null>(null);
+
+	const hasAwl = $derived(!!parsed?.anwesenheitsliste);
+	const importEvents = $derived(hasAwl);
+
+	async function fetchTeamMembers(teamId: string): Promise<TeamMemberOption[]> {
+		if (fixedTeamId) return teamMembers;
+		try {
+			const res = await fetch(`/manage/${clubId}/nds/team-members?teamId=${teamId}`);
+			if (!res.ok) return [];
+			return (await res.json()) as TeamMemberOption[];
+		} catch {
+			return [];
+		}
 	}
 
-	async function upload(e: SubmitEvent) {
+	async function submitFiles(e: SubmitEvent) {
 		e.preventDefault();
-		if (!listeFile) return;
+		if (!hasFile || !teamChosen) return;
 		busy = true;
 		errorMsg = null;
 		try {
-			const collected: PersonInput[] = [];
-			if (teilnehmendeFile) collected.push(...(await parseRoster(teilnehmendeFile)));
-			if (leiterFile) collected.push(...(await parseRoster(leiterFile)));
-
 			const form = new FormData();
-			form.append('file', listeFile);
-			const res = await fetch(`/manage/${clubId}/nds/parse`, { method: 'POST', body: form });
+			if (teilnehmendeFile) form.append('teilnehmende', teilnehmendeFile);
+			if (leiterFile) form.append('leiter', leiterFile);
+			if (listeFile) form.append('anwesenheitsliste', listeFile);
+			const teamIdForParse = fixedTeamId ?? (teamMode === 'existing' ? selectedTeamId : '');
+			if (teamIdForParse) form.append('teamId', teamIdForParse);
+
+			const res = await fetch(parseUrl, { method: 'POST', body: form });
 			if (res.status === 422) {
-				errorMsg = 'Die Datei ist keine gültige NDS-Anwesenheitsliste.';
+				errorMsg = 'Eine der Dateien konnte nicht gelesen werden.';
 				return;
 			}
 			if (!res.ok) {
-				errorMsg = 'Die Datei konnte nicht gelesen werden.';
+				errorMsg = 'Die Dateien konnten nicht gelesen werden.';
 				return;
 			}
-			parsed = (await res.json()) as Parsed;
-			persons = collected;
-			teamName = parsed.kursName ?? '';
-			step = 'preview';
+			const response = (await res.json()) as NdsParseResponse;
+			parsed = response;
+			resolvedTeamId = fixedTeamId ?? (teamMode === 'existing' ? selectedTeamId : response.linkedTeamId);
+			resolvedTeamMembers = resolvedTeamId ? await fetchTeamMembers(resolvedTeamId) : [];
+			mappings = defaultMappings(response.memberSuggestions);
+			resolutions = new Map(
+				response.conflicts.map((c) => [c.seriesKey, { keep: 'teamorg', overrides: new Map() }])
+			);
+			seriesTimes = new Map();
+			nutzergruppe = '';
+			step = 'mapping';
 		} catch {
 			errorMsg = 'Eine der Dateien konnte nicht gelesen werden.';
+		} finally {
+			busy = false;
+		}
+	}
+
+	function goToEventsOrConfirm() {
+		step = hasAwl ? 'events' : 'confirm';
+	}
+
+	const eventsGateOk = $derived(
+		parsed ? step3Gate(parsed.series, parsed.conflicts, seriesTimes, resolutions) : false
+	);
+
+	const counts = $derived.by(() => {
+		let mapped = 0;
+		let created = 0;
+		let skipped = 0;
+		for (const c of mappings.values()) {
+			if (c.action === 'map') mapped++;
+			else if (c.action === 'create') created++;
+			else skipped++;
+		}
+		const events = parsed ? conflictCounts(parsed.series, parsed.conflicts, resolutions) : null;
+		return { mapped, created, skipped, events };
+	});
+
+	async function submitImport() {
+		if (!parsed) return;
+		busy = true;
+		errorMsg = null;
+		try {
+			const payload = assemblePayload({
+				teamId: resolvedTeamId,
+				createTeamName: !resolvedTeamId ? newTeamName : undefined,
+				nutzergruppe,
+				parsed: parsed.anwesenheitsliste,
+				persons: parsed.persons,
+				importEvents,
+				attendanceMode,
+				mappings,
+				seriesTimes,
+				resolutions
+			});
+			const res = await fetch(importUrl, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			if (res.status === 409) {
+				errorMsg =
+					'Dieses Angebot ist bereits mit einem Team verknüpft. Datei neu einlesen — der Import aktualisiert dann automatisch das verknüpfte Team.';
+				return;
+			}
+			if (!res.ok) {
+				errorMsg = 'Import fehlgeschlagen.';
+				return;
+			}
+			result = (await res.json()) as ImportResult;
+			step = 'done';
+			await invalidateAll();
+		} catch {
+			errorMsg = 'Import fehlgeschlagen.';
 		} finally {
 			busy = false;
 		}
@@ -134,16 +202,16 @@
 	}}
 >
 	<div
-		class="flex max-h-[85vh] w-full max-w-[560px] flex-col rounded-[28px] bg-surface-container-low p-6"
+		class="flex max-h-[85vh] w-full max-w-[720px] flex-col rounded-[28px] bg-surface-container-low p-6"
 		role="dialog"
 		aria-modal="true"
 		aria-label="NDS-Import"
 	>
 		<div class="mb-4 flex items-start justify-between gap-4">
 			<div class="flex flex-col gap-1">
-				<h2 class="text-[20px] font-bold text-on-surface">NDS-Anwesenheitsliste importieren</h2>
+				<h2 class="text-[20px] font-bold text-on-surface">NDS-Import</h2>
 				<p class="text-[13px] text-on-surface-variant">
-					Lade die aus der NDS exportierte Anwesenheitsliste (.xlsx) hoch.
+					{fixedTeamName ? `Team: ${fixedTeamName}` : 'Dateien → Zuordnung → Events & Konflikte → Bestätigen'}
 				</p>
 			</div>
 			<button
@@ -156,14 +224,44 @@
 			</button>
 		</div>
 
-		{#if step === 'upload'}
-			<form onsubmit={upload} class="flex flex-col gap-4">
-				<p class="text-[13px] text-on-surface-variant">
-					Reihenfolge: zuerst Teilnehmende, dann Leiter/innen (beide bringen die
-					Personennummern), zuletzt die Anwesenheitsliste (Termine & Anwesenheiten).
-				</p>
+		{#if step === 'files'}
+			<form onsubmit={submitFiles} class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+				{#if !fixedTeamId}
+					<div class="flex flex-col gap-2">
+						<p class="text-[13px] font-medium text-on-surface">Team</p>
+						{#if teams.length > 0}
+							<label class="flex items-center gap-2 text-[13px] text-on-surface">
+								<input type="radio" bind:group={teamMode} value="existing" class="accent-primary" />
+								Bestehendes Team
+							</label>
+							{#if teamMode === 'existing'}
+								<select
+									bind:value={selectedTeamId}
+									class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
+								>
+									<option value="">— wählen —</option>
+									{#each teams as t (t.id)}
+										<option value={t.id}>{t.name}</option>
+									{/each}
+								</select>
+							{/if}
+						{/if}
+						<label class="flex items-center gap-2 text-[13px] text-on-surface">
+							<input type="radio" bind:group={teamMode} value="new" class="accent-primary" />
+							Neues Team
+						</label>
+						{#if teamMode === 'new'}
+							<input
+								bind:value={newTeamName}
+								placeholder="Team-Name"
+								class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
+							/>
+						{/if}
+					</div>
+				{/if}
+
 				<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
-					1. Teilnehmende (.csv) <span class="text-on-surface-variant/70">– optional</span>
+					Teilnehmende (.csv) <span class="text-on-surface-variant/70">– optional</span>
 					<input
 						type="file"
 						accept=".csv"
@@ -172,7 +270,7 @@
 					/>
 				</label>
 				<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
-					2. Leiterinnen/Leiter (.xlsx) <span class="text-on-surface-variant/70">– optional</span>
+					Leiter/innen (.xlsx) <span class="text-on-surface-variant/70">– optional</span>
 					<input
 						type="file"
 						accept=".xlsx"
@@ -181,15 +279,18 @@
 					/>
 				</label>
 				<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
-					3. Anwesenheitsliste (.xlsx) <span class="text-error">– erforderlich</span>
+					Anwesenheitsliste (.xlsx)
+					<span class="rounded-full bg-primary-container px-2 py-0.5 text-[11px] text-on-primary-container">
+						empfohlen
+					</span>
 					<input
 						type="file"
 						accept=".xlsx"
-						required
 						onchange={(e) => (listeFile = (e.currentTarget as HTMLInputElement).files?.[0] ?? null)}
 						class="rounded-2xl bg-surface-container-high px-4 py-3 text-[14px] text-on-surface"
 					/>
 				</label>
+
 				{#if errorMsg}
 					<p class="text-[12px] font-medium text-error">{errorMsg}</p>
 				{/if}
@@ -203,71 +304,93 @@
 					</button>
 					<button
 						type="submit"
-						disabled={busy || !listeFile}
+						disabled={busy || !hasFile || !teamChosen}
 						class="cursor-pointer rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						{busy ? 'Wird gelesen…' : 'Dateien lesen'}
+						{busy ? 'Wird gelesen…' : 'Weiter'}
 					</button>
 				</div>
 			</form>
-		{:else if step === 'preview' && parsed}
+		{:else if step === 'mapping' && parsed}
+			<NdsMappingStep
+				persons={parsed.persons}
+				suggestions={parsed.memberSuggestions}
+				teamMembers={resolvedTeamMembers}
+				bind:mappings
+			/>
+			<div class="mt-4 flex justify-end gap-3">
+				<button
+					type="button"
+					onclick={() => (step = 'files')}
+					class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-6 py-3 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
+				>
+					Zurück
+				</button>
+				<button
+					type="button"
+					onclick={goToEventsOrConfirm}
+					class="cursor-pointer rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90"
+				>
+					Weiter
+				</button>
+			</div>
+		{:else if step === 'events' && parsed}
+			<NdsEventsStep
+				series={parsed.series}
+				conflicts={parsed.conflicts}
+				bind:seriesTimes
+				bind:resolutions
+			/>
+			<div class="mt-4 flex justify-end gap-3">
+				<button
+					type="button"
+					onclick={() => (step = 'mapping')}
+					class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-6 py-3 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
+				>
+					Zurück
+				</button>
+				<button
+					type="button"
+					disabled={!eventsGateOk}
+					onclick={() => (step = 'confirm')}
+					class="cursor-pointer rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					Weiter
+				</button>
+			</div>
+		{:else if step === 'confirm' && parsed}
 			<div class="min-h-0 flex-1 overflow-y-auto pr-1">
 				<div class="rounded-2xl bg-surface-container-high px-4 py-3 text-[13px] text-on-surface">
-					<p><span class="text-on-surface-variant">Angebot:</span> {parsed.angebotId}</p>
-					<p><span class="text-on-surface-variant">Kurs:</span> {parsed.kursName ?? '—'}</p>
-					<p><span class="text-on-surface-variant">Hauptsportart:</span> {parsed.hauptsportart ?? '—'}</p>
-					<p class="mt-1 font-medium">
-						{parsed.activities.length} Aktivitäten · {leaders.length} Leiter · {players.length} Teilnehmer
-					</p>
-					{#if persons.length > 0}
-						<p class="mt-1 text-on-surface-variant">{withPn} Personennummern aus Personen-Dateien</p>
-					{:else}
-						<p class="mt-1 text-error">
-							Keine Personen-Dateien – Personennummern müssen später manuell erfasst werden.
-						</p>
-					{/if}
+					<p class="font-medium">Zusammenfassung</p>
+					<ul class="mt-2 list-disc pl-5 text-on-surface-variant">
+						<li>{counts.mapped} zugeordnet</li>
+						<li>{counts.created} neu</li>
+						<li>{counts.skipped} übersprungen</li>
+						{#if counts.events}
+							<li>{counts.events?.eventsNew} Events neu</li>
+							<li>
+								{counts.events?.keepTeamorg} Konflikte TeamOrg / {counts.events?.keepNds} Konflikte NDS
+							</li>
+							<li>Anwesenheiten: {attendanceMode === 'keep' ? 'ja' : 'nein'}</li>
+						{/if}
+					</ul>
 				</div>
 
 				<div class="mt-4 flex flex-col gap-3">
-					{#if parsed.linkedTeamId}
-						<div class="rounded-xl bg-primary-container px-4 py-3 text-[13px] text-on-primary-container">
-							Dieses Angebot ist bereits mit dem Team
-							<strong>{parsed.linkedTeamName}</strong> verknüpft — der Import aktualisiert
-							dieses Team (bestehende Rückmeldungen bleiben erhalten).
-						</div>
-					{:else}
-						<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
-							Team-Name
+					{#if hasAwl}
+						<label class="flex items-center gap-2 text-[14px] text-on-surface">
 							<input
-								bind:value={teamName}
-								placeholder={parsed.kursName ?? ''}
-								class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
+								type="checkbox"
+								checked={attendanceMode === 'keep'}
+								onchange={(e) =>
+									(attendanceMode = (e.currentTarget as HTMLInputElement).checked ? 'keep' : 'discard')}
+								class="h-4 w-4 accent-primary"
 							/>
+							Im NDS-Sheet mit «J» markierte Anwesenheiten als dokumentierte Präsenz importieren
 						</label>
 					{/if}
 					<label class="flex flex-col gap-1 text-[13px] text-on-surface-variant">
 						Nutzergruppe (für Dauer-Prüfung beim Export)
-						<button type="button" onclick={() => (showNgHelp = !showNgHelp)} class="text-[12px] text-primary underline">Was ist das?</button>
-						{#if showNgHelp}
-							<div class="rounded-xl bg-surface-container-high px-3 py-2 text-[12px] text-on-surface-variant">
-								<p>
-									Die J+S-Nutzergruppe (NG) beschreibt, wer dein Angebot durchführt, und bestimmt
-									die erlaubten Trainingsdauern. Beim NDS-Export wird die Dauer dagegen geprüft und
-									bei Bedarf auf den nächsten erlaubten Wert gerundet. Wähle die Nutzergruppe, unter
-									der das Angebot in der NDS registriert ist.
-								</p>
-								<ul class="mt-2 flex list-disc flex-col gap-1 pl-4">
-									<li><strong>NG 1 — Sportverein:</strong> Kurse/Trainings von Sportvereinen (oder ähnlichen Organisationen) mit Kindern und Jugendlichen. Der Normalfall für Vereinsteams; Trainings 60/75/90 Min.</li>
-									<li><strong>NG 2 — Wetterabhängige Sportarten:</strong> wie NG 1, aber Sportarten, deren Durchführung von Wind, Wasser oder Schnee abhängt (z. B. Segeln, Ski). Flexiblere Dauern, Wettkämpfe erfassbar.</li>
-									<li><strong>NG 4 — Kanton / Gemeinde / Verband:</strong> Kurse und Lager von Kantonen, Gemeinden oder nationalen Sportverbänden (z. B. kantonale Kadertrainings).</li>
-									<li><strong>NG 5 — Freiwilliger Schulsport:</strong> Angebote von Schulen ausserhalb des Pflichtunterrichts.</li>
-								</ul>
-								<p class="mt-2">
-									(NG 3 — Lager von Jugendverbänden wie Pfadi/Cevi — wird hier nicht unterstützt,
-									da sie nicht über Anwesenheitslisten pro Team abgerechnet werden.)
-								</p>
-							</div>
-						{/if}
 						<select
 							bind:value={nutzergruppe}
 							class="rounded-xl bg-surface-container-high px-3 py-2 text-[14px] text-on-surface"
@@ -279,70 +402,29 @@
 							<option value="NG5">NG 5 — freiwilliger Schulsport</option>
 						</select>
 					</label>
-					<label class="flex items-center gap-2 text-[14px] text-on-surface">
-						<input type="checkbox" bind:checked={importEvents} class="h-4 w-4 accent-primary" />
-						Trainings & Spiele als Termine importieren
-					</label>
-					{#if importEvents}
-						<label class="flex items-center gap-2 text-[14px] text-on-surface">
-							<input
-								type="checkbox"
-								checked={attendanceMode === 'keep'}
-								onchange={(e) =>
-									(attendanceMode = (e.currentTarget as HTMLInputElement).checked ? 'keep' : 'discard')}
-								class="h-4 w-4 accent-primary"
-							/>
-							Im NDS-Sheet mit «J» markierte Anwesenheiten als dokumentierte Präsenz importieren
-						</label>
-						<p class="text-[12px] text-on-surface-variant">Erscheint danach in der Anwesenheitskontrolle und als «anwesend»-Hinweis am Termin.</p>
-					{/if}
 				</div>
 			</div>
 
 			{#if errorMsg}
 				<p class="mt-3 text-[12px] font-medium text-error">{errorMsg}</p>
 			{/if}
-
-			<form
-				method="POST"
-				action="?/importNds"
-				use:enhance={() => {
-					busy = true;
-					errorMsg = null;
-					return async ({ result: r, update }) => {
-						busy = false;
-						if (r.type === 'success') {
-							result = (r.data?.ndsImported as ImportResult) ?? null;
-							step = 'done';
-							await invalidateAll();
-						} else if (r.type === 'failure') {
-							errorMsg =
-								r.data?.ndsError === 'angebotLinked'
-									? 'Dieses Angebot ist bereits mit einem Team verknüpft. Datei neu einlesen — der Import aktualisiert dann automatisch das verknüpfte Team.'
-									: 'Import fehlgeschlagen.';
-						} else {
-							await update();
-						}
-					};
-				}}
-				class="mt-5 flex justify-end gap-3"
-			>
-				<input type="hidden" name="payload" value={payload} />
+			<div class="mt-4 flex justify-end gap-3">
 				<button
 					type="button"
-					onclick={() => (step = 'upload')}
+					onclick={() => (step = hasAwl ? 'events' : 'mapping')}
 					class="cursor-pointer rounded-full border border-outline-variant bg-transparent px-6 py-3 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
 				>
 					Zurück
 				</button>
 				<button
-					type="submit"
+					type="button"
 					disabled={busy}
+					onclick={submitImport}
 					class="cursor-pointer rounded-full border-none bg-primary px-6 py-3 text-[14px] font-bold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{busy ? 'Importiere…' : 'Importieren'}
 				</button>
-			</form>
+			</div>
 		{:else if step === 'done' && result}
 			<div class="rounded-2xl bg-success-container px-4 py-4 text-[14px] text-on-surface">
 				<p class="font-medium">Import erfolgreich</p>
