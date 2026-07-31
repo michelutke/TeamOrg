@@ -10,6 +10,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
 import ch.teamorg.ui.billing.BillingScreen
 import ch.teamorg.ui.billing.BillingViewModel
+import ch.teamorg.ui.nds.NdsImportScreen
+import ch.teamorg.ui.nds.NdsImportViewModel
 import ch.teamorg.ui.club.ClubMembersScreen
 import ch.teamorg.ui.club.ClubMembersViewModel
 import ch.teamorg.ui.club.ClubSetupScreen
@@ -145,7 +147,8 @@ fun AppNavigation(
                     viewModel = viewModel,
                     onBack = { backStack.removeAt(backStack.lastIndex) },
                     onShareInvite = { },
-                    onMemberClick = { userId -> backStack.add(Screen.PlayerProfile(screen.teamId, userId)) }
+                    onMemberClick = { userId -> backStack.add(Screen.PlayerProfile(screen.teamId, userId)) },
+                    onNdsImportClick = { clubId -> backStack.add(Screen.NdsImport(screen.teamId, clubId)) }
                 )
             }
             is Screen.Invite -> {
@@ -314,6 +317,16 @@ fun AppNavigation(
                     clubId = screen.clubId,
                     viewModel = viewModel,
                     onBack = { backStack.removeAt(backStack.lastIndex) }
+                )
+            }
+            is Screen.NdsImport -> {
+                val viewModel: NdsImportViewModel = viewModel { KoinPlatform.getKoin().get() }
+                NdsImportScreen(
+                    teamId = screen.teamId,
+                    clubId = screen.clubId,
+                    viewModel = viewModel,
+                    onBack = { backStack.removeAt(backStack.lastIndex) },
+                    onDone = { backStack.removeAt(backStack.lastIndex) }
                 )
             }
             is Screen.Billing -> {

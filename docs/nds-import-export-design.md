@@ -2,6 +2,16 @@
 
 Status: **implemented** (V14, 2026-06-26) · Scope: backend (Ktor) + admin web
 
+> **Import v2 (2026-07-30, branch feat/nds-import-v2):** import now supports existing teams
+> with an explicit member-mapping step (map to existing user / create provisional / skip,
+> server-side match suggestions), event-conflict resolution against existing TeamOrg events
+> (same date+type; keep TeamOrg = J-attendance onto the existing event, keep NDS = cancel +
+> replace), wizard-set series times (the 18:00 placeholder is gone — times are required at
+> import), any subset of the 3 files, coach authorization, and a full mobile (Compose) wizard.
+> Design: `docs/superpowers/specs/2026-07-30-nds-import-existing-teams-design.md`. The
+> parse/import request/response shapes below are superseded by `NdsParseResponse` and the
+> extended `NdsImportRequest` (see `routes/NdsRoutes.kt`).
+
 > **Partially superseded (V15, 2026-07-01):** all `attendance_records` references below are
 > historical — that table was dropped by [unified attendance](unified-attendance.md).
 > NDS **export** now reads confirmed `attendance_responses`; **import** (`attendanceMode=keep`)

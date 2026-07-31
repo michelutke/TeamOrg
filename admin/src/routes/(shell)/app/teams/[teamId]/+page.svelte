@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { ArrowLeft, CalendarClock, Download, Mail } from 'lucide-svelte';
+	import { ArrowLeft, CalendarClock, Download, Mail, Upload } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import TeamBadge from '$lib/components/TeamBadge.svelte';
 	import MemberRow from '$lib/components/MemberRow.svelte';
+	import NdsImportDialog from '$lib/components/NdsImportDialog.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	interface ImportableSeries {
@@ -31,6 +32,7 @@
 
 	let inviteFor = $state<string | null>(null);
 	let linkFor = $state<string | null>(null);
+	let showNdsImport = $state(false);
 
 	const roleLabel = (role: string) =>
 		data.m.roles[role as keyof typeof data.m.roles] ?? role;
@@ -155,19 +157,32 @@
 	</section>
 {/if}
 
-{#if data.canManage && data.ndsMembers.length > 0}
+{#if data.canManage}
 	<section class="mb-8 rounded-[28px] bg-surface-container-low p-5">
 		<div class="mb-4 flex items-center justify-between gap-3">
 			<h2 class="text-[16px] font-bold text-on-surface">NDS / J+S</h2>
-			{#if data.ndsPreflight?.ok}
-				<a
-					href="/app/teams/{data.team.id}/nds/export"
-					class="inline-flex items-center gap-2 rounded-full border-none bg-primary px-5 py-2.5 text-[14px] font-bold text-on-primary no-underline hover:opacity-90"
+			<div class="flex items-center gap-2">
+				<button
+					type="button"
+					onclick={() => (showNdsImport = true)}
+					class="inline-flex items-center gap-2 rounded-full border border-outline-variant bg-transparent px-5 py-2.5 text-[14px] font-medium text-on-surface-variant hover:bg-surface-container-high"
 				>
-					<Download size={16} /> NDS-Export (CSV)
-				</a>
-			{/if}
+					<Upload size={16} /> NDS-Import
+				</button>
+				{#if data.ndsPreflight?.ok}
+					<a
+						href="/app/teams/{data.team.id}/nds/export"
+						class="inline-flex items-center gap-2 rounded-full border-none bg-primary px-5 py-2.5 text-[14px] font-bold text-on-primary no-underline hover:opacity-90"
+					>
+						<Download size={16} /> NDS-Export (CSV)
+					</a>
+				{/if}
+			</div>
 		</div>
+
+		{#if data.ndsMembers.length === 0}
+			<p class="text-[13px] text-on-surface-variant">Noch keine NDS-Daten für dieses Team importiert.</p>
+		{/if}
 
 		{#if data.ndsPreflight && !data.ndsPreflight.ok}
 			<div class="mb-4 rounded-2xl bg-error-container px-4 py-3 text-[13px] text-on-surface">
@@ -323,4 +338,14 @@
 			</div>
 		</section>
 	{/if}
+{/if}
+
+{#if showNdsImport}
+	<NdsImportDialog
+		clubId={data.team.clubId}
+		fixedTeamId={data.team.id}
+		fixedTeamName={data.team.name}
+		teamMembers={data.members}
+		onClose={() => (showNdsImport = false)}
+	/>
 {/if}

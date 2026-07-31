@@ -5,6 +5,7 @@ import ch.teamorg.data.repository.AuthRepositoryImpl
 import ch.teamorg.data.repository.BillingRepositoryImpl
 import ch.teamorg.data.repository.ClubRepositoryImpl
 import ch.teamorg.data.repository.InviteRepositoryImpl
+import ch.teamorg.data.repository.NdsImportRepositoryImpl
 import ch.teamorg.data.repository.TeamRepositoryImpl
 import ch.teamorg.preferences.UserPreferences
 import com.russhwolf.settings.PreferencesSettings
@@ -13,6 +14,7 @@ import ch.teamorg.repository.AuthRepository
 import ch.teamorg.repository.BillingRepository
 import ch.teamorg.repository.ClubRepository
 import ch.teamorg.repository.InviteRepository
+import ch.teamorg.repository.NdsImportRepository
 import ch.teamorg.repository.TeamRepository
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
@@ -26,4 +28,5 @@ actual val sharedModule = module {
     singleOf(::TeamRepositoryImpl) bind TeamRepository::class
     singleOf(::InviteRepositoryImpl) bind InviteRepository::class
     singleOf(::BillingRepositoryImpl) bind BillingRepository::class
+    singleOf(::NdsImportRepositoryImpl) bind NdsImportRepository::class
 }

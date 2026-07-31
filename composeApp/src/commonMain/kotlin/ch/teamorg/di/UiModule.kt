@@ -10,6 +10,7 @@ import ch.teamorg.ui.events.EventListViewModel
 import ch.teamorg.ui.invite.InviteViewModel
 import ch.teamorg.ui.inbox.InboxViewModel
 import ch.teamorg.ui.inbox.NotificationSettingsViewModel
+import ch.teamorg.ui.nds.NdsImportViewModel
 import ch.teamorg.ui.team.PlayerProfileViewModel
 import ch.teamorg.ui.team.TeamRosterViewModel
 import ch.teamorg.ui.team.TeamsListViewModel
@@ -39,4 +40,5 @@ val uiModule = module {
     factory { CreateEditEventViewModel(get(), get(), get()) }
     factory { InboxViewModel(get()) }
     factory { NotificationSettingsViewModel(get(), get(), get()) }
+    factory { NdsImportViewModel(get(), get()) }
 }

@@ -18,6 +18,8 @@ data class TeamRosterState(
     val inviteUrl: String? = null,
     val inviteSentTo: String? = null,
     val isClubManager: Boolean = false,
+    val isCoachOrManager: Boolean = false,
+    val clubId: String = "",
     val showEditTeamSheet: Boolean = false,
     val teamName: String = "",
     val teamDescription: String? = null,
@@ -57,15 +59,23 @@ class TeamRosterViewModel(
                     )
                 }
             )
-            checkClubManagerRole()
+            checkClubManagerRole(teamId)
         }
     }
 
-    private fun checkClubManagerRole() {
+    private fun checkClubManagerRole(teamId: String) {
         viewModelScope.launch {
             teamRepository.getMyRoles().onSuccess { roles ->
                 val isClubManager = roles.clubRoles.any { it.role == "club_manager" }
-                _state.value = _state.value.copy(isClubManager = isClubManager)
+                val isCoach = roles.teamRoles.any { it.teamId == teamId && it.role == "coach" }
+                val clubId = roles.teamRoles.firstOrNull { it.teamId == teamId }?.clubId
+                    ?: roles.clubRoles.firstOrNull()?.clubId
+                    ?: ""
+                _state.value = _state.value.copy(
+                    isClubManager = isClubManager,
+                    isCoachOrManager = isClubManager || isCoach,
+                    clubId = clubId
+                )
             }
         }
     }
