@@ -17,7 +17,7 @@ fun TeamorgTheme(
     CompositionLocalProvider(LocalTeamorgExtendedColors provides extended) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = TeamorgTypography,
+            typography = teamorgTypography(),
             shapes = TeamorgShapes,
             content = content
         )
