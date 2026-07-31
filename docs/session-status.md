@@ -1,35 +1,96 @@
-# Session Status — 2026-07-30 (for context resume)
+# Session Status — 2026-07-31 (post bulk-merge release)
 
-Snapshot of in-flight work and recent decisions. Older feature docs: `docs/self-serve-onboarding.md`, `docs/landing-status.md`.
+Snapshot of the latest development window. Older feature docs: `docs/self-serve-onboarding.md`,
+`docs/landing-status.md`, `docs/nds-import-export-design.md`.
 
-## Merge policy (ACTIVE, since 2026-07-30)
+## Merge policy (ACTIVE)
 
-PRs are **queued open, not merged**. On the user's "merge window" call: merge all queued PRs into `main`, then promote `main → production` ONCE (one Coolify web redeploy + one "Release to Stores" run instead of many). Also stored in auto-memory (`teamorg-bulk-merge-policy`).
+PRs are **queued open, not merged**. On the user's "merge window" call: merge all queued PRs
+into `main`, then promote `main → production` ONCE (one Coolify web redeploy + one "Release to
+Stores" run). Also in auto-memory (`teamorg-bulk-merge-policy`).
 
-## PR queue (open, checks running, DO NOT merge until window)
+## Released 2026-07-31 (merge window: PRs #78–#81 → main → production)
 
-| PR | Branch | Content |
-|---|---|---|
-| #78 | `fix/mobile-nav-issues` | Bottom nav hidden during onboarding (`showBottomBar` now excludes `CreateTeamOrClub`, `ClubSetup`, `CardSetup` in `TeamorgApp.kt`) + silent tab refresh: `loadEvents/loadTeams/loadNotifications/loadProfile` set `isLoading` only when no cached data (`EventList/TeamsList/Inbox/PlayerProfile` VMs) so the full-screen `TeamorgLoader` ("T indicator") no longer flashes on tab switches. |
-| #79 | `fix/mobile-nav-avatar` | (a) FBN bounce fix: `TeamorgBottomBar` label enter/exit both `tween(250, FastOutSlowInEasing)` instead of overshooting `spring(0.6)` + unmatched exit → single clean width animation. (b) Avatar upload 400: pickers report ext `jpg` → client sent `image/jpg`, server whitelist only had `image/jpeg` → part discarded. Client (`TeamRepositoryImpl.uploadAvatar`) maps jpg/jpeg→`image/jpeg`; server (`AuthRoutes` `/auth/me/avatar`) also accepts `image/jpg`. (c) New `rememberCameraCaptureLauncher` expect/actual (`ImagePicker.kt/.android/.ios`): Android `TakePicturePreview` (no CAMERA permission declared → none needed), iOS camera source (NSCameraUsageDescription already in Info.plist from ITMS-90683 fix), returns null w/o camera; `PlayerProfileScreen` avatar tap shows Take photo / Choose from library dialog, falls back to gallery when no camera. |
+Pipelines: main merged clean (one trivial `InboxViewModel` conflict #78↔#80, resolved),
+production promoted once, **Release to Stores green** (Android → Play internal, iOS →
+TestFlight), web live (teamorg.ch 200, app.teamorg.ch serving self-hosted fonts).
 
-Branches #78 and #79 are independent (both off `main`, no overlapping files). Verified each: Android+iOS compile, `:composeApp:testDebugUnitTest`, `:server:test` (needs OrbStack/Docker running for Testcontainers).
+### PR #78 — mobile nav/onboarding
+- Bottom nav hidden during onboarding (`showBottomBar` excludes `CreateTeamOrClub`,
+  `ClubSetup`, `CardSetup`).
+- Silent tab refresh: `EventList/TeamsList/Inbox/PlayerProfile` VMs set `isLoading` only when
+  no cached data — no more full-screen "T" loader between main tabs.
 
-## Shipped earlier today (already live)
+### PR #79 — bottom-nav animation, avatar, camera
+- `TeamorgBottomBar` label enter/exit both `tween(250, FastOutSlowInEasing)` (bounce fix).
+- Avatar upload 400: `image/jpg` vs `image/jpeg` MIME fixed client (`TeamRepositoryImpl`) and
+  server (`AuthRoutes` whitelist).
+- `rememberCameraCaptureLauncher` expect/actual (Android `TakePicturePreview`, iOS camera
+  source); profile avatar tap offers Take photo / Choose from library.
 
-- **Landing final redesign** (PR #76 → #77 → production, live on teamorg.ch): CSS-var theme tokens light/dark (OS-pref default + Nav toggle), `TessellationPattern.svelte` (exact brand P2 lattice), hero panel card + fade-out, `RosterPattern` outline mode, ONE shared Tribüne pattern across Contact+Footer (Footer moved from `+layout` to `+page` with route guard for legal pages), open trimmed pricing (Dict 9 keys / 4 includes, de+en). Details: memory `teamorg-landing-redesign`, plan `docs/superpowers/plans/2026-07-30-landing-final-redesign.md`, SDD ledger `.superpowers/sdd/progress.md` (Plan 4).
-- **Store review fixes** (build 9, uploaded green): `NSCameraUsageDescription` (ITMS-90683, stripe-ios references card-scan APIs) + Android adaptive icon scaled 0.75 to the 66dp safe zone (round masks clipped the top).
-- **iOS SPM signing fix** (PR #72): manual signing scoped to app target via `update_code_signing_settings` — global xcargs broke on stripe-ios SPM targets. Memory `teamorg-release-pipeline` updated.
-- **Billing confirm fix** (PR #70): hidden form posted empty `setupIntentId` (Svelte 5 bind flush async vs sync `requestSubmit()`); DOM value now set directly; gated E2E regression added.
+### PR #80 — event form, repeats, inbox, design fonts
+- Event form: ambiguous Starts/Ends chips (hidden nested tap targets) split into four explicit
+  chips: Start date / Start time / End date / End time (`CreateEditEventScreen`).
+- Repeats sheet preselects the start date's weekday (`isoDayNumber - 1`, 0=Mon..6=Sun). Also
+  fixes weekly patterns confirmed without a weekday producing zero occurrences.
+- Inbox stale-list fix: badge polled live but the cached `InboxViewModel` never refreshed →
+  "badge 2 / list empty". Now refreshes on screen entry (silent with cached data), delete-all
+  reverts on failure, pull-to-refresh state lives in the VM (stuck-spinner fix).
+- **Typography = design**: mobile app bundles Roboto Flex variable TTF via compose resources
+  (`teamorgTypography()`, weights 400/500/700/800 via wght axis — works on iOS since CMP
+  1.8.2); admin web self-hosts Roboto Flex + Google Sans Flex (Google Fonts CDN link removed;
+  `font-display` previously silently fell back). Landing was already correct.
 
-## Figma (design source of truth)
+### PR #81 — NDS Import v2 (server + admin web + mobile)
+Spec `docs/superpowers/specs/2026-07-30-nds-import-existing-teams-design.md` · plan
+`docs/superpowers/plans/2026-07-30-nds-import-v2.md` · SDD ledger `.superpowers/sdd/progress.md`.
+- Import into **existing teams** with member mapping (map/create/skip; server-side suggestions
+  via `NdsMemberMatcher`: exact/umlaut/Levenshtein + birthdate boost; mapping sets NDS fields
+  only, adds team role when missing).
+- **Conflict resolution** vs existing TeamOrg events (same date+type, bulk per series with
+  per-date overrides, default keep-TeamOrg = J-attendance onto the existing event; keep-NDS
+  cancels — or detaches when the event is shared with another team — and imports with the
+  wizard time incl. RSVP-loss warning with count).
+- Wizard-set series times (18:00 placeholder removed), any file subset (AWL „empfohlen"),
+  coach authorization, migration **V18** (Angebot unique per club).
+- Mobile: 4-step Compose wizard (`NdsImportScreen/ViewModel`), document pickers
+  (`DocumentPicker` expect/actual), shared DTOs/repo (`NdsImport.kt`,
+  `NdsImportRepository`), entry on the team roster screen.
+- Web: `NdsImportDialog` → 4-step wizard (`NdsMappingStep`, `NdsEventsStep`), pure logic in
+  `admin/src/lib/nds-import-wizard.ts` (vitest 18), new proxies (team-scoped parse/import,
+  manage import, team-members), team-page entry; **vitest introduced to admin**.
+- Tests: 30+ new server route tests (permission matrix, rollback, idempotency, two clubs same
+  Angebot), planner/matcher unit tests, Playwright E2E `admin/e2e/nds-import.spec.ts`
+  (mutation-gated, local stack only, per-run Angebot rewrite for repeatability, needs
+  `E2E_CLUB_ID`), 17 mobile VM tests.
+- 7 real bugs found by adversarial reviews and fixed pre-merge, incl. a client/server
+  `effectiveKeep` divergence on partially-conflicting series and a cross-club Angebot 500.
 
-File `iKcGJfgxUxMi2AnE9o4BAL`, section "TeamOrg Landing Page" (60876:173): final frames "Landing FINAL — Dark/Light" + variants A–F/E1–E3. Pattern board on page "Logo Concept — Graphite Cyan" (P2 Tessellation 61010:23768). Stray empty draft file `rCEmuKm34X07JTIpqkb7jD` ("TeamOrg Landing Explorations") should be trashed by the user (no delete API).
+## Deferred follow-ups (from the NDS v2 final review — none merge-blocking)
 
-## Open loose ends
+- Date-keyed conflict resolutions collapse two conflicts on the same date (key by date+type).
+- No import lock: two concurrent imports into one team can duplicate events.
+- Re-import ignores changed wizard times for existing NDS events (UX).
+- Matching uses `displayName` first-space split — wrong for multi-word last names (suggestions
+  only; fix when users get real first/last columns).
+- Matcher `take(5)` cap + funktion heuristic untested; no import-route coach-auth test (parse
+  has one; code verified).
+- Android document picker silently no-ops on unreadable files (add a toast).
+- `NdsTimePickerDialog` duplicates `EventTimePickerDialog` (extract shared).
+- Detach-instead-of-cancel leaves the detached team's attendance rows on the shared event.
+- Spec follow-up idea: unlink/re-link an Angebot from a team (no endpoint today).
 
-- Prod cleanup: test account `utke.michel+ccdebug@gmail.com` + pending club "Claude Debug Club DELETE ME" + its test-mode Stripe customer.
+## Manual QA still recommended
+
+- Real Anwesenheitsliste round-trip on staging incl. re-import.
+- Mobile: file pick + full NDS wizard on physical Android and iOS.
+- Roboto Flex rendering on a physical iOS device (wght axis via skiko — compile-verified only).
+
+## Open loose ends (carried over)
+
+- Prod cleanup: test account `utke.michel+ccdebug@gmail.com` + pending club "Claude Debug Club
+  DELETE ME" + its test-mode Stripe customer.
 - Prod Stripe still on `pk_test` — switch to live keys before real customers pay.
 - `feat/merch-badge` branch: unmerged, intentionally kept.
-- 1Password commit signing intermittently locked — retry commits when user unlocks.
-- Final-review residuals (accepted, landing): Turnstile `data-theme="auto"` follows OS not site toggle; `/i/[token]` `surface-variant` hover class was never defined (pre-existing no-op).
+- Local dev DB contains throwaway NDS-E2E data (`e2e.nds.*@example.com`, "E2E NDS Club").
+- 1Password commit signing intermittently locked — retry commits when unlocked.

@@ -2,7 +2,7 @@
 
 Status: **implemented** (V14, 2026-06-26) · Scope: backend (Ktor) + admin web
 
-> **Import v2 (2026-07-30, branch feat/nds-import-v2):** import now supports existing teams
+> **Import v2 (2026-07-30, PR #81, merged & released 2026-07-31):** import now supports existing teams
 > with an explicit member-mapping step (map to existing user / create provisional / skip,
 > server-side match suggestions), event-conflict resolution against existing TeamOrg events
 > (same date+type; keep TeamOrg = J-attendance onto the existing event, keep NDS = cancel +
