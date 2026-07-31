@@ -12,14 +12,17 @@ import kotlin.time.Duration.Companion.seconds
 
 /** Rate-limit buckets. Applied per route group via `rateLimit(RateLimitName(...))`. */
 object RateLimits {
-    /** Credential endpoints: login, register, change-password. Brute-force defence. */
+    /**
+     * Credential-checking endpoints only: login, register, change-password.
+     *
+     * Deliberately NOT the whole `/auth` subtree. `/auth/me` and `/auth/me/roles` are
+     * called server-to-server by the admin app on every page load, so they all arrive
+     * from one container IP — limiting those would throttle every logged-in user at once.
+     */
     val AUTH = RateLimitName("auth")
 
     /** Invite-code resolution: stops enumeration of the 8-char short-code space. */
     val INVITE_CODE = RateLimitName("invite-code")
-
-    /** Public contact form: stops mail flooding through the landing site. */
-    val CONTACT = RateLimitName("contact")
 }
 
 /**
@@ -59,7 +62,13 @@ fun Application.verifyJwtSecretStrength() {
  * exposed directly — Traefik is the sole ingress.
  */
 fun Application.configureForwardedHeaders() {
-    install(XForwardedHeaders)
+    install(XForwardedHeaders) {
+        // Traefik APPENDS to X-Forwarded-For, so the first entry is whatever the client
+        // sent. Trusting it would let an attacker rotate a fake value per request, get a
+        // fresh rate-limit key every time, and grow the limiter's key map without bound.
+        // The last entry is the one our own proxy wrote.
+        useLastProxy()
+    }
 }
 
 /**
@@ -70,7 +79,9 @@ fun Application.configureForwardedHeaders() {
  * - `X-Frame-Options` / `frame-ancestors` block clickjacking.
  * - `Referrer-Policy` keeps ids in paths out of third-party referer logs.
  * - `Strict-Transport-Security` pins clients to HTTPS after the first visit.
- * - The API serves JSON and user uploads only, so a restrictive CSP costs nothing here.
+ *
+ * No CSP here: this API renders no documents, and the one response type a browser could
+ * be tricked into rendering — an upload — gets its own stricter policy in `StaticFiles`.
  */
 fun Application.configureSecurityHeaders() {
     intercept(ApplicationCallPipeline.Plugins) {
@@ -79,13 +90,8 @@ fun Application.configureSecurityHeaders() {
         headers.append("X-Frame-Options", "DENY", safeOnly = false)
         headers.append("Referrer-Policy", "strict-origin-when-cross-origin", safeOnly = false)
         headers.append("Cross-Origin-Resource-Policy", "same-site", safeOnly = false)
-        headers.append("Permissions-Policy", "geolocation=(), microphone=(), camera=()", safeOnly = false)
-        headers.append(
-            "Content-Security-Policy",
-            "default-src 'none'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
-            safeOnly = false
-        )
-        if (call.request.origin.scheme == "https" || call.request.headers["X-Forwarded-Proto"] == "https") {
+        // XForwardedHeaders already resolves the client-facing scheme.
+        if (call.request.origin.scheme == "https") {
             headers.append(
                 "Strict-Transport-Security",
                 "max-age=31536000; includeSubDomains",
@@ -103,16 +109,15 @@ fun Application.configureSecurityHeaders() {
  */
 fun Application.configureRateLimiting() {
     install(RateLimit) {
+        // 20/min still reduces online password guessing to a rounding error, while
+        // leaving headroom for a club behind one NAT address and for test suites that
+        // register a batch of users in one run.
         register(RateLimits.AUTH) {
-            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            rateLimiter(limit = 20, refillPeriod = 60.seconds)
             requestKey { call -> call.clientKey() }
         }
         register(RateLimits.INVITE_CODE) {
             rateLimiter(limit = 20, refillPeriod = 60.seconds)
-            requestKey { call -> call.clientKey() }
-        }
-        register(RateLimits.CONTACT) {
-            rateLimiter(limit = 5, refillPeriod = 10.minutes)
             requestKey { call -> call.clientKey() }
         }
     }

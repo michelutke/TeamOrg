@@ -30,6 +30,16 @@ onesignal.appId=<OneSignal app id>
 | Web admin | `cd admin && npm i && npm run dev` |
 | Landing | `cd landing && npm i && npm run dev` |
 
+The server refuses to start with the placeholder JWT secret from `application.conf`, because
+booting production with it would make every token forgeable. For local development either
+export a throwaway secret of at least 32 characters, or opt out explicitly:
+
+```bash
+ALLOW_WEAK_JWT_SECRET=true ./gradlew :server:run
+# or
+JWT_SECRET="$(openssl rand -base64 48)" ./gradlew :server:run
+```
+
 ## Tests
 
 ```bash

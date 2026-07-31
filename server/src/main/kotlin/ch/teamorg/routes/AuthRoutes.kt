@@ -64,8 +64,11 @@ fun Route.authRoutes() {
             .sign(Algorithm.HMAC256(jwtSecret))
     }
 
-    rateLimit(RateLimits.AUTH) {
-      route("/auth") {
+    route("/auth") {
+      // Only the endpoints that verify or set a credential are rate limited. /auth/me and
+      // /auth/me/roles are called server-to-server by the admin app on every page load,
+      // from a single container IP — limiting those would throttle all users at once.
+      rateLimit(RateLimits.AUTH) {
         post("/register") {
             val request = call.receive<RegisterRequest>()
 
@@ -114,6 +117,7 @@ fun Route.authRoutes() {
             val token = generateToken(user.id)
             call.respond(AuthResponse(token, user.id, user.displayName, user.avatarUrl))
         }
+      }
 
         authenticate("jwt") {
             post("/logout") {
@@ -121,21 +125,23 @@ fun Route.authRoutes() {
                 call.respond(HttpStatusCode.OK)
             }
 
-            post("/change-password") {
-                val request = call.receive<ChangePasswordRequest>()
-                val passwordError = validatePassword(request.newPassword)
-                if (passwordError != null) {
-                    return@post call.respond(HttpStatusCode.BadRequest, passwordError)
-                }
-                call.authenticateUser(userRepository) { user ->
-                    val userId = UUID.fromString(user.id)
-                    val currentHash = userRepository.getPasswordHashById(userId)
-                    if (currentHash == null || !BCrypt.checkpw(request.currentPassword, currentHash)) {
-                        return@authenticateUser call.respond(HttpStatusCode.Unauthorized, "Current password is incorrect")
+            rateLimit(RateLimits.AUTH) {
+                post("/change-password") {
+                    val request = call.receive<ChangePasswordRequest>()
+                    val passwordError = validatePassword(request.newPassword)
+                    if (passwordError != null) {
+                        return@post call.respond(HttpStatusCode.BadRequest, passwordError)
                     }
-                    val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
-                    userRepository.updatePasswordHash(userId, newHash)
-                    call.respond(HttpStatusCode.OK)
+                    call.authenticateUser(userRepository) { user ->
+                        val userId = UUID.fromString(user.id)
+                        val currentHash = userRepository.getPasswordHashById(userId)
+                        if (currentHash == null || !BCrypt.checkpw(request.currentPassword, currentHash)) {
+                            return@authenticateUser call.respond(HttpStatusCode.Unauthorized, "Current password is incorrect")
+                        }
+                        val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
+                        userRepository.updatePasswordHash(userId, newHash)
+                        call.respond(HttpStatusCode.OK)
+                    }
                 }
             }
 
@@ -189,7 +195,6 @@ fun Route.authRoutes() {
                 }
             }
         }
-      }
     }
 }
 

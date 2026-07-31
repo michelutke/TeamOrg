@@ -1,10 +1,8 @@
 package ch.teamorg.routes
 
 import ch.teamorg.mail.MailService
-import ch.teamorg.plugins.RateLimits
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -39,8 +37,11 @@ fun Route.contactRoutes() {
     val toAddr = prop("contact.to").ifBlank { "info@teamorg.ch" }
     val sharedSecret = prop("contact.shared-secret")
 
-    rateLimit(RateLimits.CONTACT) {
-      post("/contact") {
+    // No rate limit here on purpose: the landing site calls this server-to-server, so every
+    // visitor shares the landing container's IP and a per-IP limit would cap the whole
+    // internet at one bucket. Abuse is already handled by Turnstile, the honeypot field and
+    // the shared secret.
+    post("/contact") {
         // Shared-secret guard (set the same value on the landing site). Compared in
         // constant time so the secret cannot be recovered byte-by-byte from response timing.
         if (sharedSecret.isNotBlank() && !constantTimeEquals(call.request.headers["X-Contact-Secret"], sharedSecret)) {
@@ -108,12 +109,12 @@ fun Route.contactRoutes() {
             application.log.error("Contact form: failed to send email", e)
             call.respond(HttpStatusCode.InternalServerError, ContactResponse(false))
         }
-      }
     }
 }
 
 private const val MAX_FIELD_LENGTH = 200
-private const val MAX_SHORT_FIELD_LENGTH = 20
+// Free-text on the landing form ("ungefähr 300 Aktivmitglieder"), not a number field.
+private const val MAX_SHORT_FIELD_LENGTH = 100
 private const val MAX_EMAIL_LENGTH = 254
 private const val MAX_MESSAGE_LENGTH = 5_000
 

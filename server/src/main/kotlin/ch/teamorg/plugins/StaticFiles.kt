@@ -10,10 +10,10 @@ import java.io.File
 /**
  * Serves user uploads (avatars, club logos).
  *
- * These bytes come from users, so they are served defensively: never inline as an
- * active document, never sniffed, and never allowed to run script. Combined with the
- * upload-side magic-byte check in `AuthRoutes`/`ClubRoutes`, an attacker cannot turn an
- * "image" into stored XSS against `server.teamorg.ch`.
+ * These bytes come from users, so they are served defensively: never sniffed, and never
+ * allowed to run script. Together with the magic-byte validation applied at upload time
+ * (`AuthRoutes` avatars, `ClubRoutes` logos), an attacker cannot turn an "image" into
+ * stored XSS against `server.teamorg.ch`.
  */
 fun Application.configureStaticFiles() {
     routing {
