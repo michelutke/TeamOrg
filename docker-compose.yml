@@ -45,6 +45,9 @@ services:
     # Pin it to the coolify network, which Traefik is also attached to.
     labels:
       - traefik.docker.network=coolify
+    security_opt:
+      # Blocks setuid/setgid escalation inside the container.
+      - no-new-privileges:true
     restart: unless-stopped
 
   admin:
@@ -67,6 +70,9 @@ services:
     # it ends up multi-homed. Pin Traefik to the coolify network or routing hangs -> 504.
     labels:
       - traefik.docker.network=coolify
+    security_opt:
+      # Blocks setuid/setgid escalation inside the container.
+      - no-new-privileges:true
     restart: unless-stopped
 
   # Public marketing site (teamorg.ch). SvelteKit adapter-node, container port 3000.
@@ -94,6 +100,9 @@ services:
       - coolify
     labels:
       - traefik.docker.network=coolify
+    security_opt:
+      # Blocks setuid/setgid escalation inside the container.
+      - no-new-privileges:true
     restart: unless-stopped
 
 networks:

@@ -29,4 +29,8 @@ COPY --from=build /app/package.json ./package.json
 ENV PORT=3000
 EXPOSE 3000
 
+# Drop to the unprivileged user that ships with the node image. The site writes
+# nothing to disk, so root buys an attacker container-escape leverage for nothing.
+USER node
+
 CMD ["node", "build"]
