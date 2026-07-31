@@ -36,7 +36,8 @@ class TeamsListViewModel(
 
     fun loadTeams() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            // Silent refresh when cached data exists — loader only on first load.
+            _state.update { it.copy(isLoading = it.teams.isEmpty() && it.club == null, error = null) }
             teamRepository.getMyRoles().onSuccess { roles ->
                 val clubRole = roles.clubRoles.firstOrNull()
                 // Derive clubId from club roles first, fall back to team roles

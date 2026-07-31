@@ -32,6 +32,7 @@ class InboxViewModel(
 
     fun loadNotifications() {
         viewModelScope.launch {
+            // Silent refresh when cached notifications exist — loader only on first load.
             _state.update { it.copy(isLoading = it.notifications.isEmpty(), error = null) }
             notificationRepository.getNotifications(50, 0)
                 .onSuccess { notifications ->

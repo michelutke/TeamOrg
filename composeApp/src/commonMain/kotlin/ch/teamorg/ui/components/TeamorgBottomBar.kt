@@ -1,7 +1,8 @@
 package ch.teamorg.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
@@ -93,8 +94,11 @@ private fun FloatingNavItem(
         }
         AnimatedVisibility(
             visible = selected,
-            enter = expandHorizontally(expandFrom = Alignment.Start, animationSpec = spring(dampingRatio = 0.6f)),
-            exit = shrinkHorizontally()
+            // Enter and exit share the same non-overshooting curve so the shrinking
+            // old label and the expanding new one stay in lockstep — the bar animates
+            // once from its start width to its end width without bouncing.
+            enter = expandHorizontally(expandFrom = Alignment.Start, animationSpec = tween(250, easing = FastOutSlowInEasing)),
+            exit = shrinkHorizontally(shrinkTowards = Alignment.Start, animationSpec = tween(250, easing = FastOutSlowInEasing))
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(8.dp))

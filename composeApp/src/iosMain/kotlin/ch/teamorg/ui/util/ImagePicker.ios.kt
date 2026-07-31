@@ -52,3 +52,45 @@ actual fun rememberImagePickerLauncher(onResult: (bytes: ByteArray, ext: String)
         )
     }
 }
+
+@OptIn(ExperimentalForeignApi::class)
+@Composable
+actual fun rememberCameraCaptureLauncher(onResult: (bytes: ByteArray, ext: String) -> Unit): (() -> Unit)? {
+    val delegate = remember {
+        object : NSObject(), UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
+            override fun imagePickerController(
+                picker: UIImagePickerController,
+                didFinishPickingMediaWithInfo: Map<Any?, *>
+            ) {
+                picker.dismissViewControllerAnimated(true, null)
+                val image = (didFinishPickingMediaWithInfo[UIImagePickerControllerEditedImage]
+                    ?: didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage])
+                    as? platform.UIKit.UIImage ?: return
+                val data: NSData = UIImageJPEGRepresentation(image, 0.85) ?: return
+                val bytes = ByteArray(data.length.toInt())
+                bytes.usePinned { pinned ->
+                    platform.posix.memcpy(pinned.addressOf(0), data.bytes, data.length)
+                }
+                onResult(bytes, "jpg")
+            }
+
+            override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
+                picker.dismissViewControllerAnimated(true, null)
+            }
+        }
+    }
+
+    if (!UIImagePickerController.isSourceTypeAvailable(
+            UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera
+        )
+    ) return null
+
+    return {
+        val picker = UIImagePickerController()
+        picker.sourceType = UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera
+        picker.delegate = delegate
+        UIApplication.sharedApplication.keyWindow?.rootViewController?.presentViewController(
+            picker, animated = true, completion = null
+        )
+    }
+}
