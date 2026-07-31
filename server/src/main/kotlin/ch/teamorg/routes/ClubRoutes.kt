@@ -10,6 +10,9 @@ import ch.teamorg.middleware.requireClubRole
 import ch.teamorg.middleware.requireClubWritable
 import ch.teamorg.storage.FileStorageService
 import ch.teamorg.storage.FileType
+import ch.teamorg.storage.ImageValidation
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -90,37 +93,29 @@ fun Route.clubRoutes() {
 
                     val multipart = call.receiveMultipart()
                     var fileBytes: ByteArray? = null
-                    var extension: String? = null
+                    var tooLarge = false
 
                     multipart.forEachPart { part ->
-                        if (part is PartData.FileItem) {
-                            val contentType = part.contentType
-                            if (contentType == null || !listOf("image/jpeg", "image/png", "image/webp").contains(contentType.toString())) {
-                                part.dispose()
-                                return@forEachPart
-                            }
-
-                            extension = when (contentType.toString()) {
-                                "image/jpeg" -> "jpg"
-                                "image/png" -> "png"
-                                "image/webp" -> "webp"
-                                else -> "bin"
-                            }
-
-                            fileBytes = part.streamProvider().readBytes()
+                        if (part is PartData.FileItem && fileBytes == null && !tooLarge) {
+                            // Read at most the limit plus one byte, so an oversized upload
+                            // is rejected without buffering the whole body in memory.
+                            val bytes = part.provider().readRemaining((ImageValidation.MAX_BYTES + 1).toLong()).readByteArray()
+                            if (bytes.size > ImageValidation.MAX_BYTES) tooLarge = true else fileBytes = bytes
                         }
                         part.dispose()
                     }
 
-                    if (fileBytes == null) {
-                        return@post call.respond(HttpStatusCode.BadRequest, "Logo file is required (jpg/png/webp)")
+                    if (tooLarge) {
+                        return@post call.respond(HttpStatusCode.PayloadTooLarge, "Logo file size must be less than 2MB")
                     }
+                    val bytes = fileBytes
+                        ?: return@post call.respond(HttpStatusCode.BadRequest, "Logo file is required (jpg/png/webp)")
 
-                    if (fileBytes!!.size > 2 * 1024 * 1024) {
-                        return@post call.respond(HttpStatusCode.BadRequest, "Logo file size must be less than 2MB")
-                    }
+                    // The declared content type is attacker-controlled; the magic bytes are not.
+                    val kind = ImageValidation.detect(bytes)
+                        ?: return@post call.respond(HttpStatusCode.BadRequest, "Logo must be a JPEG, PNG or WebP image")
 
-                    val path = fileStorageService.save(fileBytes!!, FileType.CLUB_LOGO, extension!!)
+                    val path = fileStorageService.save(bytes, FileType.CLUB_LOGO, kind.extension)
                     // Store the publicly-servable URL (mirror avatar handling in AuthRoutes,
                     // which persists "/uploads/$path"); files are served from static("/uploads").
                     val club = clubRepository.update(clubId, null, null, "/uploads/$path")

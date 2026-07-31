@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The session JWT lives in the `teamorg_prefs` SharedPreferences file. Cloud backup and
+  device-to-device transfer would copy that token off the device, so both are excluded.
+  Everything else (the SQLDelight cache) is disposable and re-fetched after a fresh login.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="teamorg_prefs.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="teamorg_prefs.xml" />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 import { SESSION_COOKIE, LEGACY_SESSION_COOKIE } from './auth';
 
@@ -48,7 +49,7 @@ export async function startImpersonation(
 	cookies.set(ORIGINAL_TOKEN_COOKIE, currentToken, {
 		path: '/',
 		httpOnly: true,
-		secure: false,
+		secure: !dev,
 		sameSite: 'lax',
 		maxAge: 3600
 	});
@@ -67,7 +68,7 @@ export async function startImpersonation(
 	cookies.set(IMPERSONATION_COOKIE, JSON.stringify(state), {
 		path: '/',
 		httpOnly: true,
-		secure: false,
+		secure: !dev,
 		sameSite: 'lax',
 		maxAge: 3600
 	});
@@ -76,7 +77,7 @@ export async function startImpersonation(
 	cookies.set(SESSION_COOKIE, data.token, {
 		path: '/',
 		httpOnly: true,
-		secure: false,
+		secure: !dev,
 		sameSite: 'lax',
 		maxAge: 3600
 	});
@@ -105,7 +106,7 @@ export async function endImpersonation(cookies: Cookies): Promise<void> {
 		cookies.set(SESSION_COOKIE, originalToken, {
 			path: '/',
 			httpOnly: true,
-			secure: false,
+			secure: !dev,
 			sameSite: 'lax',
 			maxAge: 60 * 60 * 24 * 30
 		});

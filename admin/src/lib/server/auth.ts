@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 
 const API_BASE = process.env.API_URL || 'http://localhost:8080';
@@ -54,11 +55,13 @@ function readToken(cookies: Cookies): string | null {
 }
 
 function writeSessionCookie(cookies: Cookies, token: string): void {
-	// JWT in httpOnly cookie — never exposed to browser JS.
+	// JWT in httpOnly cookie — never exposed to browser JS, and never sent over plain
+	// HTTP outside local development (without `secure` the session token leaks to any
+	// http:// request to the domain).
 	cookies.set(SESSION_COOKIE, token, {
 		path: '/',
 		httpOnly: true,
-		secure: false, // true in production
+		secure: !dev,
 		sameSite: 'lax',
 		maxAge: SESSION_MAX_AGE
 	});

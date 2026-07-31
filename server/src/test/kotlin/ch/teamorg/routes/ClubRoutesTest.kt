@@ -116,7 +116,7 @@ class ClubRoutesTest : IntegrationTestBase() {
             header(HttpHeaders.Authorization, "Bearer ${auth.token}")
             setBody(MultiPartFormDataContent(
                 formData {
-                    append("logo", "fake-image-content".toByteArray(), Headers.build {
+                    append("logo", MINIMAL_PNG, Headers.build {
                         append(HttpHeaders.ContentType, "image/png")
                         append(HttpHeaders.ContentDisposition, "filename=\"logo.png\"")
                     })
@@ -127,6 +127,38 @@ class ClubRoutesTest : IntegrationTestBase() {
         assertEquals(HttpStatusCode.OK, response.status)
         val club = response.body<Club>()
         assertNotNull(club.logoUrl)
+    }
+
+    @Test
+    fun `upload logo rejects a non-image disguised by its content type`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val auth = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("logodisguise@example.com", "password123", "Club Creator"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(auth.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("Disguise Club", "volleyball", "Lucerne"))
+        }.body<Club>().id
+
+        // HTML claiming to be a PNG: served back from /uploads this is stored XSS.
+        val response = client.post("/clubs/$clubId/logo") {
+            header(HttpHeaders.Authorization, "Bearer ${auth.token}")
+            setBody(MultiPartFormDataContent(
+                formData {
+                    append("logo", "<script>alert(1)</script>".toByteArray(), Headers.build {
+                        append(HttpHeaders.ContentType, "image/png")
+                        append(HttpHeaders.ContentDisposition, "filename=\"logo.png\"")
+                    })
+                }
+            ))
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
     }
 
     @Test
@@ -379,5 +411,12 @@ class ClubRoutesTest : IntegrationTestBase() {
         assertEquals(HttpStatusCode.OK, response.status)
         val teams = response.body<List<Team>>()
         assertEquals(2, teams.size)
+    }
+
+    private companion object {
+        /** 1x1 transparent PNG — real magic bytes, so upload validation accepts it. */
+        val MINIMAL_PNG: ByteArray = java.util.Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        )
     }
 }

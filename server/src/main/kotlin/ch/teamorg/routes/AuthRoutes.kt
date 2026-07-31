@@ -5,15 +5,20 @@ import com.auth0.jwt.algorithms.Algorithm
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.authenticateUser
+import ch.teamorg.plugins.RateLimits
 import ch.teamorg.storage.FileStorageService
 import ch.teamorg.storage.FileType
+import ch.teamorg.storage.ImageValidation
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
 import org.mindrot.jbcrypt.BCrypt
 import org.koin.ktor.ext.inject
@@ -60,17 +65,25 @@ fun Route.authRoutes() {
     }
 
     route("/auth") {
+      // Only the endpoints that verify or set a credential are rate limited. /auth/me and
+      // /auth/me/roles are called server-to-server by the admin app on every page load,
+      // from a single container IP — limiting those would throttle all users at once.
+      rateLimit(RateLimits.AUTH) {
         post("/register") {
             val request = call.receive<RegisterRequest>()
 
             if (!isValidEmail(request.email)) {
                 return@post call.respond(HttpStatusCode.BadRequest, "Invalid email format")
             }
-            if (request.password.length < 8) {
-                return@post call.respond(HttpStatusCode.BadRequest, "Password must be at least 8 characters")
+            val passwordError = validatePassword(request.password)
+            if (passwordError != null) {
+                return@post call.respond(HttpStatusCode.BadRequest, passwordError)
             }
             if (request.displayName.isBlank()) {
                 return@post call.respond(HttpStatusCode.BadRequest, "Display name cannot be empty")
+            }
+            if (request.displayName.length > MAX_DISPLAY_NAME_LENGTH) {
+                return@post call.respond(HttpStatusCode.BadRequest, "Display name is too long")
             }
 
             if (userRepository.existsByEmail(request.email)) {
@@ -88,14 +101,23 @@ fun Route.authRoutes() {
             val request = call.receive<LoginRequest>()
             val passwordHash = userRepository.getPasswordHash(request.email)
 
-            if (passwordHash == null || !BCrypt.checkpw(request.password, passwordHash)) {
+            if (passwordHash == null) {
+                // Hash against a dummy value anyway: skipping bcrypt for unknown addresses
+                // makes "no such user" measurably faster than "wrong password", which turns
+                // the login endpoint into an account-enumeration oracle.
+                BCrypt.checkpw(request.password.take(MAX_PASSWORD_LENGTH), DUMMY_BCRYPT_HASH)
+                return@post call.respond(HttpStatusCode.Unauthorized, "Invalid email or password")
+            }
+            if (!BCrypt.checkpw(request.password.take(MAX_PASSWORD_LENGTH), passwordHash)) {
                 return@post call.respond(HttpStatusCode.Unauthorized, "Invalid email or password")
             }
 
-            val user = userRepository.findByEmail(request.email)!!
+            val user = userRepository.findByEmail(request.email)
+                ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid email or password")
             val token = generateToken(user.id)
             call.respond(AuthResponse(token, user.id, user.displayName, user.avatarUrl))
         }
+      }
 
         authenticate("jwt") {
             post("/logout") {
@@ -103,20 +125,23 @@ fun Route.authRoutes() {
                 call.respond(HttpStatusCode.OK)
             }
 
-            post("/change-password") {
-                val request = call.receive<ChangePasswordRequest>()
-                if (request.newPassword.length < 8) {
-                    return@post call.respond(HttpStatusCode.BadRequest, "Password must be at least 8 characters")
-                }
-                call.authenticateUser(userRepository) { user ->
-                    val userId = UUID.fromString(user.id)
-                    val currentHash = userRepository.getPasswordHashById(userId)
-                    if (currentHash == null || !BCrypt.checkpw(request.currentPassword, currentHash)) {
-                        return@authenticateUser call.respond(HttpStatusCode.Unauthorized, "Current password is incorrect")
+            rateLimit(RateLimits.AUTH) {
+                post("/change-password") {
+                    val request = call.receive<ChangePasswordRequest>()
+                    val passwordError = validatePassword(request.newPassword)
+                    if (passwordError != null) {
+                        return@post call.respond(HttpStatusCode.BadRequest, passwordError)
                     }
-                    val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
-                    userRepository.updatePasswordHash(userId, newHash)
-                    call.respond(HttpStatusCode.OK)
+                    call.authenticateUser(userRepository) { user ->
+                        val userId = UUID.fromString(user.id)
+                        val currentHash = userRepository.getPasswordHashById(userId)
+                        if (currentHash == null || !BCrypt.checkpw(request.currentPassword, currentHash)) {
+                            return@authenticateUser call.respond(HttpStatusCode.Unauthorized, "Current password is incorrect")
+                        }
+                        val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
+                        userRepository.updatePasswordHash(userId, newHash)
+                        call.respond(HttpStatusCode.OK)
+                    }
                 }
             }
 
@@ -142,32 +167,29 @@ fun Route.authRoutes() {
                 call.authenticateUser(userRepository) { user ->
                     val multipart = call.receiveMultipart()
                     var fileBytes: ByteArray? = null
-                    var extension: String? = null
+                    var tooLarge = false
 
                     multipart.forEachPart { part ->
-                        if (part is PartData.FileItem) {
-                            val contentType = part.contentType
-                            if (contentType != null && listOf("image/jpeg", "image/jpg", "image/png", "image/webp").contains(contentType.toString())) {
-                                extension = when (contentType.toString()) {
-                                    "image/jpeg", "image/jpg" -> "jpg"
-                                    "image/png" -> "png"
-                                    "image/webp" -> "webp"
-                                    else -> "bin"
-                                }
-                                fileBytes = part.streamProvider().readBytes()
-                            }
+                        if (part is PartData.FileItem && fileBytes == null && !tooLarge) {
+                            // Read at most the limit plus one byte: an oversized upload is
+                            // rejected without ever buffering the whole body in memory.
+                            val bytes = part.provider().readRemaining((ImageValidation.MAX_BYTES + 1).toLong()).readByteArray()
+                            if (bytes.size > ImageValidation.MAX_BYTES) tooLarge = true else fileBytes = bytes
                         }
                         part.dispose()
                     }
 
-                    if (fileBytes == null) {
-                        return@authenticateUser call.respond(HttpStatusCode.BadRequest, "Avatar file required (jpg/png/webp)")
+                    if (tooLarge) {
+                        return@authenticateUser call.respond(HttpStatusCode.PayloadTooLarge, "Avatar must be less than 2MB")
                     }
-                    if (fileBytes!!.size > 2 * 1024 * 1024) {
-                        return@authenticateUser call.respond(HttpStatusCode.BadRequest, "Avatar must be less than 2MB")
-                    }
+                    val bytes = fileBytes
+                        ?: return@authenticateUser call.respond(HttpStatusCode.BadRequest, "Avatar file required (jpg/png/webp)")
 
-                    val path = fileStorageService.save(fileBytes!!, FileType.AVATAR, extension!!)
+                    // The declared content type is attacker-controlled; the magic bytes are not.
+                    val kind = ImageValidation.detect(bytes)
+                        ?: return@authenticateUser call.respond(HttpStatusCode.BadRequest, "Avatar must be a JPEG, PNG or WebP image")
+
+                    val path = fileStorageService.save(bytes, FileType.AVATAR, kind.extension)
                     val updatedUser = userRepository.updateAvatarUrl(UUID.fromString(user.id), "/uploads/$path")
                     call.respond(updatedUser)
                 }
@@ -176,6 +198,24 @@ fun Route.authRoutes() {
     }
 }
 
+private const val MAX_DISPLAY_NAME_LENGTH = 100
+
+/**
+ * bcrypt silently ignores everything past 72 bytes, so an unbounded password field is
+ * both a truncation surprise and a cheap CPU-burn vector (hashing is deliberately slow).
+ */
+private const val MAX_PASSWORD_LENGTH = 72
+
+/** Hash of a value no user can supply; used to keep failed logins constant-cost. */
+private val DUMMY_BCRYPT_HASH: String = BCrypt.hashpw("dummy-password-for-timing", BCrypt.gensalt(12))
+
+private fun validatePassword(password: String): String? = when {
+    password.length < 8 -> "Password must be at least 8 characters"
+    password.length > MAX_PASSWORD_LENGTH -> "Password must be at most $MAX_PASSWORD_LENGTH characters"
+    else -> null
+}
+
 private fun isValidEmail(email: String): Boolean {
+    if (email.length > 254) return false
     return email.contains("@") && email.indexOf("@") < email.lastIndexOf(".")
 }

@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import type { Handle } from '@sveltejs/kit';
 
 // Android App Links verification file. Served here (not as a route) because
@@ -21,5 +22,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 			headers: { 'content-type': 'application/json' }
 		});
 	}
-	return resolve(event);
+	const response = await resolve(event);
+	// CSP itself lives in svelte.config.js (SvelteKit hashes its own inline scripts).
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+	if (!dev) {
+		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+	return response;
 };
