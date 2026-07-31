@@ -75,6 +75,12 @@
 		seriesTimes = map;
 	}
 
+	function rsvpLoss(conflict: NdsConflictGroup, resolution: ConflictResolutionInput): number {
+		return conflict.dates
+			.filter((d) => (resolution.overrides.get(d.date) ?? resolution.keep) === 'nds')
+			.reduce((sum, d) => sum + d.rsvpCount, 0);
+	}
+
 	function resolutionFor(seriesKey: string): ConflictResolutionInput {
 		return resolutions.get(seriesKey) ?? { keep: 'teamorg', overrides: new Map() };
 	}
@@ -174,6 +180,11 @@
 								NDS übernehmen
 							</label>
 						</div>
+						{#if rsvpLoss(conflict, resolution) > 0}
+							<p class="mt-1 text-[12px] font-medium text-error">
+								{rsvpLoss(conflict, resolution)} Rückmeldungen gehen verloren
+							</p>
+						{/if}
 						<button
 							type="button"
 							onclick={() => toggleExpanded(s.seriesKey)}
@@ -193,6 +204,9 @@
 										{#if dateKeep === 'nds'}
 											<p class="text-[12px] font-medium text-error">
 												Dieser bestehende Termin wird storniert.
+												{#if d.rsvpCount > 0}
+													{d.rsvpCount} Rückmeldungen gehen verloren.
+												{/if}
 											</p>
 										{/if}
 										<div class="mt-1 flex gap-3">

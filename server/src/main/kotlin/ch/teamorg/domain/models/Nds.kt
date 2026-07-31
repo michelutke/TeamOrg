@@ -100,7 +100,8 @@ data class NdsConflictDate(
     @Serializable(with = LocalDateSerializer::class) val date: LocalDate,
     val existingEventId: String,
     val existingEventTitle: String,
-    val existingEventStart: String
+    val existingEventStart: String,
+    val rsvpCount: Int = 0
 )
 
 @Serializable

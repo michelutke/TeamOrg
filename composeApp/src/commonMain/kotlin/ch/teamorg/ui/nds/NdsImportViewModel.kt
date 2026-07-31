@@ -260,7 +260,8 @@ class NdsImportViewModel(
             resolution: ResolutionChoice?,
             date: String
         ): String {
-            if (conflictGroup == null) return "nds"
+            val isConflictDate = conflictGroup?.dates?.any { it.date == date } ?: false
+            if (!isConflictDate) return "nds"
             val groupKeep = resolution?.keep ?: "teamorg"
             return resolution?.overrides?.get(date) ?: groupKeep
         }

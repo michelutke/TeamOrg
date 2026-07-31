@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
 	assemblePayload,
+	conflictCounts,
 	defaultMappings,
 	mergeRows,
 	rowKey,
+	seriesImportsAnyEvent,
 	step3Gate,
 	type ConflictResolutionInput,
 	type MemberSuggestionDto,
@@ -156,7 +158,8 @@ describe('step3Gate', () => {
 						date: '2026-08-03',
 						existingEventId: 'e1',
 						existingEventTitle: 'Training',
-						existingEventStart: '2026-08-03T18:00:00Z'
+						existingEventStart: '2026-08-03T18:00:00Z',
+						rsvpCount: 0
 					}
 				]
 			}
@@ -176,7 +179,8 @@ describe('step3Gate', () => {
 						date: '2026-08-03',
 						existingEventId: 'e1',
 						existingEventTitle: 'Training',
-						existingEventStart: '2026-08-03T18:00:00Z'
+						existingEventStart: '2026-08-03T18:00:00Z',
+						rsvpCount: 0
 					}
 				]
 			}
@@ -189,6 +193,76 @@ describe('step3Gate', () => {
 			['mo-T-90', { startTime: '18:00', endTime: '19:30' }]
 		]);
 		expect(step3Gate(series, conflicts, times, resolutions)).toBe(true);
+	});
+});
+
+describe('partial-conflict series (group keep affects only conflict dates)', () => {
+	const series: NdsSeries[] = [
+		{
+			seriesKey: 'mo-T-90',
+			weekday: 0,
+			symbol: 'T',
+			durationMin: 90,
+			dates: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24'],
+			count: 4
+		}
+	];
+	const conflicts: NdsConflictGroup[] = [
+		{
+			seriesKey: 'mo-T-90',
+			dates: [
+				{
+					date: '2026-08-03',
+					existingEventId: 'e1',
+					existingEventTitle: 'Training',
+					existingEventStart: '2026-08-03T18:00:00Z',
+					rsvpCount: 0
+				},
+				{
+					date: '2026-08-10',
+					existingEventId: 'e2',
+					existingEventTitle: 'Training',
+					existingEventStart: '2026-08-10T18:00:00Z',
+					rsvpCount: 0
+				}
+			]
+		}
+	];
+	const resolutions = new Map<string, ConflictResolutionInput>([
+		['mo-T-90', { keep: 'teamorg', overrides: new Map() }]
+	]);
+
+	it('still imports events for the 2 non-conflict dates, so the series needs a time', () => {
+		expect(seriesImportsAnyEvent(series[0], conflicts, resolutions)).toBe(true);
+		expect(step3Gate(series, conflicts, new Map(), resolutions)).toBe(false);
+		const times = new Map<string, SeriesTimeInput>([
+			['mo-T-90', { startTime: '18:00', endTime: '19:30' }]
+		]);
+		expect(step3Gate(series, conflicts, times, resolutions)).toBe(true);
+	});
+
+	it('conflictCounts counts only the 2 conflict dates as keepTeamorg, the other 2 as new events', () => {
+		expect(conflictCounts(series, conflicts, resolutions)).toEqual({
+			eventsNew: 2,
+			keepTeamorg: 2,
+			keepNds: 0
+		});
+	});
+
+	it('assemblePayload still sends the group resolution', () => {
+		const payload = assemblePayload({
+			teamId: 'team-1',
+			parsed: null,
+			persons: [],
+			importEvents: true,
+			attendanceMode: 'keep',
+			mappings: new Map(),
+			seriesTimes: new Map([['mo-T-90', { startTime: '18:00', endTime: '19:30' }]]),
+			resolutions
+		});
+		expect(payload).toMatchObject({
+			conflictResolutions: [{ seriesKey: 'mo-T-90', keep: 'teamorg', overrides: [] }]
+		});
 	});
 });
 

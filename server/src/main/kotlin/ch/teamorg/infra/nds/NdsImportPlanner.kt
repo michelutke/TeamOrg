@@ -1,5 +1,6 @@
 package ch.teamorg.infra.nds
 
+import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
@@ -8,8 +9,10 @@ import ch.teamorg.domain.models.NdsConflictGroup
 import ch.teamorg.domain.models.NdsSeries
 import ch.teamorg.domain.models.ParsedActivity
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDate
@@ -74,7 +77,9 @@ class NdsImportPlanner {
             for (date in s.dates) seriesKeyFor[date to eventType] = s.seriesKey
         }
 
-        val grouped = LinkedHashMap<String, MutableList<NdsConflictDate>>()
+        data class Match(val seriesKey: String, val date: LocalDate, val eventId: UUID, val title: String, val start: String)
+
+        val matches = mutableListOf<Match>()
         transaction {
             (EventsTable innerJoin EventTeamsTable).selectAll()
                 .where { (EventTeamsTable.teamId eq teamId) and (EventsTable.status neq EventStatus.cancelled) }
@@ -84,15 +89,31 @@ class NdsImportPlanner {
                     if (date !in allDates) return@forEach
                     val eventType = row[EventsTable.type].name
                     val seriesKey = seriesKeyFor[date to eventType] ?: return@forEach
-                    grouped.getOrPut(seriesKey) { mutableListOf() }.add(
-                        NdsConflictDate(
-                            date = date,
-                            existingEventId = row[EventsTable.id].toString(),
-                            existingEventTitle = row[EventsTable.title],
-                            existingEventStart = row[EventsTable.startAt].toString()
-                        )
-                    )
+                    matches.add(Match(seriesKey, date, row[EventsTable.id], row[EventsTable.title], row[EventsTable.startAt].toString()))
                 }
+        }
+        if (matches.isEmpty()) return emptyList()
+
+        // One grouped COUNT query for every conflicting event's RSVP count, instead of per-event N+1.
+        val rsvpCountByEvent = transaction {
+            AttendanceResponsesTable
+                .select(AttendanceResponsesTable.eventId, AttendanceResponsesTable.eventId.count())
+                .where { AttendanceResponsesTable.eventId inList matches.map { it.eventId }.distinct() }
+                .groupBy(AttendanceResponsesTable.eventId)
+                .associate { it[AttendanceResponsesTable.eventId] to it[AttendanceResponsesTable.eventId.count()].toInt() }
+        }
+
+        val grouped = LinkedHashMap<String, MutableList<NdsConflictDate>>()
+        for (m in matches) {
+            grouped.getOrPut(m.seriesKey) { mutableListOf() }.add(
+                NdsConflictDate(
+                    date = m.date,
+                    existingEventId = m.eventId.toString(),
+                    existingEventTitle = m.title,
+                    existingEventStart = m.start,
+                    rsvpCount = rsvpCountByEvent[m.eventId] ?: 0
+                )
+            )
         }
         return grouped.map { (key, dates) -> NdsConflictGroup(key, dates.sortedBy { it.date }) }
     }

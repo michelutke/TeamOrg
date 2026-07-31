@@ -18,6 +18,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
@@ -96,11 +97,22 @@ class NdsEventImporter(private val planner: NdsImportPlanner) {
         val dateToEvent = HashMap<LocalDate, UUID>()
 
         // keep=nds → cancel the existing TeamOrg event (no notifications) before the NDS event is
-        // inserted below. keep=teamorg → no NDS event created; attendance targets the existing one.
+        // inserted below. If the event is shared with other teams, cancelling it would affect them
+        // too — instead just detach this team from it, leaving it active for the other team(s).
+        // keep=teamorg → no NDS event created; attendance targets the existing one.
         for ((date, existingEventId) in conflictEventIdByDate) {
             when (resolutions[date] ?: "teamorg") {
-                "nds" -> EventsTable.update({ EventsTable.id eq UUID.fromString(existingEventId) }) {
-                    it[status] = EventStatus.cancelled
+                "nds" -> {
+                    val eventUuid = UUID.fromString(existingEventId)
+                    val teamCount = EventTeamsTable.selectAll()
+                        .where { EventTeamsTable.eventId eq eventUuid }.count()
+                    if (teamCount > 1) {
+                        EventTeamsTable.deleteWhere { (EventTeamsTable.eventId eq eventUuid) and (EventTeamsTable.teamId eq teamId) }
+                    } else {
+                        EventsTable.update({ EventsTable.id eq eventUuid }) {
+                            it[status] = EventStatus.cancelled
+                        }
+                    }
                 }
                 else -> dateToEvent[date] = UUID.fromString(existingEventId)
             }
@@ -169,12 +181,16 @@ class NdsEventImporter(private val planner: NdsImportPlanner) {
                         it[NdsMembersTable.userId]
                 }
 
+            val today = LocalDate.now(ZoneOffset.UTC)
             for (m in parsed.members) {
                 val userId = memberUserByName[m.lastName.lowercase() to m.firstName.lowercase()] ?: continue
                 // For EVERY dated NDS event of the team: attended → confirmed, otherwise → declined
                 // (excused). insertIgnore keeps existing rows (e.g. player self-responses) untouched.
+                // Non-attended dates only get a declined write once past — pre-declining a real
+                // user's future event would be wrong (they haven't had a chance to respond yet).
                 for ((date, eventId) in dateToEventFull) {
                     val attended = date in m.attendedDates
+                    if (!attended && !date.isBefore(today)) continue
                     val inserted = AttendanceResponsesTable.insertIgnore {
                         it[AttendanceResponsesTable.eventId] = eventId
                         it[AttendanceResponsesTable.userId] = userId

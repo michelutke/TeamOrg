@@ -1,5 +1,6 @@
 package ch.teamorg.nds
 
+import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventType
@@ -125,6 +126,64 @@ class NdsImportPlannerTest : IntegrationTestBase() {
         assertEquals(1, group.dates.size)
         assertEquals(date, group.dates.single().date)
         assertEquals(activeEventId.toString(), group.dates.single().existingEventId)
+    }
+
+    @Test
+    fun `conflict dates carry the existing event's rsvpCount`() = withTeamorgTestApplication {
+        startApplication()
+        val date = LocalDate.of(2026, 9, 14) // a Monday
+        val (teamId, activeEventId) = transaction {
+            val userId = UUID.randomUUID()
+            UsersTable.insert {
+                it[id] = userId
+                it[email] = "planner-rsvp-owner-${UUID.randomUUID()}@example.com"
+                it[passwordHash] = "!"
+                it[displayName] = "Planner Rsvp Owner"
+            }
+            val responder = UUID.randomUUID()
+            UsersTable.insert {
+                it[id] = responder
+                it[email] = "planner-rsvp-responder-${UUID.randomUUID()}@example.com"
+                it[passwordHash] = "!"
+                it[displayName] = "Planner Rsvp Responder"
+            }
+            val clubId = UUID.randomUUID()
+            ch.teamorg.db.tables.ClubsTable.insert {
+                it[id] = clubId
+                it[name] = "Planner Rsvp Club"
+                it[sportType] = "volleyball"
+            }
+            val teamId = UUID.randomUUID()
+            TeamsTable.insert {
+                it[id] = teamId
+                it[TeamsTable.clubId] = clubId
+                it[name] = "Planner Rsvp Team"
+            }
+            val eventId = EventsTable.insert {
+                it[title] = "Existing Event"
+                it[EventsTable.type] = EventType.training
+                it[startAt] = date.atStartOfDay().toInstant(ZoneOffset.UTC)
+                it[endAt] = date.atStartOfDay().plusHours(1).toInstant(ZoneOffset.UTC)
+                it[createdBy] = userId
+            } get EventsTable.id
+            EventTeamsTable.insert {
+                it[EventTeamsTable.eventId] = eventId
+                it[EventTeamsTable.teamId] = teamId
+            }
+            AttendanceResponsesTable.insert {
+                it[AttendanceResponsesTable.eventId] = eventId
+                it[AttendanceResponsesTable.userId] = responder
+                it[status] = "confirmed"
+            }
+            teamId to eventId
+        }
+
+        val series = planner.series(listOf(activity(date)))
+        val conflicts = planner.conflicts(teamId, series)
+
+        assertEquals(1, conflicts.single().dates.size)
+        assertEquals(1, conflicts.single().dates.single().rsvpCount)
+        assertEquals(activeEventId.toString(), conflicts.single().dates.single().existingEventId)
     }
 
     // Regression: NdsEventImporter used to key its ParsedActivity lookup by date alone when

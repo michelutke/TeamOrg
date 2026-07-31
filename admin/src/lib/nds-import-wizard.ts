@@ -60,6 +60,7 @@ export interface NdsConflictDate {
 	existingEventId: string;
 	existingEventTitle: string;
 	existingEventStart: string;
+	rsvpCount: number;
 }
 export interface NdsConflictGroup {
 	seriesKey: string;
@@ -187,7 +188,8 @@ export function effectiveKeep(
 	resolution: ConflictResolutionInput | undefined,
 	date: string
 ): ConflictKeep {
-	if (!conflictGroup) return 'nds'; // no conflict on this date → nothing blocks the import
+	const isConflictDate = conflictGroup?.dates.some((cd) => cd.date === date) ?? false;
+	if (!isConflictDate) return 'nds'; // no conflict on this date → nothing blocks the import
 	const groupKeep = resolution?.keep ?? 'teamorg';
 	return resolution?.overrides.get(date) ?? groupKeep;
 }

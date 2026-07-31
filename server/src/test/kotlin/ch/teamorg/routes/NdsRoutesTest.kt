@@ -171,7 +171,8 @@ class NdsRoutesTest : IntegrationTestBase() {
         assertEquals(0, standalone)
 
         // Attendance: total 'J' marks (coach 2 + Lara 3 + Tim 1) = 6 confirmed responses.
-        // Non-attended dates get 'declined' responses; attendanceImported counts only confirmed.
+        // Non-attended dates only get a 'declined' write once the event is past — all fixture
+        // events are in the future (Aug 2026), so no declined responses are written at all here.
         val (confirmedCount, declinedCount, openCount) = transaction {
             val ids = EventTeamsTable.select(EventTeamsTable.eventId)
                 .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
@@ -189,8 +190,7 @@ class NdsRoutesTest : IntegrationTestBase() {
         }
         assertEquals(6, confirmedCount)
         assertEquals(6, res.attendanceImported)
-        // 3 matched members × 8 events = 24 responses; 6 confirmed → 18 declined.
-        assertEquals(18, declinedCount)
+        assertEquals(0, declinedCount) // future events are never pre-declined
         assertEquals(8, openCount) // future events stay open
 
         // Members list exposed via API; all unclaimed (provisional) initially.
@@ -457,6 +457,78 @@ class NdsRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `attendanceMode keep only pre-declines past events, never future ones`() = withTeamorgTestApplication {
+        val mgr = register("nds_keep_future@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "KeepFutureClub")
+        val teamId = createTeam(mgr.token, clubId, "KeepFuture Team")
+
+        val bytes = NdsTestFixtures.anwesenheitslisteBytes("nds-i4-1")
+        val parseResponse = parseFull(mgr.token, clubId, bytes, teamId)
+        val parsed = parseResponse.anwesenheitsliste!!
+
+        createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId, parsed = parsed, importEvents = true, attendanceMode = "keep",
+                seriesTimes = defaultSeriesTimes(parseResponse.series)
+            ))
+        }
+
+        val eventIds = transaction {
+            EventTeamsTable.select(EventTeamsTable.eventId).where { EventTeamsTable.teamId eq UUID.fromString(teamId) }.map { it[EventTeamsTable.eventId] }
+        }
+        assertEquals(8, eventIds.size)
+
+        // No non-attended date gets pre-declined while every fixture event is still in the future.
+        val declinedAfterFirstImport = transaction {
+            AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId inList eventIds) and (AttendanceResponsesTable.status eq "declined") }
+                .count()
+        }
+        assertEquals(0, declinedAfterFirstImport)
+
+        // Backdate the ONE event nobody attends (MONDAYS[2], see NdsTestFixtures — coach attends
+        // index 0/2, Lara attends 0/1/2, Tim attends 1; index 4 = MONDAYS[2] is attended by none),
+        // so the first import wrote no attendance row at all for it, and its declined-write below
+        // is a clean 3-for-3 rather than colliding with a pre-existing confirmed row via insertIgnore.
+        val pastEventId = transaction {
+            (EventsTable innerJoin EventTeamsTable).select(EventsTable.id)
+                .where {
+                    (EventTeamsTable.teamId eq UUID.fromString(teamId)) and
+                        (EventsTable.startAt eq NdsTestFixtures.MONDAYS[2].atTime(18, 0).toInstant(java.time.ZoneOffset.UTC))
+                }
+                .single()[EventsTable.id]
+        }
+        transaction {
+            EventsTable.update({ EventsTable.id eq pastEventId }) {
+                it[startAt] = java.time.Instant.now().minusSeconds(86_400)
+                it[endAt] = java.time.Instant.now().minusSeconds(82_800)
+            }
+        }
+        createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamId, parsed = parsed, importEvents = true, attendanceMode = "keep",
+                seriesTimes = defaultSeriesTimes(parseResponse.series)
+            ))
+        }
+
+        val (declinedOnPastEvent, declinedOnFutureEvents) = transaction {
+            val past = AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId eq pastEventId) and (AttendanceResponsesTable.status eq "declined") }
+                .count()
+            val future = AttendanceResponsesTable.selectAll()
+                .where { (AttendanceResponsesTable.eventId inList (eventIds - pastEventId)) and (AttendanceResponsesTable.status eq "declined") }
+                .count()
+            past to future
+        }
+        assertEquals(3, declinedOnPastEvent, "all 3 matched members get declined once the event is past")
+        assertEquals(0, declinedOnFutureEvents, "future events are never pre-declined")
+    }
+
+    @Test
     fun `club manager links an existing account to an imported player`() = withTeamorgTestApplication {
         val mgr = register("cm3@example.com"); promoteToSuperAdmin(mgr.userId)
         val clubId = createClub(mgr.token, "Link")
@@ -664,6 +736,43 @@ class NdsRoutesTest : IntegrationTestBase() {
             val res: NdsImportResponse = second.body()
             assertEquals(first.teamId, res.teamId)
         }
+
+    @Test
+    fun `two clubs can independently import the same NDS Angebot without a 500`() = withTeamorgTestApplication {
+        val mgrA = register("nds_crossclub_angebot_a@example.com"); promoteToSuperAdmin(mgrA.userId)
+        val clubA = createClub(mgrA.token, "CrossClubAngebotA")
+        val mgrB = register("nds_crossclub_angebot_b@example.com"); promoteToSuperAdmin(mgrB.userId)
+        val clubB = createClub(mgrB.token, "CrossClubAngebotB")
+
+        val angebot = "shared-angebot-${UUID.randomUUID().toString().take(6)}"
+        val bytes = NdsTestFixtures.anwesenheitslisteBytes(angebot)
+
+        val parsedA = parseFile(mgrA.token, clubA, bytes)
+        val respA = createJsonClient().post("/clubs/$clubA/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgrA.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(createTeamName = "Team A", parsed = parsedA, importEvents = false))
+        }
+        assertEquals(HttpStatusCode.OK, respA.status)
+
+        val parsedB = parseFile(mgrB.token, clubB, bytes)
+        val respB = createJsonClient().post("/clubs/$clubB/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgrB.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(createTeamName = "Team B", parsed = parsedB, importEvents = false))
+        }
+        assertEquals(HttpStatusCode.OK, respB.status, "club B must be able to link the same Angebot independently")
+
+        val teamAId = respA.body<NdsImportResponse>().teamId
+        val teamBId = respB.body<NdsImportResponse>().teamId
+        assertTrue(teamAId != teamBId)
+
+        // Both clubs keep their own link — re-parsing within each club reports its own team as linked.
+        val reparseA = parseFileRaw(mgrA.token, clubA, bytes).body<NdsParseResponse>()
+        assertEquals(teamAId, reparseA.linkedTeamId)
+        val reparseB = parseFileRaw(mgrB.token, clubB, bytes).body<NdsParseResponse>()
+        assertEquals(teamBId, reparseB.linkedTeamId)
+    }
 
     private suspend fun ApplicationTestBuilder.createTeam(token: String, clubId: String, name: String): String =
         createJsonClient().post("/clubs/$clubId/teams") {
@@ -1226,6 +1335,72 @@ class NdsRoutesTest : IntegrationTestBase() {
                 .count()
         }
         assertEquals(0, newEventOnGroupDate) // group default teamorg → not created here
+    }
+
+    @Test
+    fun `conflict keep-nds on an event shared with another team detaches instead of cancelling`() = withTeamorgTestApplication {
+        val mgr = register("nds_shared_conflict@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "SharedConflictClub")
+        val teamA = createTeam(mgr.token, clubId, "Shared Team A")
+        val teamB = createTeam(mgr.token, clubId, "Shared Team B")
+
+        // One TeamOrg event shared by both teams (e.g. a joint training).
+        val sharedEventId = createConflictingEvent(teamA, NdsTestFixtures.MONDAYS[0], mgr.userId, "Gemeinsames Training")
+        transaction {
+            EventTeamsTable.insert {
+                it[EventTeamsTable.eventId] = sharedEventId
+                it[EventTeamsTable.teamId] = UUID.fromString(teamB)
+            }
+        }
+
+        val parseResponse = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes("nds-shared-1"), teamA)
+        val parsed = parseResponse.anwesenheitsliste!!
+        val conflictGroup = parseResponse.conflicts.single { it.dates.any { d -> d.date == NdsTestFixtures.MONDAYS[0] } }
+
+        val resp = createJsonClient().post("/clubs/$clubId/nds/import") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsImportRequest(
+                teamId = teamA,
+                parsed = parsed,
+                importEvents = true,
+                attendanceMode = "discard",
+                seriesTimes = defaultSeriesTimes(parseResponse.series),
+                conflictResolutions = listOf(NdsConflictResolution(seriesKey = conflictGroup.seriesKey, keep = "nds"))
+            ))
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+
+        // The shared event stays active — cancelling it would have wrongly affected team B too.
+        val sharedStatus = transaction {
+            EventsTable.selectAll().where { EventsTable.id eq sharedEventId }.single()[EventsTable.status]
+        }
+        assertEquals(EventStatus.active, sharedStatus)
+
+        // Team A's link to the shared event is gone; team B's is intact.
+        val (teamALinked, teamBLinked) = transaction {
+            val teamALinked = !EventTeamsTable.selectAll()
+                .where { (EventTeamsTable.eventId eq sharedEventId) and (EventTeamsTable.teamId eq UUID.fromString(teamA)) }
+                .empty()
+            val teamBLinked = !EventTeamsTable.selectAll()
+                .where { (EventTeamsTable.eventId eq sharedEventId) and (EventTeamsTable.teamId eq UUID.fromString(teamB)) }
+                .empty()
+            teamALinked to teamBLinked
+        }
+        assertFalse(teamALinked, "team A must be detached from the shared event")
+        assertTrue(teamBLinked, "team B's link must survive untouched")
+
+        // A new NDS event was created for team A on that date.
+        val newEventForTeamA = transaction {
+            (EventsTable innerJoin EventTeamsTable).selectAll()
+                .where {
+                    (EventTeamsTable.teamId eq UUID.fromString(teamA)) and
+                        (EventsTable.externalSource eq "nds") and
+                        (EventsTable.startAt eq NdsTestFixtures.MONDAYS[0].atTime(18, 0).toInstant(java.time.ZoneOffset.UTC))
+                }
+                .count()
+        }
+        assertEquals(1, newEventForTeamA)
     }
 
     @Test

@@ -193,6 +193,33 @@ class NdsImportViewModelTest {
     }
 
     @Test
+    fun partialConflictSeries_groupKeepAppliesOnlyToConflictDates() {
+        val s1 = series("s1", listOf("2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24"))
+        val conflictGroup = NdsConflictGroup(
+            seriesKey = "s1",
+            dates = listOf(
+                NdsConflictDate("2026-08-03", "e1", "Existing", "2026-08-03T18:00:00Z"),
+                NdsConflictDate("2026-08-10", "e2", "Existing", "2026-08-10T18:00:00Z")
+            )
+        )
+        val resolutions = mapOf("s1" to ResolutionChoice(keep = "teamorg"))
+
+        NdsImportViewModel.seriesImportsAnyEvent(s1, listOf(conflictGroup), resolutions) shouldBe true
+        NdsImportViewModel.step3Gate(listOf(s1), listOf(conflictGroup), emptyMap(), resolutions) shouldBe false
+        NdsImportViewModel.step3Gate(
+            listOf(s1),
+            listOf(conflictGroup),
+            mapOf("s1" to SeriesTimeInput("18:00", "19:30")),
+            resolutions
+        ) shouldBe true
+
+        val counts = NdsImportViewModel.conflictCounts(listOf(s1), listOf(conflictGroup), resolutions)
+        counts.first shouldBe 2 // eventsNew
+        counts.second shouldBe 2 // keepTeamorg
+        counts.third shouldBe 0 // keepNds
+    }
+
+    @Test
     fun canProceedFromEvents_usesCurrentState() = runTest(testDispatcher) {
         fakeRepo.parseResult = Result.success(
             NdsParseResponse(

@@ -71,7 +71,8 @@ data class NdsConflictDate(
     val date: String,
     val existingEventId: String,
     val existingEventTitle: String,
-    val existingEventStart: String
+    val existingEventStart: String,
+    val rsvpCount: Int = 0
 )
 
 @Serializable

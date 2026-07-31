@@ -382,6 +382,16 @@ private fun SeriesCard(
                     )
                     Text("NDS übernehmen", modifier = Modifier.weight(1f))
                 }
+                val rsvpLoss = conflictGroup.dates
+                    .filter { (resolution.overrides[it.date] ?: resolution.keep) == "nds" }
+                    .sumOf { it.rsvpCount }
+                if (rsvpLoss > 0) {
+                    Text(
+                        "$rsvpLoss Rückmeldungen gehen verloren",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 TextButton(onClick = { expanded = !expanded }) {
                     Text(if (expanded) "Termine ausblenden" else "Einzelne Termine anzeigen (${conflictGroup.dates.size})")
                 }
@@ -394,6 +404,13 @@ private fun SeriesCard(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            if (effective == "nds" && d.rsvpCount > 0) {
+                                Text(
+                                    "${d.rsvpCount} Rückmeldungen gehen verloren",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
                                     selected = effective == "teamorg",
