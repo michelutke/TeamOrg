@@ -1,8 +1,10 @@
 package ch.teamorg.routes
 
 import ch.teamorg.mail.MailService
+import ch.teamorg.plugins.RateLimits
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -37,9 +39,11 @@ fun Route.contactRoutes() {
     val toAddr = prop("contact.to").ifBlank { "info@teamorg.ch" }
     val sharedSecret = prop("contact.shared-secret")
 
-    post("/contact") {
-        // Shared-secret guard (set the same value on the landing site).
-        if (sharedSecret.isNotBlank() && call.request.headers["X-Contact-Secret"] != sharedSecret) {
+    rateLimit(RateLimits.CONTACT) {
+      post("/contact") {
+        // Shared-secret guard (set the same value on the landing site). Compared in
+        // constant time so the secret cannot be recovered byte-by-byte from response timing.
+        if (sharedSecret.isNotBlank() && !constantTimeEquals(call.request.headers["X-Contact-Secret"], sharedSecret)) {
             call.respond(HttpStatusCode.Forbidden)
             return@post
         }
@@ -52,6 +56,23 @@ fun Route.contactRoutes() {
         }
 
         if (req.club.isBlank() || req.name.isBlank() || req.email.isBlank() || req.message.isBlank()) {
+            call.respond(HttpStatusCode.BadRequest, ContactResponse(false))
+            return@post
+        }
+
+        // Length caps keep a public endpoint from being used to post megabyte payloads
+        // into the support inbox.
+        if (req.club.length > MAX_FIELD_LENGTH || req.name.length > MAX_FIELD_LENGTH ||
+            req.email.length > MAX_EMAIL_LENGTH || req.members.length > MAX_SHORT_FIELD_LENGTH ||
+            req.message.length > MAX_MESSAGE_LENGTH
+        ) {
+            call.respond(HttpStatusCode.BadRequest, ContactResponse(false))
+            return@post
+        }
+
+        // The address and name land in Reply-To; a CR or LF there would let a caller
+        // append arbitrary SMTP headers (extra recipients, spoofed From).
+        if (!isPlausibleEmail(req.email) || containsHeaderBreak(req.name) || containsHeaderBreak(req.club)) {
             call.respond(HttpStatusCode.BadRequest, ContactResponse(false))
             return@post
         }
@@ -87,5 +108,31 @@ fun Route.contactRoutes() {
             application.log.error("Contact form: failed to send email", e)
             call.respond(HttpStatusCode.InternalServerError, ContactResponse(false))
         }
+      }
     }
+}
+
+private const val MAX_FIELD_LENGTH = 200
+private const val MAX_SHORT_FIELD_LENGTH = 20
+private const val MAX_EMAIL_LENGTH = 254
+private const val MAX_MESSAGE_LENGTH = 5_000
+
+private fun containsHeaderBreak(value: String): Boolean =
+    value.any { it == '\r' || it == '\n' }
+
+private fun isPlausibleEmail(email: String): Boolean =
+    !containsHeaderBreak(email) &&
+        email.length <= MAX_EMAIL_LENGTH &&
+        email.count { it == '@' } == 1 &&
+        email.indexOf('@') > 0 &&
+        email.indexOf('@') < email.lastIndexOf('.') &&
+        email.lastIndexOf('.') < email.length - 1 &&
+        email.none { it.isWhitespace() }
+
+/** Length-independent comparison, so response time reveals nothing about the secret. */
+private fun constantTimeEquals(provided: String?, expected: String): Boolean {
+    if (provided == null) return false
+    val a = provided.toByteArray(Charsets.UTF_8)
+    val b = expected.toByteArray(Charsets.UTF_8)
+    return java.security.MessageDigest.isEqual(a, b)
 }

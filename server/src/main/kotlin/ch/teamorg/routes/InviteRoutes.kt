@@ -16,7 +16,9 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.routing.*
+import ch.teamorg.plugins.RateLimits
 import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
 import java.time.Instant
@@ -212,13 +214,17 @@ fun Route.inviteRoutes() {
         }
     }
 
-    route("/invites/code/{shortCode}") {
-        get {
-            val shortCode = call.parameters["shortCode"]?.uppercase()
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing short code")
-            val details = inviteRepository.findByShortCode(shortCode)
-                ?: return@get call.respond(HttpStatusCode.NotFound, "Invite not found")
-            call.respond(details)
+    // Public and guessable: an 8-character code space is small enough to walk through
+    // without a limiter, which would hand out club memberships to whoever brute-forces it.
+    rateLimit(RateLimits.INVITE_CODE) {
+        route("/invites/code/{shortCode}") {
+            get {
+                val shortCode = call.parameters["shortCode"]?.uppercase()
+                    ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing short code")
+                val details = inviteRepository.findByShortCode(shortCode)
+                    ?: return@get call.respond(HttpStatusCode.NotFound, "Invite not found")
+                call.respond(details)
+            }
         }
     }
 
