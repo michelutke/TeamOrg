@@ -14,6 +14,7 @@ import ch.teamorg.data.repository.BillingRepositoryImpl
 import ch.teamorg.data.repository.ClubRepositoryImpl
 import ch.teamorg.data.repository.EventRepositoryImpl
 import ch.teamorg.data.repository.InviteRepositoryImpl
+import ch.teamorg.data.repository.NdsImportRepositoryImpl
 import ch.teamorg.data.repository.NotificationRepositoryImpl
 import ch.teamorg.data.repository.TeamRepositoryImpl
 import ch.teamorg.preferences.UserPreferences
@@ -26,6 +27,7 @@ import ch.teamorg.repository.BillingRepository
 import ch.teamorg.repository.ClubRepository
 import ch.teamorg.repository.EventRepository
 import ch.teamorg.repository.InviteRepository
+import ch.teamorg.repository.NdsImportRepository
 import ch.teamorg.repository.NotificationRepository
 import ch.teamorg.repository.TeamRepository
 import org.koin.core.module.dsl.singleOf
@@ -48,6 +50,7 @@ actual val sharedModule = module {
     singleOf(::EventRepositoryImpl) bind EventRepository::class
     singleOf(::AttendanceRepositoryImpl) bind AttendanceRepository::class
     singleOf(::AbwesenheitRepositoryImpl) bind AbwesenheitRepository::class
+    singleOf(::NdsImportRepositoryImpl) bind NdsImportRepository::class
     singleOf(::NotificationCacheManager)
     singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
 }

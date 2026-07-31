@@ -45,7 +45,8 @@ class PlayerProfileViewModel(
 
     fun loadProfile(teamId: String, userId: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            // Silent refresh when the profile is already loaded — loader only first time.
+            _state.update { it.copy(isLoading = it.member == null, error = null) }
             val currentUserId = userPreferences.getUserId()
             _state.update { it.copy(isOwnProfile = currentUserId == userId) }
 

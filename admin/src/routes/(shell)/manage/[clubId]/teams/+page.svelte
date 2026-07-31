@@ -78,7 +78,11 @@
 	{/if}
 
 	{#if showNdsImport}
-		<NdsImportDialog clubId={data.clubId} onClose={() => (showNdsImport = false)} />
+		<NdsImportDialog
+			clubId={data.clubId}
+			teams={data.teams.filter((t) => t.archivedAt == null)}
+			onClose={() => (showNdsImport = false)}
+		/>
 	{/if}
 
 	{#if migrateSource}

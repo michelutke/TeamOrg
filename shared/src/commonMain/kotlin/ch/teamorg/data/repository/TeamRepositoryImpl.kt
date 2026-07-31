@@ -230,8 +230,13 @@ class TeamRepositoryImpl(private val client: HttpClient) : TeamRepository {
             val response = client.submitFormWithBinaryData(
                 url = "/auth/me/avatar",
                 formData = formData {
+                    // "jpg" is not a valid MIME subtype — the server whitelist expects image/jpeg.
+                    val mimeType = when (extension.lowercase()) {
+                        "jpg", "jpeg" -> "image/jpeg"
+                        else -> "image/$extension"
+                    }
                     append("avatar", imageBytes, Headers.build {
-                        append(HttpHeaders.ContentType, "image/$extension")
+                        append(HttpHeaders.ContentType, mimeType)
                         append(HttpHeaders.ContentDisposition, "filename=\"avatar.$extension\"")
                     })
                 }

@@ -70,4 +70,7 @@ sealed class Screen(val route: String) {
 
     @Serializable
     data class Billing(val clubId: String) : Screen("billing/{clubId}")
+
+    @Serializable
+    data class NdsImport(val teamId: String, val clubId: String) : Screen("nds_import/{teamId}/{clubId}")
 }

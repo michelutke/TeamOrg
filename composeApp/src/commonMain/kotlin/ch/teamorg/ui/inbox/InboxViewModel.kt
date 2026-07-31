@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 data class InboxState(
     val notifications: List<Notification> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val hasUnread: Boolean = false,
     val unreadCount: Long = 0
@@ -31,7 +32,8 @@ class InboxViewModel(
 
     fun loadNotifications() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            // Silent refresh when cached notifications exist — loader only on first load.
+            _state.update { it.copy(isLoading = it.notifications.isEmpty(), error = null) }
             notificationRepository.getNotifications(50, 0)
                 .onSuccess { notifications ->
                     _state.update { it.copy(notifications = notifications, isLoading = false) }
@@ -43,6 +45,7 @@ class InboxViewModel(
                 .onSuccess { count ->
                     _state.update { it.copy(unreadCount = count, hasUnread = count > 0) }
                 }
+            _state.update { it.copy(isRefreshing = false) }
         }
     }
 
@@ -96,13 +99,26 @@ class InboxViewModel(
     }
 
     fun deleteAll() {
+        val previous = _state.value.notifications
+        val previousUnread = _state.value.unreadCount
         _state.update { it.copy(notifications = emptyList(), unreadCount = 0, hasUnread = false) }
         viewModelScope.launch {
             notificationRepository.deleteAll()
+                .onFailure {
+                    _state.update { s ->
+                        s.copy(
+                            notifications = previous,
+                            unreadCount = previousUnread,
+                            hasUnread = previousUnread > 0,
+                            error = "Could not delete. Try again."
+                        )
+                    }
+                }
         }
     }
 
     fun refresh() {
+        _state.update { it.copy(isRefreshing = true) }
         loadNotifications()
     }
 

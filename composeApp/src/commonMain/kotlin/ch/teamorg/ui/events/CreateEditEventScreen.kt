@@ -27,6 +27,7 @@ import ch.teamorg.ui.theme.PillShape
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.isoDayNumber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,34 +140,57 @@ fun CreateEditEventScreen(
             }
 
             // ===== DATE & TIME =====
-            val isMultiDay = state.startDate != state.endDate
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 FilledField(
-                    label = "Starts",
+                    label = "Start date",
                     onClick = { showStartDatePicker = true },
                     modifier = Modifier.weight(1.4f)
                 ) {
                     Text(
-                        "${formatShortDate(state.startDate)} · ${formatTime(state.startTime)}",
+                        formatShortDate(state.startDate),
                         color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.clickable { showStartTimePicker = true }
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
                 FilledField(
-                    label = "Ends",
+                    label = "Start time",
+                    onClick = { showStartTimePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        formatTime(state.startTime),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FilledField(
+                    label = "End date",
+                    onClick = { showEndDatePicker = true },
+                    modifier = Modifier.weight(1.4f)
+                ) {
+                    Text(
+                        formatShortDate(state.endDate),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+                FilledField(
+                    label = "End time",
                     onClick = { showEndTimePicker = true },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        if (isMultiDay) "${formatShortDate(state.endDate)} · ${formatTime(state.endTime)}"
-                        else formatTime(state.endTime),
+                        formatTime(state.endTime),
                         color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.clickable { showEndDatePicker = true }
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
@@ -515,7 +539,7 @@ fun CreateEditEventScreen(
     // Recurring pattern bottom sheet
     if (showRecurringSheet) {
         RecurringPatternSheet(
-            initialPattern = state.recurringPattern ?: RecurringPatternState(),
+            initialPattern = state.recurringPattern ?: RecurringPatternState(weekdays = setOf(state.startDate.dayOfWeek.isoDayNumber - 1)),
             onDone = { pattern ->
                 viewModel.setRecurringPattern(pattern)
                 showRecurringSheet = false
