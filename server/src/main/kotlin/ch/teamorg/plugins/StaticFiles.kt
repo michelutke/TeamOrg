@@ -25,9 +25,8 @@ fun Application.configureStaticFiles() {
                         "default-src 'none'; img-src 'self'; sandbox",
                         safeOnly = false
                     )
-                    // Even if a polyglot file slips past validation, the browser downloads
-                    // it instead of rendering it in the origin's context.
-                    call.response.headers.append("X-Content-Type-Options", "nosniff", safeOnly = false)
+                    // nosniff comes from the global header interceptor; only the stricter
+                    // upload-specific policy is added here.
                     call.response.headers.append(HttpHeaders.CacheControl, "private, max-age=3600", safeOnly = false)
                 }
             })
