@@ -47,7 +47,8 @@ fun TeamRosterScreen(
     viewModel: TeamRosterViewModel,
     onBack: () -> Unit,
     onShareInvite: (String) -> Unit,
-    onMemberClick: (String) -> Unit = {}
+    onMemberClick: (String) -> Unit = {},
+    onNdsImportClick: (String) -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val clipboardManager = LocalClipboardManager.current
@@ -145,6 +146,25 @@ fun TeamRosterScreen(
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
+                        }
+                    }
+
+                    if (state.isCoachOrManager) {
+                        item {
+                            OutlinedButton(
+                                onClick = { onNdsImportClick(state.clubId) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .testTag("btn_nds_import"),
+                                shape = PillShape
+                            ) {
+                                Text(
+                                    "NDS-Import",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 
