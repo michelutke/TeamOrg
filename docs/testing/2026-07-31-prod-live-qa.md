@@ -16,11 +16,11 @@ team `693bc58a-5b2a-438d-8bc3-55ae2578a40b`.
 | Phase | Area | Result | Notes |
 |---|---|---|---|
 | P1 | Landing | pass (3 findings) | CTAs, fonts, i18n, legal all correct; layout + policy nits |
-| P2 | Contact form | pass, delivery unconfirmed | Success state shown, no hang; mailbox check pending |
+| P2 | Contact form | pass | Success state, no hang, **mail delivered** — SMTP 535 item resolved |
 | P3 | Funnel entry | pass | Redirect, back-link, no code oracle |
 | P4 | Create + card paths | pass (3DS not run) | Decline then success; club active, no charge |
 | P5 | NDS Import v2 | **fail** (1 major) | Import works; wizard times land 2 h late |
-| P6 | Billing + convert | pass; update-card pending | Card, counts, status, both conversions OK |
+| P6 | Billing + convert | pass | Card, counts, status, update-card, both conversions OK |
 | P7 | Typography / console | pass | Self-hosted fonts, no Google CDN, clean console |
 
 ## Findings
@@ -97,7 +97,8 @@ team `693bc58a-5b2a-438d-8bc3-55ae2578a40b`.
   "Demo anfragen" → `#kontakt`; Impressum/Datenschutz complete and bilingual (no postal
   address, Hetzner Nürnberg named); zero Google-font requests.
 - **Contact:** Turnstile solved, submit returned "Danke für deine Anfrage!" in ~2 s, no stuck
-  button. Backend accepted the request.
+  button, and the mail **arrived at `info@teamorg.ch`** — the SMTP 535 open item in
+  `docs/landing-status.md` is resolved and can be ticked off.
 - **Funnel:** anonymous `/` → `/start`; `/login` carries the "Neu hier? Jetzt starten" link;
   unknown and malformed join codes return the identical error (no code oracle).
 - **Create + billing:** declined card shows an inline error and stays retryable; `4242`
@@ -114,15 +115,15 @@ team `693bc58a-5b2a-438d-8bc3-55ae2578a40b`.
   the series default is keep-TeamOrg, per-date override lists the conflicting event by name and
   time, choosing NDS warns "Dieser bestehende Termin wird storniert." and the existing event is
   indeed cancelled after import.
-- **Billing/convert:** counts render with the basis note; convert team → club and club → team
-  both succeed; no console errors.
+- **Billing/convert:** counts render with the basis note; update-card with a second test card
+  succeeds and the page then shows `mastercard •••• 4444 — 12/2034`; convert team → club and
+  club → team both succeed; no console errors.
 - **Typography:** Roboto Flex (body) and Google Sans Flex (headings) self-hosted on both
   `teamorg.ch` and `app.teamorg.ch`; no CDN fallback.
 
 ## Known / pre-registered (not counted as new findings)
 
-- **SMTP 535** — status unresolved: the form reported success, so delivery must be confirmed in
-  the `info@teamorg.ch` mailbox before the open item can be closed.
+- **SMTP 535** — **resolved.** The test submission was delivered to `info@teamorg.ch`.
 - **Cloudflare Turnstile console noise** — none observed this run; remaining console output was
   a MetaMask extension, not first-party.
 - **`www.teamorg.ch` → apex redirect** — still missing.
@@ -141,7 +142,6 @@ team `693bc58a-5b2a-438d-8bc3-55ae2578a40b`.
   DevTools device-emulation pass.
 - **Billing owner-guard** — only one account existed in the session; a non-owner was never
   tested against `/manage/{clubId}/billing`.
-- **Update-card** — pending (second test card entered manually by the user).
 
 ## Cleanup
 
