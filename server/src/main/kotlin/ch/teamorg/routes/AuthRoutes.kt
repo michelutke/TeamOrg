@@ -147,9 +147,9 @@ fun Route.authRoutes() {
                     multipart.forEachPart { part ->
                         if (part is PartData.FileItem) {
                             val contentType = part.contentType
-                            if (contentType != null && listOf("image/jpeg", "image/png", "image/webp").contains(contentType.toString())) {
+                            if (contentType != null && listOf("image/jpeg", "image/jpg", "image/png", "image/webp").contains(contentType.toString())) {
                                 extension = when (contentType.toString()) {
-                                    "image/jpeg" -> "jpg"
+                                    "image/jpeg", "image/jpg" -> "jpg"
                                     "image/png" -> "png"
                                     "image/webp" -> "webp"
                                     else -> "bin"
