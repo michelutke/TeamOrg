@@ -1,10 +1,13 @@
 package ch.teamorg.domain.repositories
 
+import ch.teamorg.db.tables.AbwesenheitRulesTable
 import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
+import ch.teamorg.db.tables.SubGroupMembersTable
+import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
@@ -347,7 +350,15 @@ class NdsRepositoryImpl : NdsRepository {
 
         // Move attendance from the provisional placeholder to the real user, skipping events where
         // the real user already has a row (avoids PK clash on (event_id, user_id)).
-        moveAttendance(AttendanceResponsesTable, AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId, provisionalUserId, realUserId)
+        moveRows(AttendanceResponsesTable, AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId, provisionalUserId, realUserId)
+
+        // Subgroup memberships and absence rules would otherwise be CASCADE-deleted with the
+        // placeholder. Rules must move BEFORE the delete, or attendance_responses.abwesenheit_rule_id
+        // on the rows just moved silently goes NULL.
+        moveSubGroupMemberships(teamId, provisionalUserId, realUserId)
+        AbwesenheitRulesTable.update({ AbwesenheitRulesTable.userId eq provisionalUserId }) {
+            it[userId] = realUserId
+        }
 
         // Drop the provisional user's team role (the redeem already added the real user's role).
         TeamRolesTable.deleteWhere {
@@ -366,19 +377,50 @@ class NdsRepositoryImpl : NdsRepository {
         }
     }
 
-    private fun moveAttendance(
+    /**
+     * Repoint [table] rows from [from] to [to]. Rows whose [keyCol] the target already holds are
+     * deleted instead of updated, so the move cannot clash on a (key, user) primary key.
+     */
+    private fun moveRows(
         table: Table,
-        eventCol: Column<UUID>,
+        keyCol: Column<UUID>,
         userCol: Column<UUID>,
         from: UUID,
         to: UUID
     ) {
-        val targetEvents = table.select(eventCol).where { userCol eq to }.map { it[eventCol] }.toSet()
-        // Delete provisional rows that would collide with an existing real-user row, then repoint.
-        if (targetEvents.isNotEmpty()) {
-            table.deleteWhere { Op.build { (userCol eq from) and (eventCol inList targetEvents) } }
+        val targetKeys = table.select(keyCol).where { userCol eq to }.map { it[keyCol] }.toSet()
+        // Delete source rows that would collide with an existing target row, then repoint the rest.
+        if (targetKeys.isNotEmpty()) {
+            table.deleteWhere { Op.build { (userCol eq from) and (keyCol inList targetKeys) } }
         }
         table.update({ userCol eq from }) { it[userCol] = to }
+    }
+
+    /** Move the placeholder's memberships in THIS team's subgroups to the real account. */
+    private fun moveSubGroupMemberships(teamId: UUID, from: UUID, to: UUID) {
+        val teamSubGroupIds = SubGroupsTable.select(SubGroupsTable.id)
+            .where { SubGroupsTable.teamId eq teamId }
+            .map { it[SubGroupsTable.id] }
+        if (teamSubGroupIds.isEmpty()) return
+
+        val alreadyHeld = SubGroupMembersTable.select(SubGroupMembersTable.subGroupId)
+            .where {
+                (SubGroupMembersTable.userId eq to) and
+                    (SubGroupMembersTable.subGroupId inList teamSubGroupIds)
+            }
+            .map { it[SubGroupMembersTable.subGroupId] }
+
+        if (alreadyHeld.isNotEmpty()) {
+            SubGroupMembersTable.deleteWhere {
+                Op.build { (userId eq from) and (subGroupId inList alreadyHeld) }
+            }
+        }
+        SubGroupMembersTable.update({
+            (SubGroupMembersTable.userId eq from) and
+                (SubGroupMembersTable.subGroupId inList teamSubGroupIds)
+        }) {
+            it[userId] = to
+        }
     }
 
     override suspend fun listExportActivities(teamId: UUID): List<ExportActivity> = transaction {

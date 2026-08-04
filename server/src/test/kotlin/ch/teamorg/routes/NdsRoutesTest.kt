@@ -1,10 +1,15 @@
 package ch.teamorg.routes
 
+import ch.teamorg.db.tables.AbwesenheitRulesTable
 import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
+import ch.teamorg.db.tables.PresetType
+import ch.teamorg.db.tables.RuleType
+import ch.teamorg.db.tables.SubGroupMembersTable
+import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
@@ -1509,5 +1514,103 @@ class NdsRoutesTest : IntegrationTestBase() {
                 .single()[NdsMembersTable.userId]
         }
         assertEquals(laraUserIdBefore, laraUserIdAfter) // the attempted (failed) mapping never committed
+    }
+
+    @Test
+    fun `link carries subgroup memberships and absence rules to the real account`() = withTeamorgTestApplication {
+        val mgr = register("nds_merge_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "MergeClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+        val provisionalUserId = lara.userId!!
+
+        // The generic-join scenario: Lara registers herself and is added to the team directly,
+        // so she is a club member with her own account, beside her placeholder.
+        val laraUser = register("lara_generic@example.com")
+        val realUserId = UUID.fromString(laraUser.userId)
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = laraUser.userId, role = "player"))
+        }
+
+        // Subgroup A: placeholder only -> must be repointed.
+        // Subgroup B: placeholder AND real user -> placeholder row must be dropped, not clash on PK.
+        val (groupA, groupB) = transaction {
+            val a = UUID.randomUUID()
+            val b = UUID.randomUUID()
+            SubGroupsTable.insert { it[id] = a; it[SubGroupsTable.teamId] = teamId; it[name] = "Gruppe A" }
+            SubGroupsTable.insert { it[id] = b; it[SubGroupsTable.teamId] = teamId; it[name] = "Gruppe B" }
+            SubGroupMembersTable.insert { it[subGroupId] = a; it[userId] = provisionalUserId }
+            SubGroupMembersTable.insert { it[subGroupId] = b; it[userId] = provisionalUserId }
+            SubGroupMembersTable.insert { it[subGroupId] = b; it[userId] = realUserId }
+            a to b
+        }
+
+        // An absence rule on the placeholder, plus a response pointing at it.
+        val ruleId = transaction {
+            val rid = UUID.randomUUID()
+            AbwesenheitRulesTable.insert {
+                it[id] = rid
+                it[userId] = provisionalUserId
+                it[presetType] = PresetType.injury
+                it[label] = "Knie"
+                it[ruleType] = RuleType.period
+                it[startDate] = java.time.LocalDate.of(2026, 1, 1)
+                it[endDate] = java.time.LocalDate.of(2026, 12, 31)
+            }
+            val anyEventId = AttendanceResponsesTable.select(AttendanceResponsesTable.eventId)
+                .where { AttendanceResponsesTable.userId eq provisionalUserId }
+                .map { it[AttendanceResponsesTable.eventId] }
+                .first()
+            AttendanceResponsesTable.update({
+                (AttendanceResponsesTable.userId eq provisionalUserId) and
+                    (AttendanceResponsesTable.eventId eq anyEventId)
+            }) { it[abwesenheitRuleId] = rid }
+            rid
+        }
+
+        val link = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = laraUser.userId))
+        }
+        assertEquals(HttpStatusCode.OK, link.status)
+
+        transaction {
+            // Real user is now in both subgroups; nothing left on the placeholder.
+            val realGroups = SubGroupMembersTable.select(SubGroupMembersTable.subGroupId)
+                .where { SubGroupMembersTable.userId eq realUserId }
+                .map { it[SubGroupMembersTable.subGroupId] }
+                .toSet()
+            assertEquals(setOf(groupA, groupB), realGroups)
+            assertEquals(
+                0,
+                SubGroupMembersTable.selectAll()
+                    .where { SubGroupMembersTable.userId eq provisionalUserId }.count().toInt()
+            )
+
+            // The absence rule moved rather than being CASCADE-deleted, and the moved response
+            // still references it.
+            assertEquals(
+                realUserId,
+                AbwesenheitRulesTable.select(AbwesenheitRulesTable.userId)
+                    .where { AbwesenheitRulesTable.id eq ruleId }
+                    .map { it[AbwesenheitRulesTable.userId] }
+                    .single()
+            )
+            assertEquals(
+                1,
+                AttendanceResponsesTable.selectAll()
+                    .where {
+                        (AttendanceResponsesTable.userId eq realUserId) and
+                            (AttendanceResponsesTable.abwesenheitRuleId eq ruleId)
+                    }.count().toInt()
+            )
+        }
     }
 }
