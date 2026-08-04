@@ -541,6 +541,15 @@ fun Route.ndsRoutes() {
                 ?: return@post call.respond(HttpStatusCode.BadRequest, "Ungültige userId")
             if (userRepository.findById(userId) == null)
                 return@post call.respond(HttpStatusCode.NotFound, "Konto nicht gefunden")
+            if (ndsRepository.isProvisionalUser(userId))
+                return@post call.respond(HttpStatusCode.BadRequest, "Provisorische Konten können nicht verknüpft werden")
+
+            val existingMemberId = ndsRepository.findMemberIdByUser(teamId, userId)
+            if (existingMemberId != null && existingMemberId != memberId)
+                return@post call.respond(
+                    HttpStatusCode.Conflict,
+                    "Dieses Konto ist bereits mit einem anderen Mitglied dieses Teams verknüpft"
+                )
             val role = if (member.funktion == "Leiter/in") "coach" else "player"
             teamRepository.addMember(teamId, userId, role)
             ndsRepository.claimMember(memberId, userId)

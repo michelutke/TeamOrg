@@ -608,6 +608,58 @@ class NdsRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `link rejects a user already linked to another roster row of the team`() = withTeamorgTestApplication {
+        val mgr = register("nds_dup_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "DupClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val members = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>()
+        val first = members.first { it.funktion == "Teilnehmer/in" }
+        val second = members.filter { it.funktion == "Teilnehmer/in" }[1]
+
+        val user = register("dup_target@example.com")
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = user.userId, role = "player"))
+        }
+
+        suspend fun link(memberId: UUID) = createJsonClient().post("/teams/$teamId/nds/members/$memberId/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = user.userId))
+        }
+
+        assertEquals(HttpStatusCode.OK, link(first.id).status)
+        assertEquals(HttpStatusCode.Conflict, link(second.id).status)
+    }
+
+    @Test
+    fun `link rejects a provisional target`() = withTeamorgTestApplication {
+        val mgr = register("nds_guard_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "GuardClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val members = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>()
+        val target = members.first { it.lastName == "Müller" }
+        val otherPlaceholderUserId = members.first { it.id != target.id }.userId!!
+
+        // Provisional placeholder as the link target -> 400.
+        val provisional = createJsonClient().post("/teams/$teamId/nds/members/${target.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = otherPlaceholderUserId.toString()))
+        }
+        assertEquals(HttpStatusCode.BadRequest, provisional.status)
+    }
+
+    @Test
     fun `person files supply person numbers and merge by name with the Anwesenheitsliste`() =
         withTeamorgTestApplication {
             val mgr = register("nds_persons@example.com"); promoteToSuperAdmin(mgr.userId)

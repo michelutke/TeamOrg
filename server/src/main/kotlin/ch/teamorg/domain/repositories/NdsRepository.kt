@@ -213,6 +213,10 @@ interface NdsRepository {
     suspend fun getMemberUserId(memberId: UUID): UUID?
     /** Link a claimed member to a real account: move attendance + role off the provisional user. */
     suspend fun claimMember(memberId: UUID, realUserId: UUID)
+    /** The roster row of [teamId] currently backed by [userId], or null if none. */
+    suspend fun findMemberIdByUser(teamId: UUID, userId: UUID): UUID?
+    /** True when [userId] is an import placeholder account (users.provisional). */
+    suspend fun isProvisionalUser(userId: UUID): Boolean
 
     /** Active events for the team (export source for the Aktivitäten file). */
     suspend fun listExportActivities(teamId: UUID): List<ExportActivity>
@@ -459,6 +463,20 @@ class NdsRepositoryImpl : NdsRepository {
             }
     }
 
+    override suspend fun findMemberIdByUser(teamId: UUID, userId: UUID): UUID? = transaction {
+        NdsMembersTable.select(NdsMembersTable.id)
+            .where { (NdsMembersTable.teamId eq teamId) and (NdsMembersTable.userId eq userId) }
+            .map { it[NdsMembersTable.id] }
+            .firstOrNull()
+    }
+
+    override suspend fun isProvisionalUser(userId: UUID): Boolean = transaction {
+        UsersTable.select(UsersTable.provisional)
+            .where { UsersTable.id eq userId }
+            .map { it[UsersTable.provisional] }
+            .singleOrNull() == true
+    }
+
     private fun ResultRow.toNdsMember() = NdsMember(
         id = this[NdsMembersTable.id],
         teamId = this[NdsMembersTable.teamId],
@@ -471,13 +489,11 @@ class NdsRepositoryImpl : NdsRepository {
         source = this[NdsMembersTable.sourceKind],
         claimed = this[NdsMembersTable.userId] != null &&
             // claimed = backed by a non-provisional user
-            !isProvisionalUser(this[NdsMembersTable.userId])
+            isProvisionalUserSync(this[NdsMembersTable.userId]!!).not()
     )
 
-    private fun isProvisionalUser(userId: UUID?): Boolean {
-        if (userId == null) return false
-        return UsersTable.select(UsersTable.provisional).where { UsersTable.id eq userId }
+    private fun isProvisionalUserSync(userId: UUID): Boolean =
+        UsersTable.select(UsersTable.provisional).where { UsersTable.id eq userId }
             .map { it[UsersTable.provisional] }
             .singleOrNull() == true
-    }
 }
