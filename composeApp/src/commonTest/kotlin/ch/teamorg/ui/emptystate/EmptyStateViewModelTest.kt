@@ -2,10 +2,14 @@ package ch.teamorg.ui.emptystate
 
 import app.cash.turbine.test
 import ch.teamorg.domain.AuthUser
+import ch.teamorg.domain.DeleteAccountResult
 import ch.teamorg.fake.FakeAuthRepository
 import ch.teamorg.fake.FakeInviteRepository
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -196,5 +200,84 @@ class EmptyStateViewModelTest {
         viewModel.dismissMessages()
 
         viewModel.state.value.error shouldBe null
+    }
+
+    // region — deleteAccount
+
+    @Test
+    fun deleteAccount_withSuccess_setsAccountDeletedAndClearsProgress() = runTest(testDispatcher) {
+        fakeAuth.deleteAccountResult = DeleteAccountResult.Success
+        createViewModel()
+
+        viewModel.deleteAccount("password123")
+
+        viewModel.state.value.accountDeleted.shouldBeTrue()
+        viewModel.state.value.deleteInProgress.shouldBeFalse()
+        viewModel.state.value.deleteError shouldBe null
+        fakeAuth.deleteAccountPasswords shouldBe listOf("password123")
+    }
+
+    @Test
+    fun deleteAccount_withInvalidPassword_setsSentenceAndKeepsDialogOpen() = runTest(testDispatcher) {
+        fakeAuth.deleteAccountResult = DeleteAccountResult.InvalidPassword
+        createViewModel()
+        viewModel.openDeleteDialog()
+
+        viewModel.deleteAccount("wrong")
+
+        viewModel.state.value.deleteError shouldBe "That password is incorrect."
+        viewModel.state.value.showDeleteDialog.shouldBeTrue()
+        viewModel.state.value.accountDeleted.shouldBeFalse()
+    }
+
+    @Test
+    fun deleteAccount_withOwnsClubs_setsSentenceNamingTheClub() = runTest(testDispatcher) {
+        fakeAuth.deleteAccountResult = DeleteAccountResult.OwnsClubs(listOf("Owner Club"))
+        createViewModel()
+
+        viewModel.deleteAccount("password123")
+
+        viewModel.state.value.deleteError shouldBe
+            "You own Owner Club. Transfer ownership to another club manager, or delete the club, before deleting your account."
+    }
+
+    @Test
+    fun deleteAccount_withOwnsClubsAndNoNames_setsActionableSentence() = runTest(testDispatcher) {
+        fakeAuth.deleteAccountResult = DeleteAccountResult.OwnsClubs(emptyList())
+        createViewModel()
+
+        viewModel.deleteAccount("password123")
+
+        viewModel.state.value.deleteError shouldBe
+            "You still own a club. Transfer ownership to another club manager, or delete the club, before deleting your account."
+    }
+
+    @Test
+    fun deleteAccount_whileInFlight_ignoresSecondCall() = runTest(testDispatcher) {
+        fakeAuth.deleteAccountResult = DeleteAccountResult.Success
+        fakeAuth.deleteAccountGate = CompletableDeferred()
+        createViewModel()
+
+        viewModel.deleteAccount("first")
+        viewModel.state.value.deleteInProgress.shouldBeTrue()
+        viewModel.deleteAccount("second")
+        fakeAuth.deleteAccountGate!!.complete(Unit)
+
+        fakeAuth.deleteAccountPasswords shouldBe listOf("first")
+        viewModel.state.value.accountDeleted.shouldBeTrue()
+    }
+
+    @Test
+    fun openDeleteDialog_clearsStaleError() = runTest(testDispatcher) {
+        fakeAuth.deleteAccountResult = DeleteAccountResult.InvalidPassword
+        createViewModel()
+        viewModel.deleteAccount("wrong")
+        viewModel.state.value.deleteError shouldBe "That password is incorrect."
+
+        viewModel.closeDeleteDialog()
+        viewModel.openDeleteDialog()
+
+        viewModel.state.value.deleteError shouldBe null
+        viewModel.state.value.showDeleteDialog.shouldBeTrue()
     }
 }

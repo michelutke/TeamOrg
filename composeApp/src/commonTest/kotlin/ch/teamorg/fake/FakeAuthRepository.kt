@@ -6,6 +6,7 @@ import ch.teamorg.domain.DeleteAccountResult
 import ch.teamorg.domain.LoginRequest
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.repository.AuthRepository
+import kotlinx.coroutines.CompletableDeferred
 
 class FakeAuthRepository : AuthRepository {
 
@@ -22,6 +23,7 @@ class FakeAuthRepository : AuthRepository {
     var hasTeamResult: Boolean = false
     var deleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
     var deleteAccountPasswords: MutableList<String> = mutableListOf()
+    var deleteAccountGate: CompletableDeferred<Unit>? = null
 
     var lastLoginRequest: LoginRequest? = null
     var lastRegisterRequest: RegisterRequest? = null
@@ -41,6 +43,7 @@ class FakeAuthRepository : AuthRepository {
         hasTeamResult = false
         deleteAccountResult = DeleteAccountResult.Success
         deleteAccountPasswords = mutableListOf()
+        deleteAccountGate = null
         lastLoginRequest = null
         lastRegisterRequest = null
         logoutCalled = false
@@ -71,6 +74,7 @@ class FakeAuthRepository : AuthRepository {
 
     override suspend fun deleteAccount(password: String): DeleteAccountResult {
         deleteAccountPasswords.add(password)
+        deleteAccountGate?.await()
         return deleteAccountResult
     }
 }

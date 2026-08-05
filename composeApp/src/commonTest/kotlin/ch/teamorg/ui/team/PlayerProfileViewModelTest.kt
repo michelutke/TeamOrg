@@ -18,6 +18,7 @@ import com.russhwolf.settings.MapSettings
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -143,6 +144,20 @@ class PlayerProfileViewModelTest {
         viewModel.deleteAccount("password123")
 
         viewModel.state.value.deleteError shouldBe "Couldn't delete your account. Please try again."
+    }
+
+    @Test
+    fun `a second call while in flight is ignored`() = runTest {
+        authRepository.deleteAccountResult = DeleteAccountResult.Success
+        authRepository.deleteAccountGate = CompletableDeferred()
+
+        viewModel.deleteAccount("first")
+        viewModel.state.value.deleteInProgress.shouldBeTrue()
+        viewModel.deleteAccount("second")
+        authRepository.deleteAccountGate!!.complete(Unit)
+
+        authRepository.deleteAccountPasswords shouldBe listOf("first")
+        viewModel.state.value.accountDeleted.shouldBeTrue()
     }
 
     @Test

@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,12 +20,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.AbwesenheitRule
 import ch.teamorg.ui.attendance.AbsenceCard
 import ch.teamorg.ui.attendance.AddAbsenceSheet
 import ch.teamorg.ui.attendance.AttendanceStatsBar
+import ch.teamorg.ui.components.DeleteAccountDialog
 import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.theme.PillShape
 import ch.teamorg.ui.util.rememberCameraCaptureLauncher
@@ -51,8 +50,6 @@ fun PlayerProfileScreen(
     var showAddAbsenceSheet by remember { mutableStateOf(false) }
     var editingRule by remember { mutableStateOf<AbwesenheitRule?>(null) }
     var deleteTargetRule by remember { mutableStateOf<AbwesenheitRule?>(null) }
-    var deletePassword by remember { mutableStateOf("") }
-    var disclosureExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.leftTeam) {
         if (state.leftTeam) onLeftTeam()
@@ -102,11 +99,33 @@ fun PlayerProfileScreen(
                     }
                 }
                 state.member == null -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Player not found",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                if (isNavProfile) "You're not part of a team yet." else "Player not found",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (isNavProfile) {
+                            TextButton(
+                                onClick = { viewModel.openDeleteDialog() },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = PillShape,
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text(
+                                    "Delete account",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.height(80.dp))
+                        }
                     }
                 }
                 else -> {
@@ -407,13 +426,9 @@ fun PlayerProfileScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
-                        if (isNavProfile && state.isOwnProfile) {
+                        if (isNavProfile) {
                             TextButton(
-                                onClick = {
-                                    deletePassword = ""
-                                    disclosureExpanded = false
-                                    viewModel.openDeleteDialog()
-                                },
+                                onClick = { viewModel.openDeleteDialog() },
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 shape = PillShape,
                                 colors = ButtonDefaults.textButtonColors(
@@ -537,65 +552,12 @@ fun PlayerProfileScreen(
 
     // Delete account dialog
     if (state.showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!state.deleteInProgress) viewModel.closeDeleteDialog() },
-            shape = RoundedCornerShape(28.dp),
-            title = { Text("Delete account", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "This permanently deletes your personal data.",
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { disclosureExpanded = !disclosureExpanded }) {
-                            Icon(Icons.Outlined.Info, contentDescription = "What gets deleted")
-                        }
-                    }
-                    if (disclosureExpanded) {
-                        Spacer(Modifier.height(8.dp))
-                        Text("Deleted:", fontWeight = FontWeight.Bold)
-                        Text("Your email address and name, profile picture, attendance replies, absences, notifications and their settings, and your team and club memberships.")
-                        Spacer(Modifier.height(8.dp))
-                        Text("Kept for your team:", fontWeight = FontWeight.Bold)
-                        Text("Events you created and attendance you recorded stay with your team. Your name is replaced there.")
-                        if (state.isCoachOrManager) {
-                            Spacer(Modifier.height(8.dp))
-                            Text("Teams you coach will have no coach until a club manager assigns one.")
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = deletePassword,
-                        onValueChange = { deletePassword = it },
-                        label = { Text("Your password") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        enabled = !state.deleteInProgress,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    state.deleteError?.let { error ->
-                        Spacer(Modifier.height(8.dp))
-                        Text(error, color = MaterialTheme.colorScheme.error)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text("This cannot be undone.", fontWeight = FontWeight.Bold)
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.deleteAccount(deletePassword) },
-                    enabled = deletePassword.isNotBlank() && !state.deleteInProgress
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { viewModel.closeDeleteDialog() },
-                    enabled = !state.deleteInProgress
-                ) { Text("Cancel") }
-            }
+        DeleteAccountDialog(
+            deleteInProgress = state.deleteInProgress,
+            deleteError = state.deleteError,
+            showCoachWarning = state.isCoachOrManager,
+            onConfirm = { password -> viewModel.deleteAccount(password) },
+            onDismiss = { viewModel.closeDeleteDialog() }
         )
     }
 

@@ -14,6 +14,7 @@ import ch.teamorg.repository.AttendanceRepository
 import ch.teamorg.repository.AuthRepository
 import ch.teamorg.repository.EventRepository
 import ch.teamorg.repository.TeamRepository
+import ch.teamorg.ui.components.deleteAccountErrorMessage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -191,6 +192,7 @@ class PlayerProfileViewModel(
     }
 
     fun deleteAccount(password: String) {
+        if (_state.value.deleteInProgress) return
         viewModelScope.launch {
             _state.update { it.copy(deleteInProgress = true, deleteError = null) }
             when (val result = authRepository.deleteAccount(password)) {
@@ -198,29 +200,12 @@ class PlayerProfileViewModel(
                     _state.update {
                         it.copy(deleteInProgress = false, showDeleteDialog = false, accountDeleted = true)
                     }
-                DeleteAccountResult.InvalidPassword ->
+                else ->
                     _state.update {
-                        it.copy(deleteInProgress = false, deleteError = "That password is incorrect.")
-                    }
-                is DeleteAccountResult.OwnsClubs ->
-                    _state.update {
-                        it.copy(deleteInProgress = false, deleteError = ownsClubsMessage(result.clubNames))
-                    }
-                is DeleteAccountResult.Error ->
-                    _state.update {
-                        it.copy(
-                            deleteInProgress = false,
-                            deleteError = "Couldn't delete your account. Please try again."
-                        )
+                        it.copy(deleteInProgress = false, deleteError = deleteAccountErrorMessage(result))
                     }
             }
         }
-    }
-
-    private fun ownsClubsMessage(clubNames: List<String>): String {
-        val subject = if (clubNames.isEmpty()) "You still own a club" else "You own ${clubNames.joinToString(", ")}"
-        return "$subject. Transfer ownership to another club manager, or delete the club, " +
-            "before deleting your account."
     }
 
     fun uploadAvatar(teamId: String, userId: String, imageBytes: ByteArray, extension: String) {

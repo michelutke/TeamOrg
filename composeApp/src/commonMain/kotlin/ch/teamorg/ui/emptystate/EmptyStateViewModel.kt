@@ -2,8 +2,10 @@ package ch.teamorg.ui.emptystate
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ch.teamorg.domain.DeleteAccountResult
 import ch.teamorg.repository.AuthRepository
 import ch.teamorg.repository.InviteRepository
+import ch.teamorg.ui.components.deleteAccountErrorMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -16,7 +18,11 @@ data class EmptyStateUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val infoMessage: String? = null,
-    val isSuperAdmin: Boolean = false
+    val isSuperAdmin: Boolean = false,
+    val showDeleteDialog: Boolean = false,
+    val deleteInProgress: Boolean = false,
+    val deleteError: String? = null,
+    val accountDeleted: Boolean = false
 )
 
 sealed class EmptyStateEvent {
@@ -105,5 +111,33 @@ class EmptyStateViewModel(
 
     fun dismissMessages() {
         _state.value = _state.value.copy(error = null, infoMessage = null)
+    }
+
+    fun openDeleteDialog() {
+        _state.value = _state.value.copy(showDeleteDialog = true, deleteError = null)
+    }
+
+    fun closeDeleteDialog() {
+        _state.value = _state.value.copy(showDeleteDialog = false, deleteError = null)
+    }
+
+    fun deleteAccount(password: String) {
+        if (_state.value.deleteInProgress) return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(deleteInProgress = true, deleteError = null)
+            when (val result = authRepository.deleteAccount(password)) {
+                DeleteAccountResult.Success ->
+                    _state.value = _state.value.copy(
+                        deleteInProgress = false,
+                        showDeleteDialog = false,
+                        accountDeleted = true
+                    )
+                else ->
+                    _state.value = _state.value.copy(
+                        deleteInProgress = false,
+                        deleteError = deleteAccountErrorMessage(result)
+                    )
+            }
+        }
     }
 }
