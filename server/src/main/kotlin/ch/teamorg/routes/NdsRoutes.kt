@@ -588,6 +588,12 @@ fun Route.ndsRoutes() {
                     HttpStatusCode.Conflict,
                     "Dieses Konto ist bereits mit einem anderen Mitglied dieses Teams verknüpft"
                 )
+            val currentUserId = member.userId
+            if (currentUserId != null && currentUserId != userId && !ndsRepository.isProvisionalUser(currentUserId))
+                return@post call.respond(
+                    HttpStatusCode.Conflict,
+                    "Dieses Mitglied ist bereits mit einem anderen Konto verknüpft"
+                )
             val role = if (member.funktion == "Leiter/in") "coach" else "player"
             teamRepository.addMember(teamId, userId, role)
             ndsRepository.claimMember(memberId, userId)

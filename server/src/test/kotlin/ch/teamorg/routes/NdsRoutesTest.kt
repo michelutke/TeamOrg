@@ -1669,6 +1669,76 @@ class NdsRoutesTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `relinking a claimed roster row to a different account is rejected and preserves the holder's data`() = withTeamorgTestApplication {
+        val mgr = register("nds_reclaim_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "ReclaimClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+
+        val userA = register("nds_reclaim_a@example.com")
+        val realUserAId = UUID.fromString(userA.userId)
+        val firstLink = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = userA.userId))
+        }
+        assertEquals(HttpStatusCode.OK, firstLink.status)
+
+        // Give A something losable, so this proves data preservation, not just the status code.
+        val groupId = transaction {
+            val g = UUID.randomUUID()
+            SubGroupsTable.insert { it[id] = g; it[SubGroupsTable.teamId] = teamId; it[name] = "Gruppe A" }
+            SubGroupMembersTable.insert { it[subGroupId] = g; it[userId] = realUserAId }
+            g
+        }
+        val ruleId = transaction {
+            val rid = UUID.randomUUID()
+            AbwesenheitRulesTable.insert {
+                it[id] = rid
+                it[userId] = realUserAId
+                it[presetType] = PresetType.injury
+                it[label] = "Knie"
+                it[ruleType] = RuleType.period
+                it[startDate] = java.time.LocalDate.of(2026, 1, 1)
+                it[endDate] = java.time.LocalDate.of(2026, 12, 31)
+            }
+            rid
+        }
+
+        val userB = register("nds_reclaim_b@example.com")
+        val secondLink = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = userB.userId))
+        }
+        assertEquals(HttpStatusCode.Conflict, secondLink.status)
+
+        transaction {
+            assertEquals(
+                1,
+                SubGroupMembersTable.selectAll()
+                    .where { (SubGroupMembersTable.subGroupId eq groupId) and (SubGroupMembersTable.userId eq realUserAId) }
+                    .count().toInt()
+            )
+            assertEquals(
+                realUserAId,
+                AbwesenheitRulesTable.select(AbwesenheitRulesTable.userId)
+                    .where { AbwesenheitRulesTable.id eq ruleId }
+                    .map { it[AbwesenheitRulesTable.userId] }
+                    .single()
+            )
+            val role = TeamRolesTable.selectAll()
+                .where { (TeamRolesTable.userId eq realUserAId) and (TeamRolesTable.teamId eq teamId) }
+                .map { it[TeamRolesTable.role] }.singleOrNull()
+            assertEquals("player", role)
+        }
+    }
+
+    @Test
     fun `duplicate suggestions match a self-registered account to its imported roster row`() = withTeamorgTestApplication {
         val mgr = register("nds_sugg_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
         val clubId = createClub(mgr.token, "SuggClub")
