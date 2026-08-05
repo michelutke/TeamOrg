@@ -4,7 +4,8 @@ import type { Dict } from '$lib/i18n';
 export class ApiError extends Error {
 	constructor(
 		public readonly status: number,
-		message: string
+		message: string,
+		public readonly payload?: unknown
 	) {
 		super(message);
 		this.name = 'ApiError';
