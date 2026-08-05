@@ -126,3 +126,32 @@ data class NdsImportResponse(
     val eventsCreated: Int,
     val attendanceImported: Int = 0
 )
+
+/** What a merge would carry over from the placeholder. Mirrors the server's MovableCounts. */
+@Serializable
+data class MovableCounts(
+    val attendance: Int = 0,
+    val subgroups: Int = 0,
+    val rules: Int = 0
+)
+
+@Serializable
+data class DuplicateCandidate(
+    val userId: String,
+    val displayName: String,
+    /** "HIGH" or "MEDIUM" — how confident the server's name match is. */
+    val score: String
+)
+
+/** One imported roster row that is not yet backed by a real account, plus its candidate accounts. */
+@Serializable
+data class DuplicateSuggestion(
+    val memberId: String,
+    val lastName: String,
+    val firstName: String,
+    val birthDate: String? = null,
+    val personNumber: String? = null,
+    val funktion: String,
+    val candidates: List<DuplicateCandidate> = emptyList(),
+    val willMove: MovableCounts = MovableCounts()
+)
