@@ -100,7 +100,7 @@ end
 
 desc "Archive, sign (manual, profile via App Store Connect API) and upload to TestFlight"
 lane :ios_testflight do
-  require_env!(IOS_SECRETS)
+  require_env!(IOS_SECRETS, "API_BASE_URL")
   setup_ci
 
   api_key = app_store_connect_api_key(
@@ -126,10 +126,14 @@ lane :ios_testflight do
 
   config_path = "../#{XCODE_CONFIG_FILE}"
   config = File.read(config_path)
+  # xcconfig treats "//" as a comment; "$()" (empty substitution) keeps the URL intact.
+  api_base_url = ENV["API_BASE_URL"].sub("://", ":/$()/")
   config = config.sub(/^TEAM_ID=.*$/, "TEAM_ID=#{ENV['APPLE_TEAM_ID']}")
   config = config.sub(/^CURRENT_PROJECT_VERSION=.*$/, "CURRENT_PROJECT_VERSION=#{build_number}")
-  unless config.include?("TEAM_ID=#{ENV['APPLE_TEAM_ID']}") && config.include?("CURRENT_PROJECT_VERSION=#{build_number}")
-    UI.user_error!("Failed to inject TEAM_ID/CURRENT_PROJECT_VERSION into #{XCODE_CONFIG_FILE}")
+  config = config.sub(/^API_BASE_URL=.*$/) { "API_BASE_URL=#{api_base_url}" }
+  unless config.include?("TEAM_ID=#{ENV['APPLE_TEAM_ID']}") && config.include?("CURRENT_PROJECT_VERSION=#{build_number}") &&
+         config.include?("API_BASE_URL=#{api_base_url}")
+    UI.user_error!("Failed to inject TEAM_ID/CURRENT_PROJECT_VERSION/API_BASE_URL into #{XCODE_CONFIG_FILE}")
   end
   File.write(config_path, config)
 

@@ -13,7 +13,8 @@ Same answer for both stores.
 
 | Claim | Where to verify |
 |---|---|
-| Release builds use an HTTPS base URL | `shared/build.gradle.kts` — release `buildConfigField` defaults to `https://api.teamorg.app` |
+| Android release builds use an HTTPS base URL | `shared/build.gradle.kts` — release `buildConfigField` defaults to `https://api.teamorg.app` |
+| iOS builds use an HTTPS base URL | `iosApp/Configuration/Config.xcconfig` — `API_BASE_URL` defaults to `https://api.teamorg.app`, read via `iosApp/iosApp/Info.plist` in `shared/src/iosMain/kotlin/ch/teamorg/data/network/ApiConfig.ios.kt`; the code fallback for a missing plist key is the same HTTPS URL. CI TestFlight builds have the value injected from the `API_BASE_URL` secret (`fastlane/Fastfile` `ios_testflight`); local Xcode builds use the xcconfig default. |
 | A non-HTTPS base URL cannot ship silently | `shared/src/commonMain/kotlin/ch/teamorg/data/network/HttpClientFactory.kt` — `requireSecureBaseUrl` throws unless the URL is HTTPS or a local dev host |
 | Android release builds cannot speak cleartext | `composeApp/src/androidMain/res/xml/network_security_config.xml` — `base-config cleartextTrafficPermitted="false"`; `AndroidManifest.xml` — `android:usesCleartextTraffic="false"` |
 | iOS ships no ATS exception | `iosApp/iosApp/Info.plist` — no `NSAppTransportSecurity` key |
