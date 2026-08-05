@@ -37,6 +37,9 @@
 	const roleLabel = (role: string) =>
 		data.m.roles[role as keyof typeof data.m.roles] ?? role;
 
+	const pluralDe = (count: number, singular: string, plural: string) =>
+		count === 1 ? singular : plural;
+
 	const coaches = $derived(data.members.filter((m) => m.role === 'coach'));
 	const players = $derived(data.members.filter((m) => m.role !== 'coach'));
 
@@ -233,9 +236,12 @@
 								</span>
 							</div>
 							<p class="mt-1 text-[12px] text-on-surface-variant">
-								Wird übernommen: {d.willMove.attendance} Anwesenheiten, {d.willMove.subgroups}
-								Gruppen, {d.willMove.rules} Abwesenheitsregeln. Das provisorische Konto wird
-								gelöscht — nicht umkehrbar.
+								Wird übernommen: {d.willMove.attendance}
+								{pluralDe(d.willMove.attendance, 'Anwesenheit', 'Anwesenheiten')}, {d.willMove
+									.subgroups}
+								{pluralDe(d.willMove.subgroups, 'Gruppe', 'Gruppen')}, {d.willMove.rules}
+								{pluralDe(d.willMove.rules, 'Abwesenheitsregel', 'Abwesenheitsregeln')}. Das
+								provisorische Konto wird gelöscht — nicht umkehrbar.
 							</p>
 							<form method="POST" action="?/linkNdsMember" class="mt-2 flex items-center gap-2">
 								<input type="hidden" name="memberId" value={d.memberId} />
@@ -371,6 +377,8 @@
 				{#each coaches as member (member.userId)}
 					<a href="/app/teams/{data.team.id}/members/{member.userId}" class="block">
 						<MemberRow {member} {roleLabel}>
+							<!-- Reads `member` from the {#each} closure, not the snippet's own param —
+							     MemberRow's Member type has no `provisional` field. -->
 							{#snippet actions()}
 								{#if member.provisional}
 									<span class="rounded-full bg-surface-container px-2 py-0.5 text-[11px] text-on-surface-variant">Provisorisch</span>
@@ -392,6 +400,8 @@
 				{#each players as member (member.userId)}
 					<a href="/app/teams/{data.team.id}/members/{member.userId}" class="block">
 						<MemberRow {member} {roleLabel}>
+							<!-- Reads `member` from the {#each} closure, not the snippet's own param —
+							     MemberRow's Member type has no `provisional` field. -->
 							{#snippet actions()}
 								{#if member.provisional}
 									<span class="rounded-full bg-surface-container px-2 py-0.5 text-[11px] text-on-surface-variant">Provisorisch</span>
