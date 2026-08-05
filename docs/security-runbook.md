@@ -103,6 +103,32 @@ The apps now emit HSTS themselves. Additionally, in Coolify/Traefik:
 - Only submit the domain to the HSTS preload list once you are certain every subdomain
   will stay HTTPS-only — preload is effectively irreversible.
 
+### Postgres connection TLS
+
+`DATABASE_URL` carries no `sslmode`, so the server → Postgres hop is plaintext. It travels only
+over Coolify's internal Docker network and the database has no public port (§5), but the store
+privacy answer needs a defensible position rather than an open question.
+
+Check whether the managed Postgres presents a certificate:
+
+```bash
+docker exec -it <postgres-container> psql -U <user> -c "SHOW ssl;"
+```
+
+- `on` → append `&sslmode=require` to `DATABASE_URL` in Coolify and redeploy the server.
+- `off` → record that here, with the justification (internal network only, no public port), and
+  do not leave it as a pending item. `docs/store-data-safety.md` references this decision.
+
+### HTTP → HTTPS redirect (must be confirmed, not assumed)
+
+HSTS only protects a client that has already completed one successful HTTPS request. Until the
+redirect is enforced in Traefik for all three domains, a first-ever plain-HTTP request is
+answered over cleartext. Confirm with:
+
+```bash
+curl -sSI http://api.teamorg.app | head -1   # expect 301/308
+```
+
 ## 7. Secret hygiene
 
 - `docs/deploy-secrets.local.md` is gitignored and excluded from the Docker build context.
