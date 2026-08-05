@@ -6,7 +6,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -522,12 +524,17 @@ fun TeamRosterScreen(
 
     // Duplicate review sheet
     if (state.showDuplicatesSheet) {
-        ModalBottomSheet(onDismissRequest = { viewModel.closeDuplicatesSheet() }) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.closeDuplicatesSheet() },
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = 32.dp),
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
@@ -541,6 +548,16 @@ fun TeamRosterScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (state.mergedCount > 0) {
+                    Text(
+                        if (state.mergedCount == 1) "1 member merged."
+                        else "${state.mergedCount} members merged.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.testTag("txt_merge_success")
+                    )
+                }
 
                 if (state.mergeError != null) {
                     Text(
