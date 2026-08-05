@@ -200,8 +200,15 @@ interface NdsRepository {
     /** Upsert members from a dedicated person export (carries PERSONENNUMMER); merges by name. */
     suspend fun upsertMembers(teamId: UUID, members: List<NdsMemberInput>): List<NdsMember>
     suspend fun listMembers(teamId: UUID): List<NdsMember>
-    /** Team roster joined with any already-linked nds_members identity, for match suggestions. */
-    suspend fun listTeamUsersForMatching(teamId: UUID): List<MatchCandidateUser>
+    /**
+     * Team roster joined with any already-linked nds_members identity, for match suggestions.
+     * [excludeProvisional] defaults to false because the import wizard relies on a placeholder's
+     * own linked identity matching itself to produce `alreadyLinkedUserId` and suppress a lossy
+     * "map" onto the real account (see [ch.teamorg.infra.nds.NdsMemberMatcher.suggest]). The
+     * duplicate-suggestions endpoint passes true: placeholders must never be offered as merge
+     * candidates.
+     */
+    suspend fun listTeamUsersForMatching(teamId: UUID, excludeProvisional: Boolean = false): List<MatchCandidateUser>
     suspend fun getMember(memberId: UUID): NdsMember?
     suspend fun updateMember(
         memberId: UUID,
@@ -287,7 +294,7 @@ class NdsRepositoryImpl : NdsRepository {
             .map { it.toNdsMember() }
     }
 
-    override suspend fun listTeamUsersForMatching(teamId: UUID): List<MatchCandidateUser> = transaction {
+    override suspend fun listTeamUsersForMatching(teamId: UUID, excludeProvisional: Boolean): List<MatchCandidateUser> = transaction {
         val ndsByUser = NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq teamId }
             .filter { it[NdsMembersTable.userId] != null }
             .associateBy { it[NdsMembersTable.userId]!! }
@@ -298,7 +305,13 @@ class NdsRepositoryImpl : NdsRepository {
             .distinct()
         if (userIds.isEmpty()) return@transaction emptyList()
 
-        UsersTable.selectAll().where { (UsersTable.id inList userIds) and (UsersTable.provisional eq false) }
+        UsersTable.selectAll().where {
+            if (excludeProvisional) {
+                (UsersTable.id inList userIds) and (UsersTable.provisional eq false)
+            } else {
+                UsersTable.id inList userIds
+            }
+        }
             .map { user ->
                 val userId = user[UsersTable.id]
                 val displayName = user[UsersTable.displayName]

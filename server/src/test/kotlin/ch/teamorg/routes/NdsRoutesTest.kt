@@ -45,6 +45,7 @@ import java.util.zip.ZipInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NdsRoutesTest : IntegrationTestBase() {
@@ -1737,4 +1738,39 @@ class NdsRoutesTest : IntegrationTestBase() {
         }
         assertEquals(HttpStatusCode.Forbidden, res2.status)
     }
+
+    @Test
+    fun `parse with teamId keeps offering no lossy map for a placeholder whose real account has joined`() =
+        withTeamorgTestApplication {
+            val mgr = register("nds_wizard_unaffected_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+            val clubId = createClub(mgr.token, "WizardUnaffectedClub")
+            val res = importAll(mgr.token, clubId)
+            val teamId = UUID.fromString(res.teamId)
+
+            val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+
+            // Lara's real account joins the team under the same name — same setup that would make
+            // the duplicate-suggestions endpoint surface her, but this is the wizard's *parse* path.
+            val laraUser = createJsonClient().post("/auth/register") {
+                contentType(ContentType.Application.Json)
+                setBody(RegisterRequest("lara_wizard@example.com", "password123", "${lara.firstName} ${lara.lastName}"))
+            }.body<AuthResponse>()
+            createJsonClient().post("/teams/$teamId/members") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+                contentType(ContentType.Application.Json)
+                setBody(AddMemberRequest(userId = laraUser.userId, role = "player"))
+            }
+
+            // Re-parsing with teamId must still short-circuit on the placeholder's own linked
+            // identity (alreadyLinkedUserId) rather than preselect the real account as a "map"
+            // candidate — "map" doesn't move attendance/subgroups/rules like /link does.
+            val response = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes(), teamId = teamId.toString())
+            val laraRowKey = NdsMemberMatcher.rowKey(lara.funktion, lara.lastName, lara.firstName)
+            val suggestion = response.memberSuggestions.single { it.rowKey == laraRowKey }
+            assertEquals(lara.userId.toString(), suggestion.alreadyLinkedUserId)
+            assertNull(suggestion.preselectedUserId)
+            assertTrue(suggestion.candidates.isEmpty())
+        }
 }

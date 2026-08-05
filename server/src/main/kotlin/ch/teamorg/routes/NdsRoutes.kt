@@ -441,7 +441,7 @@ fun Route.ndsRoutes() {
             val unresolved = ndsRepository.listUnresolvedMembers(teamId)
             if (unresolved.isEmpty()) return@get call.respond(emptyList<DuplicateSuggestion>())
 
-            val teamUsers = ndsRepository.listTeamUsersForMatching(teamId)
+            val teamUsers = ndsRepository.listTeamUsersForMatching(teamId, excludeProvisional = true)
             val rows = unresolved.map {
                 NdsMemberInput(it.lastName, it.firstName, it.birthDate, it.personNumber, it.funktion)
             }
