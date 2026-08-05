@@ -7,13 +7,33 @@ on:
   push:
     branches:
       - main
+    # A docs, server or web change cannot alter the APK, so it must not spend a build.
+    # Use workflow_dispatch to force a build outside these paths.
+    paths:
+      - 'composeApp/**'
+      - 'shared/**'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'fastlane/**'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '.github/workflows/deploy-android.yml'
   workflow_dispatch:
+
+# One Updraft build per branch. A newer commit makes the running build obsolete, so
+# cancel it instead of letting two builds race to upload.
+concurrency:
+  group: deploy-android-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   updraft:
     name: fastlane android_updraft
     runs-on: ubuntu-latest
     environment: development
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4

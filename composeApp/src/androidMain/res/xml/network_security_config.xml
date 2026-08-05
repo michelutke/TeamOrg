@@ -6,16 +6,4 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-
-    <!-- Debug builds only (android:debuggable=true): the emulator host alias and localhost stay
-         reachable over HTTP so a debug build against a locally-run server keeps working. -->
-    <debug-overrides>
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
-        <domain-config cleartextTrafficPermitted="true">
-            <domain includeSubdomains="true">10.0.2.2</domain>
-            <domain includeSubdomains="true">localhost</domain>
-        </domain-config>
-    </debug-overrides>
 </network-security-config>

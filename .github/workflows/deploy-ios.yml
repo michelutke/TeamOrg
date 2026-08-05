@@ -7,12 +7,33 @@ on:
   push:
     branches:
       - main
+    # macOS runners are the most expensive minutes we buy — never spend them on a
+    # change that cannot affect the iOS build. Use workflow_dispatch to force one.
+    paths:
+      - 'composeApp/**'
+      - 'shared/**'
+      - 'iosApp/**'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'fastlane/**'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '.xcode-version'
+      - '.github/workflows/deploy-ios.yml'
   workflow_dispatch:
+
+# One iOS build per branch; a newer commit supersedes the running one.
+concurrency:
+  group: deploy-ios-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-check:
     name: fastlane ios_check (unsigned simulator build)
     runs-on: macos-15
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
