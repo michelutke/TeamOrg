@@ -63,6 +63,7 @@ from any `invite_links.invited_email` it appears in, and any impersonation sessi
 user (as actor or target) is marked inactive so a previously minted impersonation token cannot
 outlive the deletion.
 
-**Preconditions:** a user who still owns a live club is refused with a 409 and told to transfer
-ownership or delete the club first — deleting them silently would leave a billed club without an
-owner.
+**Preconditions:** a user who still owns a live club is refused with a 409 — deleting them
+silently would leave a billed club without an owner. Ownership transfer and club deletion are not
+self-service, so the message tells the user to contact `info@teamorg.ch` to have the club
+transferred or closed before their account can be deleted.

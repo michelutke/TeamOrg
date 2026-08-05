@@ -36,8 +36,8 @@ fun deleteAccountErrorMessage(result: DeleteAccountResult): String? = when (resu
         } else {
             "You own ${result.clubNames.joinToString(", ")}"
         }
-        "$subject. Transfer ownership to another club manager, or delete the club, " +
-            "before deleting your account."
+        "$subject. Contact info@teamorg.ch so we can transfer or close the club " +
+            "before you delete your account."
     }
     is DeleteAccountResult.Error -> "Couldn't delete your account. Please try again."
 }

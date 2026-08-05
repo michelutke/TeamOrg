@@ -602,7 +602,7 @@ const de: Dict = {
 		deleteCancel: 'Abbrechen',
 		deleteWrongPassword: 'Das Passwort ist falsch.',
 		deleteOwnsClubs:
-			'Du bist Besitzer von {clubs}. Übertrage die Besitzer-Rolle an einen anderen Vereinsmanager oder lösche den Verein, bevor du dein Konto löschst.',
+			'Du bist Besitzer von {clubs}. Kontaktiere info@teamorg.ch, damit wir den Verein übertragen oder auflösen können, bevor du dein Konto löschst.',
 		deleteFailed: 'Konto konnte nicht gelöscht werden. Bitte versuche es erneut.'
 	},
 	invite: {
@@ -1020,7 +1020,7 @@ const en: Dict = {
 		deleteCancel: 'Cancel',
 		deleteWrongPassword: 'That password is incorrect.',
 		deleteOwnsClubs:
-			'You own {clubs}. Transfer ownership to another club manager, or delete the club, before deleting your account.',
+			'You own {clubs}. Contact info@teamorg.ch so we can transfer or close the club before you delete your account.',
 		deleteFailed: 'Could not delete your account. Please try again.'
 	},
 	invite: {

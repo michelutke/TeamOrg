@@ -113,7 +113,7 @@ class PlayerProfileViewModelTest {
         viewModel.deleteAccount("password123")
 
         viewModel.state.value.deleteError shouldBe
-            "You own Owner Club. Transfer ownership to another club manager, or delete the club, before deleting your account."
+            "You own Owner Club. Contact info@teamorg.ch so we can transfer or close the club before you delete your account."
         viewModel.state.value.showDeleteDialog.shouldBeTrue()
     }
 
@@ -124,7 +124,7 @@ class PlayerProfileViewModelTest {
         viewModel.deleteAccount("password123")
 
         viewModel.state.value.deleteError shouldBe
-            "You own A, B. Transfer ownership to another club manager, or delete the club, before deleting your account."
+            "You own A, B. Contact info@teamorg.ch so we can transfer or close the club before you delete your account."
     }
 
     @Test
@@ -134,7 +134,7 @@ class PlayerProfileViewModelTest {
         viewModel.deleteAccount("password123")
 
         viewModel.state.value.deleteError shouldBe
-            "You still own a club. Transfer ownership to another club manager, or delete the club, before deleting your account."
+            "You still own a club. Contact info@teamorg.ch so we can transfer or close the club before you delete your account."
     }
 
     @Test
