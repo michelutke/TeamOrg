@@ -1,6 +1,7 @@
 package ch.teamorg.ui.team
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import ch.teamorg.ui.components.TeamorgLoader
 import coil3.compose.AsyncImage
+import ch.teamorg.domain.DuplicateSuggestion
 import ch.teamorg.domain.TeamMember
 import ch.teamorg.ui.theme.PillShape
 
@@ -161,6 +163,27 @@ fun TeamRosterScreen(
                             ) {
                                 Text(
                                     "NDS-Import",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    if (state.duplicates.isNotEmpty()) {
+                        item {
+                            val n = state.duplicates.size
+                            OutlinedButton(
+                                onClick = { viewModel.openDuplicatesSheet() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .testTag("btn_review_duplicates"),
+                                shape = PillShape
+                            ) {
+                                Text(
+                                    if (n == 1) "1 possible duplicate — review"
+                                    else "$n possible duplicates — review",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -496,6 +519,56 @@ fun TeamRosterScreen(
             onDeleteSubGroup = { subGroupId -> viewModel.deleteSubGroup(teamId, subGroupId) }
         )
     }
+
+    // Duplicate review sheet
+    if (state.showDuplicatesSheet) {
+        ModalBottomSheet(onDismissRequest = { viewModel.closeDuplicatesSheet() }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "Possible duplicates",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "These imported members may already have an account. Merging moves their " +
+                        "imported history to that account and deletes the provisional one. This can't be undone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (state.mergeError != null) {
+                    Text(
+                        state.mergeError!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag("txt_merge_error")
+                    )
+                }
+
+                if (state.duplicates.isEmpty()) {
+                    Text(
+                        "Nothing left to review.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                state.duplicates.forEach { suggestion ->
+                    DuplicateSuggestionCard(
+                        suggestion = suggestion,
+                        mergeInProgress = state.mergeInProgress,
+                        onMerge = { userId -> viewModel.mergeDuplicate(teamId, suggestion.memberId, userId) }
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -554,11 +627,30 @@ fun MemberItem(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(
-                text = member.displayName,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = member.displayName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (member.provisional) {
+                    // Import placeholder holding attendance for someone without an account yet.
+                    // Only coaches and club managers ever receive these rows from the server.
+                    Text(
+                        text = "Provisional",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .testTag("chip_provisional_${member.userId}")
+                    )
+                }
+            }
             val subtitle = if (member.role == "player") {
                 listOfNotNull(
                     member.jerseyNumber?.let { "#$it" },
@@ -575,3 +667,82 @@ fun MemberItem(
         }
     }
 }
+
+@Composable
+private fun DuplicateSuggestionCard(
+    suggestion: DuplicateSuggestion,
+    mergeInProgress: Boolean,
+    onMerge: (String) -> Unit
+) {
+    var selectedUserId by remember(suggestion.memberId) { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(14.dp)
+            .testTag("card_duplicate_${suggestion.memberId}"),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            "${suggestion.firstName} ${suggestion.lastName}",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            listOfNotNull(
+                suggestion.birthDate,
+                suggestion.personNumber?.let { "No. $it" },
+                suggestion.funktion
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "Moves ${pluralize(suggestion.willMove.attendance, "attendance", "attendances")}, " +
+                "${pluralize(suggestion.willMove.subgroups, "group", "groups")}, " +
+                "${pluralize(suggestion.willMove.rules, "absence rule", "absence rules")}.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        suggestion.candidates.forEach { candidate ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { selectedUserId = candidate.userId }
+                    .padding(vertical = 6.dp)
+                    .testTag("candidate_${suggestion.memberId}_${candidate.userId}"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                RadioButton(
+                    selected = selectedUserId == candidate.userId,
+                    onClick = { selectedUserId = candidate.userId }
+                )
+                Text(
+                    if (candidate.score == "HIGH") "${candidate.displayName} (very likely)"
+                    else candidate.displayName,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        Button(
+            onClick = { selectedUserId?.let(onMerge) },
+            enabled = selectedUserId != null && !mergeInProgress,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("btn_merge_${suggestion.memberId}"),
+            shape = PillShape
+        ) {
+            Text("Merge", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** English uses the plural for 0 ("0 groups"), so key on == 1, never on > 1. */
+private fun pluralize(count: Int, singular: String, pluralForm: String): String =
+    "$count ${if (count == 1) singular else pluralForm}"
