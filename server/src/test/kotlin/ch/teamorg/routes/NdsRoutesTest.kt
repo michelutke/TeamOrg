@@ -1,15 +1,21 @@
 package ch.teamorg.routes
 
+import ch.teamorg.db.tables.AbwesenheitRulesTable
 import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
+import ch.teamorg.db.tables.PresetType
+import ch.teamorg.db.tables.RuleType
+import ch.teamorg.db.tables.SubGroupMembersTable
+import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.deriveCheckInStatus
+import ch.teamorg.domain.models.DuplicateSuggestion
 import ch.teamorg.domain.models.NdsConflictOverride
 import ch.teamorg.domain.models.NdsConflictResolution
 import ch.teamorg.domain.models.NdsMapping
@@ -39,6 +45,7 @@ import java.util.zip.ZipInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NdsRoutesTest : IntegrationTestBase() {
@@ -600,6 +607,58 @@ class NdsRoutesTest : IntegrationTestBase() {
             setBody(NdsMemberLinkRequest(userId = UUID.randomUUID().toString()))
         }
         assertEquals(HttpStatusCode.NotFound, resp.status)
+    }
+
+    @Test
+    fun `link rejects a user already linked to another roster row of the team`() = withTeamorgTestApplication {
+        val mgr = register("nds_dup_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "DupClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val members = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>()
+        val first = members.first { it.funktion == "Teilnehmer/in" }
+        val second = members.filter { it.funktion == "Teilnehmer/in" }[1]
+
+        val user = register("dup_target@example.com")
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = user.userId, role = "player"))
+        }
+
+        suspend fun link(memberId: UUID) = createJsonClient().post("/teams/$teamId/nds/members/$memberId/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = user.userId))
+        }
+
+        assertEquals(HttpStatusCode.OK, link(first.id).status)
+        assertEquals(HttpStatusCode.Conflict, link(second.id).status)
+    }
+
+    @Test
+    fun `link rejects a provisional target`() = withTeamorgTestApplication {
+        val mgr = register("nds_guard_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "GuardClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val members = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>()
+        val target = members.first { it.lastName == "Müller" }
+        val otherPlaceholderUserId = members.first { it.id != target.id }.userId!!
+
+        // Provisional placeholder as the link target -> 400.
+        val provisional = createJsonClient().post("/teams/$teamId/nds/members/${target.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = otherPlaceholderUserId.toString()))
+        }
+        assertEquals(HttpStatusCode.BadRequest, provisional.status)
     }
 
     @Test
@@ -1510,4 +1569,278 @@ class NdsRoutesTest : IntegrationTestBase() {
         }
         assertEquals(laraUserIdBefore, laraUserIdAfter) // the attempted (failed) mapping never committed
     }
+
+    @Test
+    fun `link carries subgroup memberships and absence rules to the real account`() = withTeamorgTestApplication {
+        val mgr = register("nds_merge_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "MergeClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+        val provisionalUserId = lara.userId!!
+
+        // The generic-join scenario: Lara registers herself and is added to the team directly,
+        // so she is a club member with her own account, beside her placeholder.
+        val laraUser = register("lara_generic@example.com")
+        val realUserId = UUID.fromString(laraUser.userId)
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = laraUser.userId, role = "player"))
+        }
+
+        // Subgroup A: placeholder only -> must be repointed.
+        // Subgroup B: placeholder AND real user -> placeholder row must be dropped, not clash on PK.
+        val (groupA, groupB) = transaction {
+            val a = UUID.randomUUID()
+            val b = UUID.randomUUID()
+            SubGroupsTable.insert { it[id] = a; it[SubGroupsTable.teamId] = teamId; it[name] = "Gruppe A" }
+            SubGroupsTable.insert { it[id] = b; it[SubGroupsTable.teamId] = teamId; it[name] = "Gruppe B" }
+            SubGroupMembersTable.insert { it[subGroupId] = a; it[userId] = provisionalUserId }
+            SubGroupMembersTable.insert { it[subGroupId] = b; it[userId] = provisionalUserId }
+            SubGroupMembersTable.insert { it[subGroupId] = b; it[userId] = realUserId }
+            a to b
+        }
+
+        // An absence rule on the placeholder, plus a response pointing at it.
+        val ruleId = transaction {
+            val rid = UUID.randomUUID()
+            AbwesenheitRulesTable.insert {
+                it[id] = rid
+                it[userId] = provisionalUserId
+                it[presetType] = PresetType.injury
+                it[label] = "Knie"
+                it[ruleType] = RuleType.period
+                it[startDate] = java.time.LocalDate.of(2026, 1, 1)
+                it[endDate] = java.time.LocalDate.of(2026, 12, 31)
+            }
+            val anyEventId = AttendanceResponsesTable.select(AttendanceResponsesTable.eventId)
+                .where { AttendanceResponsesTable.userId eq provisionalUserId }
+                .map { it[AttendanceResponsesTable.eventId] }
+                .first()
+            AttendanceResponsesTable.update({
+                (AttendanceResponsesTable.userId eq provisionalUserId) and
+                    (AttendanceResponsesTable.eventId eq anyEventId)
+            }) { it[abwesenheitRuleId] = rid }
+            rid
+        }
+
+        val link = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = laraUser.userId))
+        }
+        assertEquals(HttpStatusCode.OK, link.status)
+
+        transaction {
+            // Real user is now in both subgroups; nothing left on the placeholder.
+            val realGroups = SubGroupMembersTable.select(SubGroupMembersTable.subGroupId)
+                .where { SubGroupMembersTable.userId eq realUserId }
+                .map { it[SubGroupMembersTable.subGroupId] }
+                .toSet()
+            assertEquals(setOf(groupA, groupB), realGroups)
+            assertEquals(
+                0,
+                SubGroupMembersTable.selectAll()
+                    .where { SubGroupMembersTable.userId eq provisionalUserId }.count().toInt()
+            )
+
+            // The absence rule moved rather than being CASCADE-deleted, and the moved response
+            // still references it.
+            assertEquals(
+                realUserId,
+                AbwesenheitRulesTable.select(AbwesenheitRulesTable.userId)
+                    .where { AbwesenheitRulesTable.id eq ruleId }
+                    .map { it[AbwesenheitRulesTable.userId] }
+                    .single()
+            )
+            assertEquals(
+                1,
+                AttendanceResponsesTable.selectAll()
+                    .where {
+                        (AttendanceResponsesTable.userId eq realUserId) and
+                            (AttendanceResponsesTable.abwesenheitRuleId eq ruleId)
+                    }.count().toInt()
+            )
+        }
+    }
+
+    @Test
+    fun `relinking a claimed roster row to a different account is rejected and preserves the holder's data`() = withTeamorgTestApplication {
+        val mgr = register("nds_reclaim_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "ReclaimClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+
+        val userA = register("nds_reclaim_a@example.com")
+        val realUserAId = UUID.fromString(userA.userId)
+        val firstLink = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = userA.userId))
+        }
+        assertEquals(HttpStatusCode.OK, firstLink.status)
+
+        // Give A something losable, so this proves data preservation, not just the status code.
+        val groupId = transaction {
+            val g = UUID.randomUUID()
+            SubGroupsTable.insert { it[id] = g; it[SubGroupsTable.teamId] = teamId; it[name] = "Gruppe A" }
+            SubGroupMembersTable.insert { it[subGroupId] = g; it[userId] = realUserAId }
+            g
+        }
+        val ruleId = transaction {
+            val rid = UUID.randomUUID()
+            AbwesenheitRulesTable.insert {
+                it[id] = rid
+                it[userId] = realUserAId
+                it[presetType] = PresetType.injury
+                it[label] = "Knie"
+                it[ruleType] = RuleType.period
+                it[startDate] = java.time.LocalDate.of(2026, 1, 1)
+                it[endDate] = java.time.LocalDate.of(2026, 12, 31)
+            }
+            rid
+        }
+
+        val userB = register("nds_reclaim_b@example.com")
+        val secondLink = createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = userB.userId))
+        }
+        assertEquals(HttpStatusCode.Conflict, secondLink.status)
+
+        transaction {
+            assertEquals(
+                1,
+                SubGroupMembersTable.selectAll()
+                    .where { (SubGroupMembersTable.subGroupId eq groupId) and (SubGroupMembersTable.userId eq realUserAId) }
+                    .count().toInt()
+            )
+            assertEquals(
+                realUserAId,
+                AbwesenheitRulesTable.select(AbwesenheitRulesTable.userId)
+                    .where { AbwesenheitRulesTable.id eq ruleId }
+                    .map { it[AbwesenheitRulesTable.userId] }
+                    .single()
+            )
+            val role = TeamRolesTable.selectAll()
+                .where { (TeamRolesTable.userId eq realUserAId) and (TeamRolesTable.teamId eq teamId) }
+                .map { it[TeamRolesTable.role] }.singleOrNull()
+            assertEquals("player", role)
+        }
+    }
+
+    @Test
+    fun `duplicate suggestions match a self-registered account to its imported roster row`() = withTeamorgTestApplication {
+        val mgr = register("nds_sugg_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "SuggClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        // Before any real account joins: placeholders must not suggest each other.
+        val empty = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<DuplicateSuggestion>>()
+        assertTrue(empty.isEmpty(), "placeholders must not be matching candidates")
+
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+
+        // Lara joins generically: her display name matches the roster row exactly.
+        val laraUser = createJsonClient().post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("lara_sugg@example.com", "password123", "${lara.firstName} ${lara.lastName}"))
+        }.body<AuthResponse>()
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = laraUser.userId, role = "player"))
+        }
+
+        val suggestions = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<DuplicateSuggestion>>()
+
+        val forLara = suggestions.single { it.memberId == lara.id }
+        assertEquals(laraUser.userId, forLara.candidates.single().userId.toString())
+        assertEquals("HIGH", forLara.candidates.single().score)
+        // The import writes a response per activity (confirmed when attended, declined otherwise),
+        // so assert non-zero rather than a fixture-coupled count.
+        assertTrue(forLara.willMove.attendance > 0)
+
+        // After the merge the row is resolved and drops out of the list.
+        createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = laraUser.userId))
+        }
+        val after = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<DuplicateSuggestion>>()
+        assertTrue(after.none { it.memberId == lara.id })
+    }
+
+    @Test
+    fun `duplicate suggestions require an elevated role`() = withTeamorgTestApplication {
+        val mgr = register("nds_sugg_guard@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "SuggGuardClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val player = register("sugg_player@example.com")
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = player.userId, role = "player"))
+        }
+
+        val res2 = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${player.token}")
+        }
+        assertEquals(HttpStatusCode.Forbidden, res2.status)
+    }
+
+    @Test
+    fun `parse with teamId keeps offering no lossy map for a placeholder whose real account has joined`() =
+        withTeamorgTestApplication {
+            val mgr = register("nds_wizard_unaffected_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+            val clubId = createClub(mgr.token, "WizardUnaffectedClub")
+            val res = importAll(mgr.token, clubId)
+            val teamId = UUID.fromString(res.teamId)
+
+            val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+
+            // Lara's real account joins the team under the same name — same setup that would make
+            // the duplicate-suggestions endpoint surface her, but this is the wizard's *parse* path.
+            val laraUser = createJsonClient().post("/auth/register") {
+                contentType(ContentType.Application.Json)
+                setBody(RegisterRequest("lara_wizard@example.com", "password123", "${lara.firstName} ${lara.lastName}"))
+            }.body<AuthResponse>()
+            createJsonClient().post("/teams/$teamId/members") {
+                header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+                contentType(ContentType.Application.Json)
+                setBody(AddMemberRequest(userId = laraUser.userId, role = "player"))
+            }
+
+            // Re-parsing with teamId must still short-circuit on the placeholder's own linked
+            // identity (alreadyLinkedUserId) rather than preselect the real account as a "map"
+            // candidate — "map" doesn't move attendance/subgroups/rules like /link does.
+            val response = parseFull(mgr.token, clubId, NdsTestFixtures.anwesenheitslisteBytes(), teamId = teamId.toString())
+            val laraRowKey = NdsMemberMatcher.rowKey(lara.funktion, lara.lastName, lara.firstName)
+            val suggestion = response.memberSuggestions.single { it.rowKey == laraRowKey }
+            assertEquals(lara.userId.toString(), suggestion.alreadyLinkedUserId)
+            assertNull(suggestion.preselectedUserId)
+            assertTrue(suggestion.candidates.isEmpty())
+        }
 }

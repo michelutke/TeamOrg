@@ -1,5 +1,7 @@
 package ch.teamorg.routes
 
+import ch.teamorg.db.tables.TeamRolesTable
+import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.Team
 import ch.teamorg.domain.models.TeamAppearance
@@ -10,6 +12,9 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -754,5 +759,67 @@ class TeamRoutesTest : IntegrationTestBase() {
         assertEquals(teamId, roles.teamRoles[0].teamId)
         assertEquals(clubId, roles.teamRoles[0].clubId)
         assertEquals("player", roles.teamRoles[0].role)
+    }
+
+    @Test
+    fun `team members hides provisional placeholders from players and flags them for coaches`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+
+        val mgr = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("prov_mgr@example.com", "password123", "Manager"))
+        }.body<AuthResponse>()
+        promoteToSuperAdmin(mgr.userId)
+
+        val clubId = client.post("/clubs") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateClubRequest("ProvClub"))
+        }.body<Club>().id
+
+        val teamId = client.post("/clubs/$clubId/teams") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(CreateTeamRequest("Prov Team"))
+        }.body<Team>().id
+
+        val player = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("prov_player@example.com", "password123", "Player"))
+        }.body<AuthResponse>()
+        client.post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = player.userId, role = "player"))
+        }
+
+        // A placeholder exactly as an NDS import creates it: provisional user + team role.
+        val ghostId = UUID.randomUUID()
+        transaction {
+            UsersTable.insert {
+                it[id] = ghostId
+                it[email] = "nds-$ghostId@import.teamorg.local"
+                it[passwordHash] = "!"
+                it[displayName] = "Ghost Member"
+                it[provisional] = true
+            }
+            TeamRolesTable.insert {
+                it[userId] = ghostId
+                it[TeamRolesTable.teamId] = UUID.fromString(teamId)
+                it[role] = "player"
+            }
+        }
+
+        val asPlayer = client.get("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${player.token}")
+        }.body<List<TeamMember>>()
+        assertTrue(asPlayer.none { it.userId == ghostId.toString() }, "player must not see placeholders")
+
+        val asManager = client.get("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<TeamMember>>()
+        val ghost = asManager.single { it.userId == ghostId.toString() }
+        assertTrue(ghost.provisional)
+        assertTrue(asManager.single { it.userId == player.userId }.provisional.not())
     }
 }

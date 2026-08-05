@@ -1,5 +1,7 @@
 package ch.teamorg.repository
 
+import ch.teamorg.domain.DuplicateSuggestion
+import ch.teamorg.domain.LinkMemberResult
 import ch.teamorg.domain.SubGroup
 import ch.teamorg.domain.TeamMember
 import ch.teamorg.domain.UserRoles
@@ -19,5 +21,7 @@ interface TeamRepository {
     suspend fun addSubGroupMember(teamId: String, subGroupId: String, userId: String): Result<Unit>
     suspend fun removeSubGroupMember(teamId: String, subGroupId: String, userId: String): Result<Unit>
     suspend fun uploadAvatar(imageBytes: ByteArray, extension: String): Result<Unit>
-    suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): Result<Unit>
+    /** Imported roster rows of [teamId] that may be duplicates of a real account. Coach/manager only. */
+    suspend fun getDuplicateSuggestions(teamId: String): Result<List<DuplicateSuggestion>>
+    suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): LinkMemberResult
 }

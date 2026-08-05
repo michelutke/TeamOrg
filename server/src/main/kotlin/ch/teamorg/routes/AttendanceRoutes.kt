@@ -93,7 +93,13 @@ fun Route.attendanceRoutes() {
             // Any member of the event's team(s) may read the roster (the app shows RSVP counts
             // to players); non-members are rejected.
             if (!call.requireEventAccess(eventId, "coach", "player", "club_manager", eventRepository = eventRepository, teamRepository = teamRepository)) return@get
-            val responses = attendanceRepo.getEventAttendance(eventId)
+            val callerId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+            // Placeholders are hidden from players by /teams/{id}/members, so their responses must
+            // be hidden too — otherwise the client shows RSVPs it cannot name.
+            val elevated = eventRepository.findById(eventId)?.teamIds.orEmpty().any {
+                teamRepository.hasRole(callerId, it, "coach", "club_manager")
+            }
+            val responses = attendanceRepo.getEventAttendance(eventId, includeProvisional = elevated)
             call.respond(responses.map { it.toDto() })
         }
 
@@ -240,9 +246,11 @@ fun Route.attendanceRoutes() {
             // Restricted to members of the team (a player sees their own team's attendance);
             // club_manager passes via role inheritance.
             if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
+            val callerId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+            val elevated = teamRepository.hasRole(callerId, teamId, "coach", "club_manager")
             val from = call.parameters["from"]?.let { Instant.parse(it) }
             val to = call.parameters["to"]?.let { Instant.parse(it) }
-            val rows = attendanceRepo.getTeamAttendance(teamId, from, to)
+            val rows = attendanceRepo.getTeamAttendance(teamId, from, to, includeProvisional = elevated)
             call.respond(rows.map { it.toDto() })
         }
 

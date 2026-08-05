@@ -15,8 +15,10 @@ requests to **info@teamorg.ch**.
     How-it-works, Pricing (2 CHF/Mitglied/Jahr), Contact, Footer.
   - **i18n** DE (default) + EN via `?lang=` → `lang` cookie (the toggle links use
     `data-sveltekit-reload` + `preload-data="off"` so hover doesn't flip the cookie).
-  - **Amber/gold** theme + green/red/yellow pastel highlight accents (the app's
-    going/unsure/declined colours). Phone mockups stay purple (the real app).
+  - **Graphite Cyan** theme (teal on light, graphite sections) + pastel highlight
+    accents. Contact section on graphite with the subtle roster "Tribüne" pattern
+    (reused on footer); phone mockups exported from the teal Figma redesign (#65).
+    Hero + pricing CTAs link to app.teamorg.ch/start (self-serve flow, #68).
   - **Fonts self-hosted** (`landing/static/fonts/`, `@font-face` in `app.css`) — no
     requests to Google.
   - **Material 3 Expressive shapes** (`Shape.svelte`: clover/flower/sunny/squircle) for
@@ -88,8 +90,9 @@ requests to **info@teamorg.ch**.
 
 ## Open items
 
-- [ ] Set correct `SMTP_USER`/`SMTP_PASS` (mailbox device password) + `SMTP_PORT=587`,
-      restart `server`, submit a test → confirm mail arrives at info@teamorg.ch.
+- [x] **RESOLVED 2026-07-31.** SMTP credentials are correct: a live submission during the
+      production QA pass was delivered to info@teamorg.ch. The 535 troubleshooting log below
+      is kept for reference only.
 - [ ] www → apex redirect (Infomaniak DNS or Coolify toggle).
 - [ ] Optional: when revenue crosses CHF 100k → register Einzelunternehmen, add UID/MwSt
       to Impressum.

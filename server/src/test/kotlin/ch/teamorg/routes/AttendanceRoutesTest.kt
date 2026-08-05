@@ -1,5 +1,8 @@
 package ch.teamorg.routes
 
+import ch.teamorg.db.tables.AttendanceResponsesTable
+import ch.teamorg.db.tables.TeamRolesTable
+import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.Event
 import ch.teamorg.domain.models.Team
@@ -9,6 +12,9 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -552,5 +558,51 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         }
 
         assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `event attendance hides provisional responses from players`() = withTeamorgTestApplication {
+        val mgr = registerAndLogin("att_prov_mgr@example.com", displayName = "Manager")
+        promoteToSuperAdmin(mgr.userId)
+        val (_, teamId) = setupClubAndTeam(mgr.token)
+        val event = createEvent(mgr.token, "Training Provisional", teamIds = listOf(teamId))
+
+        val player = registerAndLogin("att_prov_player@example.com", displayName = "Player")
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = player.userId, role = "player"))
+        }
+
+        val ghostId = UUID.randomUUID()
+        transaction {
+            UsersTable.insert {
+                it[id] = ghostId
+                it[email] = "nds-$ghostId@import.teamorg.local"
+                it[passwordHash] = "!"
+                it[displayName] = "Ghost Member"
+                it[provisional] = true
+            }
+            TeamRolesTable.insert {
+                it[userId] = ghostId
+                it[TeamRolesTable.teamId] = UUID.fromString(teamId)
+                it[role] = "player"
+            }
+            AttendanceResponsesTable.insert {
+                it[AttendanceResponsesTable.eventId] = event.id
+                it[userId] = ghostId
+                it[status] = "confirmed"
+            }
+        }
+
+        val asPlayer = createJsonClient().get("/events/${event.id}/attendance") {
+            header(HttpHeaders.Authorization, "Bearer ${player.token}")
+        }.body<List<AttendanceResponsePayload>>()
+        assertTrue(asPlayer.none { it.userId == ghostId.toString() })
+
+        val asManager = createJsonClient().get("/events/${event.id}/attendance") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<AttendanceResponsePayload>>()
+        assertTrue(asManager.any { it.userId == ghostId.toString() })
     }
 }

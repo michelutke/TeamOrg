@@ -1,7 +1,7 @@
 # Self-Serve Onboarding & Billing
 
 Feature documentation — what was built, how it fits together, how to operate it.
-Shipped 2026-07 across three PRs: **#64** (backend), **#66** (web), **#67** (mobile), plus **#65** (landing refresh).
+Shipped 2026-07 across five PRs: **#64** (backend), **#65** (landing refresh), **#66** (web), **#67** (mobile), **#68** (funnel wiring).
 Spec: `docs/superpowers/specs/2026-07-24-self-serve-onboarding-billing-design.md` · Plans: `docs/superpowers/plans/2026-07-24-self-serve-billing-backend.md`, `...-onboarding-web.md`, `2026-07-28-self-serve-onboarding-mobile.md`.
 
 ## What it does
@@ -82,6 +82,24 @@ Server env (all optional, empty fallbacks for dev): `STRIPE_SECRET_KEY`, `STRIPE
 - Web: `npm run check` 0 errors; Playwright suite run against a real local stack (6 green).
 - Mobile: VM test suites (wizard, card confirm, billing) + iOS sim/Android unit suites + unsigned iOS build.
 - **Outstanding manual QA** (needs Stripe sandbox, real devices/browser): test-card happy/decline/3DS paths, update-card, convert, frozen banners — checklists at the end of the web spec header comment (`admin/e2e/onboarding.spec.ts`) and the mobile plan doc.
+
+## Entry funnel (#68)
+
+- **Landing** (`teamorg.ch`): hero primary CTA and pricing-card CTA link to `https://app.teamorg.ch/start` ("Jetzt kostenlos starten"). Nav "Demo anfragen" and the contact section remain the club-setup-via-support path. Pricing footnote no longer excludes individuals.
+- **App** (`app.teamorg.ch`): anonymous visits to `/` redirect to `/start` (logged-in users go to their landing page as before); the login page links back to `/start` ("Neu hier? Jetzt starten").
+- Full path: teamorg.ch → Start CTA → `/start` chooser → `/join` (code) or `/create` (wizard → card) → managing the club.
+
+## Change history
+
+| PR | Scope |
+|---|---|
+| #64 | Backend: schema V16/V17, self-serve + billing endpoints, Stripe subscriptions, sampling/year-end/cleanup jobs, webhook, frozen enforcement, invite short codes |
+| #65 | Landing visual refresh: graphite contact section (amber removed), reusable roster pattern (subtle, contact + footer), teal app mockups from the Figma redesign |
+| #66 | Web onboarding: /start, /join, /create wizard + Payment Element, owner billing page + convert, frozen/past-due banners, i18n, Playwright e2e |
+| #67 | Mobile onboarding: chooser + wizard + native PaymentSheet (expect/actual, Swift bridge, first SPM package), billing screen, frozen banner, feature docs; backend gains `publishableKey` in responses + unified `PUBLIC_STRIPE_PUBLISHABLE_KEY` env var |
+| #68 | Funnel: landing CTAs → /start, app root → /start for anonymous, login → /start link |
+
+Pricing was raised from CHF 1 to CHF 2 per member/year before launch (price lives only in the Stripe dashboard Price object; copy updated across landing/web/mobile/docs).
 
 ## Known issues & follow-ups (accepted at review, tracked)
 

@@ -24,7 +24,7 @@ interface TeamRepository {
      * (team_roles rows newly inserted on the target).
      */
     suspend fun migrateTeam(sourceTeamId: UUID, targetTeamId: UUID): Int
-    suspend fun listMembers(teamId: UUID): List<TeamMember>
+    suspend fun listMembers(teamId: UUID, includeProvisional: Boolean = false): List<TeamMember>
     suspend fun hasRole(userId: UUID, teamId: UUID, vararg roles: String): Boolean
     suspend fun getClubId(teamId: UUID): UUID?
     suspend fun setGamesSyncEnabled(teamId: UUID, enabled: Boolean)
