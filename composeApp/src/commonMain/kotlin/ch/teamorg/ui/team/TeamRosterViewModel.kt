@@ -211,7 +211,7 @@ class TeamRosterViewModel(
     }
 
     fun openDuplicatesSheet() {
-        _state.value = _state.value.copy(showDuplicatesSheet = true, mergeError = null)
+        _state.value = _state.value.copy(showDuplicatesSheet = true, mergeError = null, mergedCount = 0)
     }
 
     fun closeDuplicatesSheet() {
