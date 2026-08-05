@@ -2,9 +2,15 @@ package ch.teamorg.routes
 
 import ch.teamorg.db.tables.AbwesenheitRulesTable
 import ch.teamorg.db.tables.AuditLogTable
+import ch.teamorg.db.tables.ClubRolesTable
 import ch.teamorg.db.tables.ClubsTable
 import ch.teamorg.db.tables.ImpersonationSessionsTable
+import ch.teamorg.db.tables.InviteLinksTable
+import ch.teamorg.db.tables.NotificationSettingsTable
+import ch.teamorg.db.tables.SubGroupMembersTable
+import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.TeamRolesTable
+import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.test.IntegrationTestBase
 import io.ktor.client.call.*
@@ -96,6 +102,44 @@ class AccountDeletionTest : IntegrationTestBase() {
         }
         assertTrue(ruleResponse.status.isSuccess(), "absence rule setup failed: ${ruleResponse.bodyAsText()}")
 
+        // Give the user membership rows in every personal table so each delete is exercised.
+        val userId = UUID.fromString(auth.userId)
+        transaction {
+            val clubId = ClubsTable.insert { it[name] = "Del3 Club" } get ClubsTable.id
+            val teamId = TeamsTable.insert {
+                it[TeamsTable.clubId] = clubId
+                it[name] = "Del3 Team"
+            } get TeamsTable.id
+            val subGroupId = SubGroupsTable.insert {
+                it[SubGroupsTable.teamId] = teamId
+                it[name] = "Del3 Subgroup"
+            } get SubGroupsTable.id
+            TeamRolesTable.insert {
+                it[TeamRolesTable.userId] = userId
+                it[TeamRolesTable.teamId] = teamId
+                it[role] = "player"
+            }
+            ClubRolesTable.insert {
+                it[ClubRolesTable.userId] = userId
+                it[ClubRolesTable.clubId] = clubId
+                it[role] = "club_manager"
+            }
+            SubGroupMembersTable.insert {
+                it[SubGroupMembersTable.subGroupId] = subGroupId
+                it[SubGroupMembersTable.userId] = userId
+            }
+            NotificationSettingsTable.insert {
+                it[NotificationSettingsTable.userId] = userId
+                it[NotificationSettingsTable.teamId] = teamId
+            }
+        }
+        transaction {
+            assertTrue(
+                TeamRolesTable.selectAll().where { TeamRolesTable.userId eq userId }.count() > 0,
+                "setup failed: no team role before deletion"
+            )
+        }
+
         client.delete("/auth/me") {
             bearerAuth(auth.token)
             contentType(ContentType.Application.Json)
@@ -103,7 +147,6 @@ class AccountDeletionTest : IntegrationTestBase() {
         }
 
         transaction {
-            val userId = UUID.fromString(auth.userId)
             assertTrue(
                 AbwesenheitRulesTable.selectAll().where { AbwesenheitRulesTable.userId eq userId }.empty(),
                 "absence rules survived deletion"
@@ -111,6 +154,62 @@ class AccountDeletionTest : IntegrationTestBase() {
             assertTrue(
                 TeamRolesTable.selectAll().where { TeamRolesTable.userId eq userId }.empty(),
                 "team roles survived deletion"
+            )
+            assertTrue(
+                ClubRolesTable.selectAll().where { ClubRolesTable.userId eq userId }.empty(),
+                "club roles survived deletion"
+            )
+            assertTrue(
+                SubGroupMembersTable.selectAll().where { SubGroupMembersTable.userId eq userId }.empty(),
+                "sub-group memberships survived deletion"
+            )
+            assertTrue(
+                NotificationSettingsTable.selectAll().where { NotificationSettingsTable.userId eq userId }.empty(),
+                "notification settings survived deletion"
+            )
+        }
+    }
+
+    @Test
+    fun `deletion clears the user's email from invite links`() = withTeamorgTestApplication {
+        val client = createJsonClient()
+        val inviter = register(client, "inviter@example.com", name = "Inviter")
+        val auth = register(client, "del6@example.com")
+
+        transaction {
+            InviteLinksTable.insert {
+                it[token] = UUID.randomUUID().toString()
+                it[invitedByUserId] = UUID.fromString(inviter.userId)
+                it[invitedEmail] = "del6@example.com"
+                it[expiresAt] = Instant.now().plusSeconds(86400)
+            }
+            InviteLinksTable.insert {
+                it[token] = UUID.randomUUID().toString()
+                it[invitedByUserId] = UUID.fromString(inviter.userId)
+                it[invitedEmail] = "Del6@Example.com"
+                it[expiresAt] = Instant.now().plusSeconds(86400)
+            }
+        }
+
+        val response = client.delete("/auth/me") {
+            bearerAuth(auth.token)
+            contentType(ContentType.Application.Json)
+            setBody(DeleteAccountRequest("password123"))
+        }
+        assertEquals(HttpStatusCode.NoContent, response.status)
+
+        transaction {
+            val leftover = InviteLinksTable.selectAll()
+                .mapNotNull { it[InviteLinksTable.invitedEmail] }
+                .filter { it.equals("del6@example.com", ignoreCase = true) }
+            assertTrue(leftover.isEmpty(), "invite links still carry the deleted user's email: $leftover")
+            // The invite rows themselves must survive — only the address is scrubbed.
+            assertEquals(
+                2,
+                InviteLinksTable.selectAll()
+                    .where { InviteLinksTable.invitedByUserId eq UUID.fromString(inviter.userId) }
+                    .count().toInt(),
+                "invite rows must not be deleted"
             )
         }
     }

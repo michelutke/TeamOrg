@@ -6,6 +6,7 @@ import ch.teamorg.db.tables.ClubRolesTable
 import ch.teamorg.db.tables.ClubsTable
 import ch.teamorg.db.tables.EventReminderOverridesTable
 import ch.teamorg.db.tables.ImpersonationSessionsTable
+import ch.teamorg.db.tables.InviteLinksTable
 import ch.teamorg.db.tables.NdsMembersTable
 import ch.teamorg.db.tables.NotificationRemindersTable
 import ch.teamorg.db.tables.NotificationSettingsTable
@@ -16,6 +17,7 @@ import ch.teamorg.db.tables.UsersTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -78,6 +80,18 @@ class UserDeletionRepositoryImpl(
         // import — the duplicate-merge flow can re-link it later.
         NdsMembersTable.update({ NdsMembersTable.userId eq userId }) {
             it[NdsMembersTable.userId] = null
+        }
+
+        // The invite rows must survive (RESTRICT FKs, and an unredeemed invite the user sent
+        // stays usable by its recipient) — only the address they carry is personal data.
+        val realEmail = UsersTable.select(UsersTable.email)
+            .where { UsersTable.id eq userId }
+            .singleOrNull()
+            ?.get(UsersTable.email)
+        if (realEmail != null) {
+            InviteLinksTable.update({ InviteLinksTable.invitedEmail.lowerCase() eq realEmail.lowercase() }) {
+                it[InviteLinksTable.invitedEmail] = null
+            }
         }
 
         // A previously minted impersonation token stays valid as long as its session row is
