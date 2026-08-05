@@ -2,6 +2,8 @@ package ch.teamorg.ui.team
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ch.teamorg.domain.DuplicateSuggestion
+import ch.teamorg.domain.LinkMemberResult
 import ch.teamorg.domain.SubGroup
 import ch.teamorg.domain.TeamMember
 import ch.teamorg.repository.ClubRepository
@@ -24,7 +26,12 @@ data class TeamRosterState(
     val teamName: String = "",
     val teamDescription: String? = null,
     val subGroups: List<SubGroup> = emptyList(),
-    val showSubGroupSheet: Boolean = false
+    val showSubGroupSheet: Boolean = false,
+    val duplicates: List<DuplicateSuggestion> = emptyList(),
+    val showDuplicatesSheet: Boolean = false,
+    val mergeInProgress: Boolean = false,
+    val mergeError: String? = null,
+    val mergedCount: Int = 0
 )
 
 class TeamRosterViewModel(
@@ -76,6 +83,15 @@ class TeamRosterViewModel(
                     isCoachOrManager = isClubManager || isCoach,
                     clubId = clubId
                 )
+                if (isClubManager || isCoach) loadDuplicateSuggestions(teamId)
+            }
+        }
+    }
+
+    private fun loadDuplicateSuggestions(teamId: String) {
+        viewModelScope.launch {
+            teamRepository.getDuplicateSuggestions(teamId).onSuccess { suggestions ->
+                _state.value = _state.value.copy(duplicates = suggestions)
             }
         }
     }
@@ -192,5 +208,46 @@ class TeamRosterViewModel(
 
     fun toggleSubGroupSheet() {
         _state.value = _state.value.copy(showSubGroupSheet = !_state.value.showSubGroupSheet)
+    }
+
+    fun openDuplicatesSheet() {
+        _state.value = _state.value.copy(showDuplicatesSheet = true, mergeError = null)
+    }
+
+    fun closeDuplicatesSheet() {
+        _state.value = _state.value.copy(showDuplicatesSheet = false, mergeError = null)
+    }
+
+    fun clearMergeError() {
+        _state.value = _state.value.copy(mergeError = null)
+    }
+
+    /**
+     * Merges [userId]'s account into imported roster row [memberId]. Irreversible: the placeholder
+     * account is deleted server-side. On failure the sheet stays open so another account can be picked.
+     */
+    fun mergeDuplicate(teamId: String, memberId: String, userId: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(mergeInProgress = true, mergeError = null)
+            when (teamRepository.linkNdsMember(teamId, memberId, userId)) {
+                LinkMemberResult.Success -> {
+                    _state.value = _state.value.copy(
+                        duplicates = _state.value.duplicates.filterNot { it.memberId == memberId },
+                        mergedCount = _state.value.mergedCount + 1,
+                        mergeInProgress = false
+                    )
+                    loadRoster(teamId, isRefresh = true)
+                }
+                LinkMemberResult.Conflict -> setMergeError(
+                    "This account is already linked to another member of this team."
+                )
+                LinkMemberResult.NotLinkable -> setMergeError("This account can't be linked.")
+                is LinkMemberResult.Error -> setMergeError("Couldn't merge. Please try again.")
+            }
+        }
+    }
+
+    private fun setMergeError(message: String) {
+        _state.value = _state.value.copy(mergeInProgress = false, mergeError = message)
     }
 }
