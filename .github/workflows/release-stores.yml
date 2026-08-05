@@ -9,11 +9,19 @@ on:
       - production
   workflow_dispatch:
 
+# Deliberately NOT cancel-in-progress: these jobs upload binaries to Google Play and
+# App Store Connect. Killing one mid-upload can leave a half-ingested build and burn a
+# version code that can never be reused. Newer promotes queue behind the running one.
+concurrency:
+  group: release-stores-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   play-store:
     name: fastlane android_play (internal track)
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +74,7 @@ jobs:
     name: fastlane ios_testflight
     runs-on: macos-15
     environment: production
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
