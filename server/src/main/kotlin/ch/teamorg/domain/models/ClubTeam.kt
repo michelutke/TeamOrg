@@ -42,5 +42,6 @@ data class TeamMember(
     val avatarUrl: String?,
     val role: String,
     val jerseyNumber: Int?,
-    val position: String?
+    val position: String?,
+    val provisional: Boolean = false
 )

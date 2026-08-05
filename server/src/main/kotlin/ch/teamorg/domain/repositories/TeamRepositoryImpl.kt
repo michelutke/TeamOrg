@@ -138,8 +138,12 @@ class TeamRepositoryImpl : TeamRepository {
         movedMembers
     }
 
-    override suspend fun listMembers(teamId: UUID): List<TeamMember> = transaction {
-        (TeamRolesTable innerJoin UsersTable).selectAll().where { TeamRolesTable.teamId eq teamId }
+    override suspend fun listMembers(teamId: UUID, includeProvisional: Boolean): List<TeamMember> = transaction {
+        (TeamRolesTable innerJoin UsersTable).selectAll()
+            .where {
+                if (includeProvisional) TeamRolesTable.teamId eq teamId
+                else (TeamRolesTable.teamId eq teamId) and (UsersTable.provisional eq false)
+            }
             .map { row ->
                 TeamMember(
                     userId = row[UsersTable.id].toString(),
@@ -147,7 +151,8 @@ class TeamRepositoryImpl : TeamRepository {
                     avatarUrl = row[UsersTable.avatarUrl],
                     role = row[TeamRolesTable.role],
                     jerseyNumber = row[TeamRolesTable.jerseyNumber],
-                    position = row[TeamRolesTable.position]
+                    position = row[TeamRolesTable.position],
+                    provisional = row[UsersTable.provisional]
                 )
             }
     }
