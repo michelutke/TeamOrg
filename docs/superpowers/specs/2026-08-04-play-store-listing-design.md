@@ -160,16 +160,16 @@ Use only what already exists in the file — no new variables, no new fonts.
 All frames live directly in section `61183:6190` (x 13268, y 5244, 5462×5899).
 Layout, relative to section origin, 200 px gutters:
 
-| Frame name | Size | Offset in section |
-|---|---|---|
-| `play-icon-512` | 512×512 | 200, 200 |
-| `play-feature-1024x500` | 1024×500 | 912, 200 |
-| `play-phone-01-events` | 1080×1920 | 200, 900 |
-| `play-phone-02-attendance` | 1080×1920 | 1480, 900 |
-| `play-phone-03-absences` | 1080×1920 | 2760, 900 |
-| `play-phone-04-reminders` | 1080×1920 | 200, 2980 |
-| `play-phone-05-roles` | 1080×1920 | 1480, 2980 |
-| `play-phone-06-stats` | 1080×1920 | 2760, 2980 |
+| Frame name | Size | Offset in section | Node |
+|---|---|---|---|
+| `play-icon-512` | 512×512 | 200, 200 | `61186:6190` |
+| `play-feature-1024x500` | 1024×500 | 912, 200 | `61186:6191` |
+| `play-phone-01-events` | 1080×1920 | 200, 900 | `61186:6192` |
+| `play-phone-02-attendance` | 1080×1920 | 1480, 900 | `61186:6193` |
+| `play-phone-03-absences` | 1080×1920 | 2760, 900 | `61186:6194` |
+| `play-phone-04-reminders` | 1080×1920 | 200, 2980 | `61186:6195` |
+| `play-phone-05-roles` | 1080×1920 | 1480, 2980 | `61186:6196` |
+| `play-phone-06-stats` | 1080×1920 | 2760, 2980 | `61186:6197` |
 
 ### 3.1 `play-icon-512`
 
@@ -183,9 +183,9 @@ masking on every launcher. No text, no wordmark, no badge, no border.
 
 Graphite ground, same gradient. Tessellated roster-"T" pattern (the landing
 `TessellationPattern` motif) in cyan at 8 % opacity, filling the frame, clipped.
-Centred horizontal lockup: 128×128 cyan mark + `teamorg` wordmark in
-`Display/Large` on `Schemes/On Surface`. Everything inside a 154 px horizontal /
-75 px vertical safe inset (15 %) because Play crops this asset for tablet and TV
+Centred horizontal lockup (605×130, gap 40): 128×128 cyan mark + `teamorg` wordmark in
+`Display/Large` @104 on `Schemes/On Surface`. Measured insets: 210 left / 209 right /
+185 top / 185 bottom — inside the 154 px horizontal / 75 px vertical safe inset (15 %) because Play crops this asset for tablet and TV
 placements. No tagline, no small type, no screenshots, no device frames.
 
 ### 3.3 Phone screenshots (×6)
@@ -193,17 +193,28 @@ placements. No tagline, no small type, no screenshots, no device frames.
 Shared anatomy, identical across all six so the set reads as one system:
 
 ```
-1080×1920 frame, fill = Schemes/Surface (graphite)
-├─ pattern band, top 0–560, tessellation motif, cyan @6%, clipped
-├─ caption block, x 90, y 130, width 900
-│   ├─ step chip  — Label/Large, On Primary Container on Primary Container,
-│   │               Corner/Full, e.g. "01"
-│   └─ caption    — Headline/Medium (Google Sans Flex ExtraBold), On Surface,
-│                   max 2 lines, 3–5 words
-└─ device mockup — 720×1603 (source screen 412×917 rescaled ×1.748),
-                   x 180, y 290 relative to frame, Corner/Extra-large clip,
-                   1 px Outline Variant stroke, drop shadow 0/32/64 @28 % black
+1080×1920 frame, fill = Schemes/Surface (graphite), Cyan DT mode pinned
+├─ tessellation, 1080×620 at 0,0 — roster-T tile (120 px box) on a 172×142 grid,
+│                 odd rows offset 86, cyan fill, layer opacity 6 %, clipped
+├─ caption-block — auto-layout VERTICAL, x 90, y 130, width 900 FIXED,
+│   │              height HUG
+│   └─ caption  — Headline/Medium @76, line-height 105 %, On Surface,
+│                 FILL width, 1–2 lines, 3–5 words. No numbering chip — it ate
+│                 vertical space without carrying information.
+└─ device-frame — 650×1408 bezel, Surface Container High fill, 2 px Outline
+    │             Variant stroke, Corner/Extra-extra-large, clipped,
+    │             drop shadow 0/32/72 @32 % black; x 215, y 402,
+    │             leaving 110 px padding to the frame bottom
+    └─ screen   — 618×1376 (source screen 412×917 rescaled ×1.5), inset 16 px
+                  in the bezel, Corner/Extra-large-increased.
+                  paddingTop reduced from 68→20 (unscaled): the source screens
+                  reserve empty status-bar space and no status bar is drawn in
+                  store art, so the gap reads as a layout bug.
 ```
+
+Caption font sizes are deliberate overrides on the shared text styles: the styles are
+authored for a 412 pt app canvas, store art is 1080 px wide. Family, weight and
+colour still come from `Headline/Medium` / `Label/Large` and the `M3` variables.
 
 Captions and source screens:
 
@@ -212,14 +223,20 @@ Captions and source screens:
 | 1 | `play-phone-01-events` | Alle Termine im Blick | Every session at a glance | `App / Events List` `60805:71` |
 | 2 | `play-phone-02-attendance` | Zusagen in Echtzeit | Live RSVPs from everyone | `App / Event Detail (Coach)` `60838:156` |
 | 3 | `play-phone-03-absences` | Abwesenheiten einmal erfassen | Set absences once | `App / My Absences` `60816:105` |
-| 4 | `play-phone-04-reminders` | Erinnerung vor jedem Training | Reminders before every training | `App / Sheet – Set Reminder` `61074:194` |
+| 4 | `play-phone-04-reminders` | Erinnerung vor jedem Training | Reminders before every training | `App / Notification Settings` `60824:139` |
 | 5 | `play-phone-05-roles` | Rollen für jedes Teammitglied | Roles for every member | `App / Team Roster` `60819:122` |
 | 6 | `play-phone-06-stats` | Anwesenheitsquote pro Spieler | Attendance rates per player | `App / Player Profile` `60820:122` |
 
 Source screens are copied (`clone()`) into the screenshot frames, never moved, so the
-redesign page stays intact. If `App / Player Profile` carries no attendance figures,
-frame 6 keeps the clone and gets a visible `TODO: stats screen` annotation rather
-than invented UI.
+`TeamOrg Redesign` section stays intact. `App / Notification Settings` replaced
+`App / Sheet – Set Reminder` for frame 4: the sheet screen carries a full-frame scrim,
+which renders as a flat grey slab once cropped into a store mockup. `App / Player
+Profile` already carries attendance figures (87 % presence / 91 % trainings /
+75 % matches), so frame 6 needs no placeholder.
+
+Screens render in the app's light theme against the graphite ground — the contrast is
+intentional and matches the launched app; the cyan-never-on-white brand rule applies to
+the brand mark, which appears only on graphite in the icon and feature graphic.
 
 Localisation: captions are TEXT nodes named `caption`. The DE string is the built
 state; the EN string is recorded in this spec and applied to a duplicated
@@ -235,7 +252,8 @@ screenshot uploads per locale, so no component variants are used.
 - Icon: mark ≤ 66 % of canvas, no text, square, 512×512.
 - Feature graphic: no element inside the 15 % outer inset; no type smaller than
   `Display/Small`.
-- Each screenshot: caption 3–5 words, device fully inside the frame, caption not
-  overlapping the device.
+- Each screenshot: caption 3–5 words, device bezel fully inside the frame with
+  ≥ 100 px padding to the bottom edge, caption not overlapping the device, and no
+  empty status-bar band above the screen content.
 - Text metadata is within the character limits stated in §1 and contains no emoji,
   no superlative or ranking claim, and no price.
