@@ -139,14 +139,6 @@ class ClubMembersViewModel(
         }
     }
 
-    fun linkNds(teamId: String, memberId: String, userId: String) {
-        viewModelScope.launch {
-            teamRepository.linkNdsMember(teamId, memberId, userId).onFailure { e ->
-                _state.update { it.copy(error = e.message ?: "Failed to link NDS member") }
-            }
-        }
-    }
-
     fun clearError() {
         _state.update { it.copy(error = null) }
     }

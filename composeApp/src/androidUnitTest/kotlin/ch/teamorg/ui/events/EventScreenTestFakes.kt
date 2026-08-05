@@ -3,9 +3,11 @@ package ch.teamorg.ui.events
 import ch.teamorg.domain.Club
 import ch.teamorg.domain.ClubUser
 import ch.teamorg.domain.CreateEventRequest
+import ch.teamorg.domain.DuplicateSuggestion
 import ch.teamorg.domain.EditEventRequest
 import ch.teamorg.domain.Event
 import ch.teamorg.domain.EventWithTeams
+import ch.teamorg.domain.LinkMemberResult
 import ch.teamorg.domain.SubGroup
 import ch.teamorg.domain.Team
 import ch.teamorg.domain.TeamMember
@@ -56,7 +58,8 @@ class FakeEventListTeamRepo(
     override suspend fun removeSubGroupMember(teamId: String, subGroupId: String, userId: String) = Result.success(Unit)
     override suspend fun uploadAvatar(imageBytes: ByteArray, extension: String) = Result.success(Unit)
     override suspend fun addMember(teamId: String, userId: String, role: String) = Result.success(Unit)
-    override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String) = Result.success(Unit)
+    override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String) = LinkMemberResult.Success
+    override suspend fun getDuplicateSuggestions(teamId: String) = Result.success(emptyList<DuplicateSuggestion>())
 }
 
 /** ClubRepository fake returning fixed teams for a club. */

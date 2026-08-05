@@ -1,13 +1,17 @@
 package ch.teamorg.domain.repositories
 
+import ch.teamorg.db.tables.AbwesenheitRulesTable
 import ch.teamorg.db.tables.AttendanceResponsesTable
 import ch.teamorg.db.tables.EventStatus
 import ch.teamorg.db.tables.EventTeamsTable
 import ch.teamorg.db.tables.EventsTable
 import ch.teamorg.db.tables.NdsMembersTable
+import ch.teamorg.db.tables.SubGroupMembersTable
+import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
+import ch.teamorg.domain.models.MovableCounts
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.ParsedMember
@@ -196,8 +200,15 @@ interface NdsRepository {
     /** Upsert members from a dedicated person export (carries PERSONENNUMMER); merges by name. */
     suspend fun upsertMembers(teamId: UUID, members: List<NdsMemberInput>): List<NdsMember>
     suspend fun listMembers(teamId: UUID): List<NdsMember>
-    /** Team roster joined with any already-linked nds_members identity, for match suggestions. */
-    suspend fun listTeamUsersForMatching(teamId: UUID): List<MatchCandidateUser>
+    /**
+     * Team roster joined with any already-linked nds_members identity, for match suggestions.
+     * [excludeProvisional] defaults to false because the import wizard relies on a placeholder's
+     * own linked identity matching itself to produce `alreadyLinkedUserId` and suppress a lossy
+     * "map" onto the real account (see [ch.teamorg.infra.nds.NdsMemberMatcher.suggest]). The
+     * duplicate-suggestions endpoint passes true: placeholders must never be offered as merge
+     * candidates.
+     */
+    suspend fun listTeamUsersForMatching(teamId: UUID, excludeProvisional: Boolean = false): List<MatchCandidateUser>
     suspend fun getMember(memberId: UUID): NdsMember?
     suspend fun updateMember(
         memberId: UUID,
@@ -210,6 +221,14 @@ interface NdsRepository {
     suspend fun getMemberUserId(memberId: UUID): UUID?
     /** Link a claimed member to a real account: move attendance + role off the provisional user. */
     suspend fun claimMember(memberId: UUID, realUserId: UUID)
+    /** The roster row of [teamId] currently backed by [userId], or null if none. */
+    suspend fun findMemberIdByUser(teamId: UUID, userId: UUID): UUID?
+    /** True when [userId] is an import placeholder account (users.provisional). */
+    suspend fun isProvisionalUser(userId: UUID): Boolean
+    /** Roster rows of [teamId] not backed by a real account (no user, or a provisional one). */
+    suspend fun listUnresolvedMembers(teamId: UUID): List<NdsMember>
+    /** How many rows a merge would carry off [userId] within [teamId]. */
+    suspend fun countMovableRows(userId: UUID, teamId: UUID): MovableCounts
 
     /** Active events for the team (export source for the Aktivitäten file). */
     suspend fun listExportActivities(teamId: UUID): List<ExportActivity>
@@ -275,7 +294,7 @@ class NdsRepositoryImpl : NdsRepository {
             .map { it.toNdsMember() }
     }
 
-    override suspend fun listTeamUsersForMatching(teamId: UUID): List<MatchCandidateUser> = transaction {
+    override suspend fun listTeamUsersForMatching(teamId: UUID, excludeProvisional: Boolean): List<MatchCandidateUser> = transaction {
         val ndsByUser = NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq teamId }
             .filter { it[NdsMembersTable.userId] != null }
             .associateBy { it[NdsMembersTable.userId]!! }
@@ -286,7 +305,13 @@ class NdsRepositoryImpl : NdsRepository {
             .distinct()
         if (userIds.isEmpty()) return@transaction emptyList()
 
-        UsersTable.selectAll().where { UsersTable.id inList userIds }
+        UsersTable.selectAll().where {
+            if (excludeProvisional) {
+                (UsersTable.id inList userIds) and (UsersTable.provisional eq false)
+            } else {
+                UsersTable.id inList userIds
+            }
+        }
             .map { user ->
                 val userId = user[UsersTable.id]
                 val displayName = user[UsersTable.displayName]
@@ -347,7 +372,15 @@ class NdsRepositoryImpl : NdsRepository {
 
         // Move attendance from the provisional placeholder to the real user, skipping events where
         // the real user already has a row (avoids PK clash on (event_id, user_id)).
-        moveAttendance(AttendanceResponsesTable, AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId, provisionalUserId, realUserId)
+        moveRows(AttendanceResponsesTable, AttendanceResponsesTable.eventId, AttendanceResponsesTable.userId, provisionalUserId, realUserId)
+
+        // Subgroup memberships and absence rules would otherwise be CASCADE-deleted with the
+        // placeholder. Rules must move BEFORE the delete, or attendance_responses.abwesenheit_rule_id
+        // on the rows just moved silently goes NULL.
+        moveSubGroupMemberships(teamId, provisionalUserId, realUserId)
+        AbwesenheitRulesTable.update({ AbwesenheitRulesTable.userId eq provisionalUserId }) {
+            it[userId] = realUserId
+        }
 
         // Drop the provisional user's team role (the redeem already added the real user's role).
         TeamRolesTable.deleteWhere {
@@ -366,19 +399,50 @@ class NdsRepositoryImpl : NdsRepository {
         }
     }
 
-    private fun moveAttendance(
+    /**
+     * Repoint [table] rows from [from] to [to]. Rows whose [keyCol] the target already holds are
+     * deleted instead of updated, so the move cannot clash on a (key, user) primary key.
+     */
+    private fun moveRows(
         table: Table,
-        eventCol: Column<UUID>,
+        keyCol: Column<UUID>,
         userCol: Column<UUID>,
         from: UUID,
         to: UUID
     ) {
-        val targetEvents = table.select(eventCol).where { userCol eq to }.map { it[eventCol] }.toSet()
-        // Delete provisional rows that would collide with an existing real-user row, then repoint.
-        if (targetEvents.isNotEmpty()) {
-            table.deleteWhere { Op.build { (userCol eq from) and (eventCol inList targetEvents) } }
+        val targetKeys = table.select(keyCol).where { userCol eq to }.map { it[keyCol] }.toSet()
+        // Delete source rows that would collide with an existing target row, then repoint the rest.
+        if (targetKeys.isNotEmpty()) {
+            table.deleteWhere { Op.build { (userCol eq from) and (keyCol inList targetKeys) } }
         }
         table.update({ userCol eq from }) { it[userCol] = to }
+    }
+
+    /** Move the placeholder's memberships in THIS team's subgroups to the real account. */
+    private fun moveSubGroupMemberships(teamId: UUID, from: UUID, to: UUID) {
+        val teamSubGroupIds = SubGroupsTable.select(SubGroupsTable.id)
+            .where { SubGroupsTable.teamId eq teamId }
+            .map { it[SubGroupsTable.id] }
+        if (teamSubGroupIds.isEmpty()) return
+
+        val alreadyHeld = SubGroupMembersTable.select(SubGroupMembersTable.subGroupId)
+            .where {
+                (SubGroupMembersTable.userId eq to) and
+                    (SubGroupMembersTable.subGroupId inList teamSubGroupIds)
+            }
+            .map { it[SubGroupMembersTable.subGroupId] }
+
+        if (alreadyHeld.isNotEmpty()) {
+            SubGroupMembersTable.deleteWhere {
+                Op.build { (userId eq from) and (subGroupId inList alreadyHeld) }
+            }
+        }
+        SubGroupMembersTable.update({
+            (SubGroupMembersTable.userId eq from) and
+                (SubGroupMembersTable.subGroupId inList teamSubGroupIds)
+        }) {
+            it[userId] = to
+        }
     }
 
     override suspend fun listExportActivities(teamId: UUID): List<ExportActivity> = transaction {
@@ -417,6 +481,49 @@ class NdsRepositoryImpl : NdsRepository {
             }
     }
 
+    override suspend fun findMemberIdByUser(teamId: UUID, userId: UUID): UUID? = transaction {
+        NdsMembersTable.select(NdsMembersTable.id)
+            .where { (NdsMembersTable.teamId eq teamId) and (NdsMembersTable.userId eq userId) }
+            .map { it[NdsMembersTable.id] }
+            .firstOrNull()
+    }
+
+    override suspend fun isProvisionalUser(userId: UUID): Boolean = transaction {
+        UsersTable.select(UsersTable.provisional)
+            .where { UsersTable.id eq userId }
+            .map { it[UsersTable.provisional] }
+            .singleOrNull() == true
+    }
+
+    override suspend fun listUnresolvedMembers(teamId: UUID): List<NdsMember> = transaction {
+        val provisionalIds = UsersTable.select(UsersTable.id)
+            .where { UsersTable.provisional eq true }
+            .map { it[UsersTable.id] }
+            .toSet()
+        NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq teamId }
+            .filter { row ->
+                val uid = row[NdsMembersTable.userId]
+                uid == null || uid in provisionalIds
+            }
+            .map { it.toNdsMember() }
+    }
+
+    override suspend fun countMovableRows(userId: UUID, teamId: UUID): MovableCounts = transaction {
+        val attendance = AttendanceResponsesTable.selectAll()
+            .where { AttendanceResponsesTable.userId eq userId }.count().toInt()
+        val teamSubGroupIds = SubGroupsTable.select(SubGroupsTable.id)
+            .where { SubGroupsTable.teamId eq teamId }
+            .map { it[SubGroupsTable.id] }
+        val subgroups = if (teamSubGroupIds.isEmpty()) 0 else SubGroupMembersTable.selectAll()
+            .where {
+                (SubGroupMembersTable.userId eq userId) and
+                    (SubGroupMembersTable.subGroupId inList teamSubGroupIds)
+            }.count().toInt()
+        val rules = AbwesenheitRulesTable.selectAll()
+            .where { AbwesenheitRulesTable.userId eq userId }.count().toInt()
+        MovableCounts(attendance = attendance, subgroups = subgroups, rules = rules)
+    }
+
     private fun ResultRow.toNdsMember() = NdsMember(
         id = this[NdsMembersTable.id],
         teamId = this[NdsMembersTable.teamId],
@@ -429,13 +536,11 @@ class NdsRepositoryImpl : NdsRepository {
         source = this[NdsMembersTable.sourceKind],
         claimed = this[NdsMembersTable.userId] != null &&
             // claimed = backed by a non-provisional user
-            !isProvisionalUser(this[NdsMembersTable.userId])
+            isProvisionalUserSync(this[NdsMembersTable.userId]!!).not()
     )
 
-    private fun isProvisionalUser(userId: UUID?): Boolean {
-        if (userId == null) return false
-        return UsersTable.select(UsersTable.provisional).where { UsersTable.id eq userId }
+    private fun isProvisionalUserSync(userId: UUID): Boolean =
+        UsersTable.select(UsersTable.provisional).where { UsersTable.id eq userId }
             .map { it[UsersTable.provisional] }
             .singleOrNull() == true
-    }
 }

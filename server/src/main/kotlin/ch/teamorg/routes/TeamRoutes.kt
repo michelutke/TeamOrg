@@ -13,6 +13,7 @@ import ch.teamorg.middleware.requireTeamRole
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -148,8 +149,11 @@ fun Route.teamRoutes() {
                 get("/members") {
                     val teamId = UUID.fromString(call.parameters["teamId"])
                     if (!call.requireTeamRole(teamId, "coach", "player", "club_manager", teamRepository = teamRepository)) return@get
-                    val members = teamRepository.listMembers(teamId)
-                    call.respond(members)
+                    val callerId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.subject)
+                    // Import placeholders are bookkeeping rows, not teammates: only the people who
+                    // can merge them away get to see them.
+                    val elevated = teamRepository.hasRole(callerId, teamId, "coach", "club_manager")
+                    call.respond(teamRepository.listMembers(teamId, includeProvisional = elevated))
                 }
 
                 post("/members") {

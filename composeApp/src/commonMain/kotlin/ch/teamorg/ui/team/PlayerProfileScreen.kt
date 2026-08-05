@@ -25,6 +25,7 @@ import ch.teamorg.domain.AbwesenheitRule
 import ch.teamorg.ui.attendance.AbsenceCard
 import ch.teamorg.ui.attendance.AddAbsenceSheet
 import ch.teamorg.ui.attendance.AttendanceStatsBar
+import ch.teamorg.ui.components.DeleteAccountDialog
 import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.theme.PillShape
 import ch.teamorg.ui.util.rememberCameraCaptureLauncher
@@ -39,6 +40,7 @@ fun PlayerProfileScreen(
     viewModel: PlayerProfileViewModel,
     onBack: () -> Unit,
     onLeftTeam: () -> Unit,
+    onAccountDeleted: () -> Unit = {},
     isNavProfile: Boolean = false  // true = bottom nav profile tab, false = member detail
 ) {
     val state by viewModel.state.collectAsState()
@@ -51,6 +53,10 @@ fun PlayerProfileScreen(
 
     LaunchedEffect(state.leftTeam) {
         if (state.leftTeam) onLeftTeam()
+    }
+
+    LaunchedEffect(state.accountDeleted) {
+        if (state.accountDeleted) onAccountDeleted()
     }
 
     Box(
@@ -93,11 +99,33 @@ fun PlayerProfileScreen(
                     }
                 }
                 state.member == null -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Player not found",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                if (isNavProfile) "You're not part of a team yet." else "Player not found",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (isNavProfile) {
+                            TextButton(
+                                onClick = { viewModel.openDeleteDialog() },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = PillShape,
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text(
+                                    "Delete account",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.height(80.dp))
+                        }
                     }
                 }
                 else -> {
@@ -398,6 +426,24 @@ fun PlayerProfileScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
+                        if (isNavProfile) {
+                            TextButton(
+                                onClick = { viewModel.openDeleteDialog() },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = PillShape,
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text(
+                                    "Delete account",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                        }
+
                         // Bottom padding for FAB
                         Spacer(Modifier.height(80.dp))
                     }
@@ -501,6 +547,17 @@ fun PlayerProfileScreen(
             dismissButton = {
                 TextButton(onClick = { showLeaveDialog = false }) { Text("Cancel") }
             }
+        )
+    }
+
+    // Delete account dialog
+    if (state.showDeleteDialog) {
+        DeleteAccountDialog(
+            deleteInProgress = state.deleteInProgress,
+            deleteError = state.deleteError,
+            showCoachWarning = state.isCoachOrManager,
+            onConfirm = { password -> viewModel.deleteAccount(password) },
+            onDismiss = { viewModel.closeDeleteDialog() }
         )
     }
 

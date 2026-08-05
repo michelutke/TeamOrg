@@ -1,5 +1,7 @@
 package ch.teamorg.data.repository
 
+import ch.teamorg.domain.DuplicateSuggestion
+import ch.teamorg.domain.LinkMemberResult
 import ch.teamorg.domain.SubGroup
 import ch.teamorg.domain.TeamMember
 import ch.teamorg.domain.UserRoles
@@ -260,12 +262,20 @@ class TeamRepositoryImpl(private val client: HttpClient) : TeamRepository {
         else Result.failure(Exception("addMember: ${r.status}"))
     } catch (e: Exception) { Result.failure(e) }
 
-    override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): Result<Unit> = try {
+    override suspend fun getDuplicateSuggestions(teamId: String): Result<List<DuplicateSuggestion>> = try {
+        Result.success(client.get("/teams/$teamId/nds/duplicate-suggestions").body())
+    } catch (e: Exception) { Result.failure(e) }
+
+    override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): LinkMemberResult = try {
         val r = client.post("/teams/$teamId/nds/members/$memberId/link") {
             contentType(ContentType.Application.Json)
             setBody(LinkNdsMemberRequest(userId))
         }
-        if (r.status == HttpStatusCode.OK || r.status == HttpStatusCode.Created) Result.success(Unit)
-        else Result.failure(Exception("linkNdsMember: ${r.status}"))
-    } catch (e: Exception) { Result.failure(e) }
+        when (r.status) {
+            HttpStatusCode.OK, HttpStatusCode.Created -> LinkMemberResult.Success
+            HttpStatusCode.Conflict -> LinkMemberResult.Conflict
+            HttpStatusCode.BadRequest -> LinkMemberResult.NotLinkable
+            else -> LinkMemberResult.Error("linkNdsMember: ${r.status}")
+        }
+    } catch (e: Exception) { LinkMemberResult.Error(e.message ?: "linkNdsMember failed") }
 }
