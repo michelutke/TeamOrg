@@ -44,7 +44,7 @@ data class AttendanceResponseDto(
 )
 
 interface AttendanceRepository {
-    suspend fun getEventAttendance(eventId: UUID): List<AttendanceResponseRow>
+    suspend fun getEventAttendance(eventId: UUID, includeProvisional: Boolean = true): List<AttendanceResponseRow>
     suspend fun getMyResponse(eventId: UUID, userId: UUID): AttendanceResponseRow?
     suspend fun upsertResponse(eventId: UUID, userId: UUID, status: String, reason: String?): AttendanceResponseRow
     /**
@@ -74,7 +74,12 @@ interface AttendanceRepository {
         to: Instant?,
         restrictToTeamIds: Set<UUID>? = null
     ): List<RawAttendanceRow>
-    suspend fun getTeamAttendance(teamId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow>
+    suspend fun getTeamAttendance(
+        teamId: UUID,
+        from: Instant?,
+        to: Instant?,
+        includeProvisional: Boolean = true
+    ): List<RawAttendanceRow>
     /**
      * Finalizes an event's attendance.
      * - Returns [FinalizeResult.BlockedUnsure] if any roster member has status `unsure`.
