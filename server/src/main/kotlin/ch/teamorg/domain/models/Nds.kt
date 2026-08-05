@@ -83,6 +83,34 @@ data class MemberSuggestionDto(
     data class CandidateDto(val userId: String, val displayName: String, val score: String, val birthdateMatch: Boolean)
 }
 
+/** What a merge would carry over from the placeholder, shown in the confirm dialog. */
+@Serializable
+data class MovableCounts(
+    val attendance: Int,
+    val subgroups: Int,
+    val rules: Int
+)
+
+/** One unresolved roster row plus the accounts it might be the same person as. */
+@Serializable
+data class DuplicateSuggestion(
+    @Serializable(with = UUIDSerializer::class) val memberId: java.util.UUID,
+    val lastName: String,
+    val firstName: String,
+    @Serializable(with = LocalDateSerializer::class) val birthDate: LocalDate?,
+    val personNumber: String?,
+    val funktion: String,
+    val candidates: List<Candidate>,
+    val willMove: MovableCounts
+) {
+    @Serializable
+    data class Candidate(
+        @Serializable(with = UUIDSerializer::class) val userId: java.util.UUID,
+        val displayName: String,
+        val score: String
+    )
+}
+
 /** A detected weekly-recurrence group (or single one-off) among the Anwesenheitsliste activities. */
 @Serializable
 data class NdsSeries(

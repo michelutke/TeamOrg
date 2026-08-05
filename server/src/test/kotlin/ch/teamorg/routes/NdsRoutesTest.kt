@@ -15,6 +15,7 @@ import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
 import ch.teamorg.domain.models.Club
 import ch.teamorg.domain.models.deriveCheckInStatus
+import ch.teamorg.domain.models.DuplicateSuggestion
 import ch.teamorg.domain.models.NdsConflictOverride
 import ch.teamorg.domain.models.NdsConflictResolution
 import ch.teamorg.domain.models.NdsMapping
@@ -1664,5 +1665,76 @@ class NdsRoutesTest : IntegrationTestBase() {
                     }.count().toInt()
             )
         }
+    }
+
+    @Test
+    fun `duplicate suggestions match a self-registered account to its imported roster row`() = withTeamorgTestApplication {
+        val mgr = register("nds_sugg_mgr@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "SuggClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        // Before any real account joins: placeholders must not suggest each other.
+        val empty = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<DuplicateSuggestion>>()
+        assertTrue(empty.isEmpty(), "placeholders must not be matching candidates")
+
+        val lara = createJsonClient().get("/teams/$teamId/nds/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<NdsMember>>().single { it.lastName == "Müller" }
+
+        // Lara joins generically: her display name matches the roster row exactly.
+        val laraUser = createJsonClient().post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("lara_sugg@example.com", "password123", "${lara.firstName} ${lara.lastName}"))
+        }.body<AuthResponse>()
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = laraUser.userId, role = "player"))
+        }
+
+        val suggestions = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<DuplicateSuggestion>>()
+
+        val forLara = suggestions.single { it.memberId == lara.id }
+        assertEquals(laraUser.userId, forLara.candidates.single().userId.toString())
+        assertEquals("HIGH", forLara.candidates.single().score)
+        // The import writes a response per activity (confirmed when attended, declined otherwise),
+        // so assert non-zero rather than a fixture-coupled count.
+        assertTrue(forLara.willMove.attendance > 0)
+
+        // After the merge the row is resolved and drops out of the list.
+        createJsonClient().post("/teams/$teamId/nds/members/${lara.id}/link") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(NdsMemberLinkRequest(userId = laraUser.userId))
+        }
+        val after = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+        }.body<List<DuplicateSuggestion>>()
+        assertTrue(after.none { it.memberId == lara.id })
+    }
+
+    @Test
+    fun `duplicate suggestions require an elevated role`() = withTeamorgTestApplication {
+        val mgr = register("nds_sugg_guard@example.com"); promoteToSuperAdmin(mgr.userId)
+        val clubId = createClub(mgr.token, "SuggGuardClub")
+        val res = importAll(mgr.token, clubId)
+        val teamId = UUID.fromString(res.teamId)
+
+        val player = register("sugg_player@example.com")
+        createJsonClient().post("/teams/$teamId/members") {
+            header(HttpHeaders.Authorization, "Bearer ${mgr.token}")
+            contentType(ContentType.Application.Json)
+            setBody(AddMemberRequest(userId = player.userId, role = "player"))
+        }
+
+        val res2 = createJsonClient().get("/teams/$teamId/nds/duplicate-suggestions") {
+            header(HttpHeaders.Authorization, "Bearer ${player.token}")
+        }
+        assertEquals(HttpStatusCode.Forbidden, res2.status)
     }
 }

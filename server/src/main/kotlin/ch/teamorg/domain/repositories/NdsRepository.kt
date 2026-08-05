@@ -11,6 +11,7 @@ import ch.teamorg.db.tables.SubGroupsTable
 import ch.teamorg.db.tables.TeamRolesTable
 import ch.teamorg.db.tables.TeamsTable
 import ch.teamorg.db.tables.UsersTable
+import ch.teamorg.domain.models.MovableCounts
 import ch.teamorg.domain.models.NdsMember
 import ch.teamorg.domain.models.NdsMemberInput
 import ch.teamorg.domain.models.ParsedMember
@@ -217,6 +218,10 @@ interface NdsRepository {
     suspend fun findMemberIdByUser(teamId: UUID, userId: UUID): UUID?
     /** True when [userId] is an import placeholder account (users.provisional). */
     suspend fun isProvisionalUser(userId: UUID): Boolean
+    /** Roster rows of [teamId] not backed by a real account (no user, or a provisional one). */
+    suspend fun listUnresolvedMembers(teamId: UUID): List<NdsMember>
+    /** How many rows a merge would carry off [userId] within [teamId]. */
+    suspend fun countMovableRows(userId: UUID, teamId: UUID): MovableCounts
 
     /** Active events for the team (export source for the Aktivitäten file). */
     suspend fun listExportActivities(teamId: UUID): List<ExportActivity>
@@ -293,7 +298,7 @@ class NdsRepositoryImpl : NdsRepository {
             .distinct()
         if (userIds.isEmpty()) return@transaction emptyList()
 
-        UsersTable.selectAll().where { UsersTable.id inList userIds }
+        UsersTable.selectAll().where { (UsersTable.id inList userIds) and (UsersTable.provisional eq false) }
             .map { user ->
                 val userId = user[UsersTable.id]
                 val displayName = user[UsersTable.displayName]
@@ -475,6 +480,35 @@ class NdsRepositoryImpl : NdsRepository {
             .where { UsersTable.id eq userId }
             .map { it[UsersTable.provisional] }
             .singleOrNull() == true
+    }
+
+    override suspend fun listUnresolvedMembers(teamId: UUID): List<NdsMember> = transaction {
+        val provisionalIds = UsersTable.select(UsersTable.id)
+            .where { UsersTable.provisional eq true }
+            .map { it[UsersTable.id] }
+            .toSet()
+        NdsMembersTable.selectAll().where { NdsMembersTable.teamId eq teamId }
+            .filter { row ->
+                val uid = row[NdsMembersTable.userId]
+                uid == null || uid in provisionalIds
+            }
+            .map { it.toNdsMember() }
+    }
+
+    override suspend fun countMovableRows(userId: UUID, teamId: UUID): MovableCounts = transaction {
+        val attendance = AttendanceResponsesTable.selectAll()
+            .where { AttendanceResponsesTable.userId eq userId }.count().toInt()
+        val teamSubGroupIds = SubGroupsTable.select(SubGroupsTable.id)
+            .where { SubGroupsTable.teamId eq teamId }
+            .map { it[SubGroupsTable.id] }
+        val subgroups = if (teamSubGroupIds.isEmpty()) 0 else SubGroupMembersTable.selectAll()
+            .where {
+                (SubGroupMembersTable.userId eq userId) and
+                    (SubGroupMembersTable.subGroupId inList teamSubGroupIds)
+            }.count().toInt()
+        val rules = AbwesenheitRulesTable.selectAll()
+            .where { AbwesenheitRulesTable.userId eq userId }.count().toInt()
+        MovableCounts(attendance = attendance, subgroups = subgroups, rules = rules)
     }
 
     private fun ResultRow.toNdsMember() = NdsMember(

@@ -1,6 +1,8 @@
 package ch.teamorg.routes
 
+import ch.teamorg.domain.models.DuplicateSuggestion
 import ch.teamorg.domain.models.MemberSuggestionDto
+import ch.teamorg.domain.models.MovableCounts
 import ch.teamorg.domain.models.NdsConflictResolution
 import ch.teamorg.domain.models.NdsMapping
 import ch.teamorg.domain.models.NdsMember
@@ -429,6 +431,42 @@ fun Route.ndsRoutes() {
             val teamId = UUID.fromString(call.parameters["teamId"])
             if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@get
             call.respond(ndsRepository.listMembers(teamId))
+        }
+
+        // Unresolved roster rows plus the real accounts they might be duplicates of.
+        get("/teams/{teamId}/nds/duplicate-suggestions") {
+            val teamId = UUID.fromString(call.parameters["teamId"])
+            if (!call.requireTeamRole(teamId, "coach", "club_manager", teamRepository = teamRepository)) return@get
+
+            val unresolved = ndsRepository.listUnresolvedMembers(teamId)
+            if (unresolved.isEmpty()) return@get call.respond(emptyList<DuplicateSuggestion>())
+
+            val teamUsers = ndsRepository.listTeamUsersForMatching(teamId)
+            val rows = unresolved.map {
+                NdsMemberInput(it.lastName, it.firstName, it.birthDate, it.personNumber, it.funktion)
+            }
+            val suggestionsByRowKey = NdsMemberMatcher.suggest(rows, teamUsers).associateBy { it.rowKey }
+
+            val result = unresolved.mapNotNull { member ->
+                val key = NdsMemberMatcher.rowKey(member.funktion, member.lastName, member.firstName)
+                val candidates = suggestionsByRowKey[key]?.candidates.orEmpty()
+                if (candidates.isEmpty()) return@mapNotNull null
+                DuplicateSuggestion(
+                    memberId = member.id,
+                    lastName = member.lastName,
+                    firstName = member.firstName,
+                    birthDate = member.birthDate,
+                    personNumber = member.personNumber,
+                    funktion = member.funktion,
+                    candidates = candidates.map {
+                        DuplicateSuggestion.Candidate(it.userId, it.displayName, it.score)
+                    },
+                    willMove = member.userId
+                        ?.let { ndsRepository.countMovableRows(it, teamId) }
+                        ?: MovableCounts(0, 0, 0)
+                )
+            }
+            call.respond(result)
         }
 
         // Update a member's NDS data. Coaches/managers edit anyone; a member edits only their own row.
