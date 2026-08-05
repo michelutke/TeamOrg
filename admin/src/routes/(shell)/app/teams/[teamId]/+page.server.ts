@@ -11,6 +11,7 @@ interface Member {
 	role: string;
 	jerseyNumber: number | null;
 	position: string | null;
+	provisional: boolean;
 }
 
 interface NdsMember {
@@ -22,6 +23,23 @@ interface NdsMember {
 	personNumber: string | null;
 	funktion: string;
 	claimed: boolean;
+}
+
+interface DuplicateCandidate {
+	userId: string;
+	displayName: string;
+	score: string;
+}
+
+interface DuplicateSuggestion {
+	memberId: string;
+	lastName: string;
+	firstName: string;
+	birthDate: string | null;
+	personNumber: string | null;
+	funktion: string;
+	candidates: DuplicateCandidate[];
+	willMove: { attendance: number; subgroups: number; rules: number };
 }
 
 interface ClubUser {
@@ -58,6 +76,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		let ndsMembers: NdsMember[] = [];
 		let ndsPreflight: NdsPreflightReport | null = null;
 		let clubUsers: ClubUser[] = [];
+		let ndsDuplicates: DuplicateSuggestion[] = [];
 		if (canManage) {
 			try {
 				ndsMembers = await apiGet<NdsMember[]>(`/teams/${teamId}/nds/members`, token);
@@ -75,9 +94,17 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			} catch {
 				clubUsers = [];
 			}
+			try {
+				ndsDuplicates = await apiGet<DuplicateSuggestion[]>(
+					`/teams/${teamId}/nds/duplicate-suggestions`,
+					token
+				);
+			} catch {
+				ndsDuplicates = [];
+			}
 		}
 
-		return { team, members, canManage, ndsMembers, ndsPreflight, clubUsers };
+		return { team, members, canManage, ndsMembers, ndsPreflight, clubUsers, ndsDuplicates };
 	} catch (e) {
 		if (e instanceof ApiError) throw error(e.status === 403 ? 403 : e.status, 'Kein Zugriff');
 		throw e;
@@ -128,7 +155,9 @@ export const actions: Actions = {
 				userId
 			});
 			return { ndsLinked: true };
-		} catch {
+		} catch (e) {
+			if (e instanceof ApiError && e.status === 409) return fail(409, { ndsError: 'alreadyLinked' });
+			if (e instanceof ApiError && e.status === 400) return fail(400, { ndsError: 'notLinkable' });
 			return fail(500, { ndsError: 'failed' });
 		}
 	}

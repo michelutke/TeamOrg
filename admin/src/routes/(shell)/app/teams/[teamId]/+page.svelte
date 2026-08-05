@@ -214,6 +214,53 @@
 			</div>
 		{/if}
 
+		{#if data.ndsDuplicates.length > 0}
+			<div class="mb-4 rounded-2xl bg-surface-container-high px-4 py-3">
+				<p class="text-[13px] font-medium text-on-surface">
+					{data.ndsDuplicates.length} mögliche {data.ndsDuplicates.length === 1
+						? 'Dublette'
+						: 'Dubletten'} — Konto und importiertes Mitglied zusammenführen?
+				</p>
+				<div class="mt-3 flex flex-col gap-3">
+					{#each data.ndsDuplicates as d (d.memberId)}
+						<div class="rounded-xl bg-surface-container px-3 py-2">
+							<div class="text-[13px] text-on-surface">
+								<span class="font-medium">{d.firstName} {d.lastName}</span>
+								<span class="text-on-surface-variant">
+									{d.birthDate ? ` · ${d.birthDate}` : ''}{d.personNumber
+										? ` · Nr. ${d.personNumber}`
+										: ''} · {d.funktion}
+								</span>
+							</div>
+							<p class="mt-1 text-[12px] text-on-surface-variant">
+								Wird übernommen: {d.willMove.attendance} Anwesenheiten, {d.willMove.subgroups}
+								Gruppen, {d.willMove.rules} Abwesenheitsregeln. Das provisorische Konto wird
+								gelöscht — nicht umkehrbar.
+							</p>
+							<form method="POST" action="?/linkNdsMember" class="mt-2 flex items-center gap-2">
+								<input type="hidden" name="memberId" value={d.memberId} />
+								<select
+									name="userId"
+									required
+									class="flex-1 rounded-lg bg-surface-container-high px-2 py-1 text-[13px] text-on-surface"
+								>
+									{#each d.candidates as c (c.userId)}
+										<option value={c.userId}>
+											{c.displayName}{c.score === 'HIGH' ? ' (sehr wahrscheinlich)' : ''}
+										</option>
+									{/each}
+								</select>
+								<button
+									type="submit"
+									class="cursor-pointer rounded-full border-none bg-primary px-4 py-1 text-[12px] font-bold text-on-primary hover:opacity-90"
+								>Zusammenführen</button>
+							</form>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		<div class="flex flex-col gap-2">
 			{#each data.ndsMembers as m (m.id)}
 				<div class="rounded-2xl bg-surface-container-high px-4 py-3">
@@ -300,7 +347,13 @@
 		</div>
 		{#if form?.ndsError}
 			<p class="mt-3 text-[12px] font-medium text-error">
-				{form.ndsError === 'badNumber' ? 'Ungültige Personennummer.' : 'Aktion fehlgeschlagen.'}
+				{form.ndsError === 'badNumber'
+					? 'Ungültige Personennummer.'
+					: form.ndsError === 'alreadyLinked'
+						? 'Dieses Konto ist bereits mit einem anderen Mitglied dieses Teams verknüpft.'
+						: form.ndsError === 'notLinkable'
+							? 'Dieses Konto kann nicht verknüpft werden.'
+							: 'Aktion fehlgeschlagen.'}
 			</p>
 		{/if}
 	</section>
@@ -317,7 +370,13 @@
 			<div class="flex flex-col gap-2">
 				{#each coaches as member (member.userId)}
 					<a href="/app/teams/{data.team.id}/members/{member.userId}" class="block">
-						<MemberRow {member} {roleLabel} />
+						<MemberRow {member} {roleLabel}>
+							{#snippet actions()}
+								{#if member.provisional}
+									<span class="rounded-full bg-surface-container px-2 py-0.5 text-[11px] text-on-surface-variant">Provisorisch</span>
+								{/if}
+							{/snippet}
+						</MemberRow>
 					</a>
 				{/each}
 			</div>
@@ -332,7 +391,13 @@
 			<div class="flex flex-col gap-2">
 				{#each players as member (member.userId)}
 					<a href="/app/teams/{data.team.id}/members/{member.userId}" class="block">
-						<MemberRow {member} {roleLabel} />
+						<MemberRow {member} {roleLabel}>
+							{#snippet actions()}
+								{#if member.provisional}
+									<span class="rounded-full bg-surface-container px-2 py-0.5 text-[11px] text-on-surface-variant">Provisorisch</span>
+								{/if}
+							{/snippet}
+						</MemberRow>
 					</a>
 				{/each}
 			</div>
