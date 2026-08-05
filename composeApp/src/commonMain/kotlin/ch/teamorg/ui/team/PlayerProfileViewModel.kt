@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import ch.teamorg.data.AttendanceStatsCalculator
 import ch.teamorg.domain.AbwesenheitRule
 import ch.teamorg.domain.CreateAbwesenheitRequest
+import ch.teamorg.domain.DeleteAccountResult
 import ch.teamorg.domain.TeamMember
 import ch.teamorg.domain.UpdateAbwesenheitRequest
 import ch.teamorg.preferences.UserPreferences
 import ch.teamorg.repository.AbwesenheitRepository
 import ch.teamorg.repository.AttendanceRepository
+import ch.teamorg.repository.AuthRepository
 import ch.teamorg.repository.EventRepository
 import ch.teamorg.repository.TeamRepository
 import kotlinx.coroutines.delay
@@ -29,7 +31,11 @@ data class PlayerProfileState(
     val trainingPresencePct: Float = 0f,
     val matchPresencePct: Float = 0f,
     val absenceRules: List<AbwesenheitRule> = emptyList(),
-    val backfillStatus: String? = null
+    val backfillStatus: String? = null,
+    val showDeleteDialog: Boolean = false,
+    val deleteInProgress: Boolean = false,
+    val deleteError: String? = null,
+    val accountDeleted: Boolean = false
 )
 
 class PlayerProfileViewModel(
@@ -37,7 +43,8 @@ class PlayerProfileViewModel(
     private val userPreferences: UserPreferences,
     private val abwesenheitRepository: AbwesenheitRepository,
     private val attendanceRepository: AttendanceRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PlayerProfileState())
@@ -173,6 +180,47 @@ class PlayerProfileViewModel(
                 .onSuccess { _state.update { it.copy(leftTeam = true) } }
                 .onFailure { e -> _state.update { it.copy(error = e.message ?: "Failed to leave team") } }
         }
+    }
+
+    fun openDeleteDialog() {
+        _state.update { it.copy(showDeleteDialog = true, deleteError = null) }
+    }
+
+    fun closeDeleteDialog() {
+        _state.update { it.copy(showDeleteDialog = false, deleteError = null) }
+    }
+
+    fun deleteAccount(password: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(deleteInProgress = true, deleteError = null) }
+            when (val result = authRepository.deleteAccount(password)) {
+                DeleteAccountResult.Success ->
+                    _state.update {
+                        it.copy(deleteInProgress = false, showDeleteDialog = false, accountDeleted = true)
+                    }
+                DeleteAccountResult.InvalidPassword ->
+                    _state.update {
+                        it.copy(deleteInProgress = false, deleteError = "That password is incorrect.")
+                    }
+                is DeleteAccountResult.OwnsClubs ->
+                    _state.update {
+                        it.copy(deleteInProgress = false, deleteError = ownsClubsMessage(result.clubNames))
+                    }
+                is DeleteAccountResult.Error ->
+                    _state.update {
+                        it.copy(
+                            deleteInProgress = false,
+                            deleteError = "Couldn't delete your account. Please try again."
+                        )
+                    }
+            }
+        }
+    }
+
+    private fun ownsClubsMessage(clubNames: List<String>): String {
+        val subject = if (clubNames.isEmpty()) "You still own a club" else "You own ${clubNames.joinToString(", ")}"
+        return "$subject. Transfer ownership to another club manager, or delete the club, " +
+            "before deleting your account."
     }
 
     fun uploadAvatar(teamId: String, userId: String, imageBytes: ByteArray, extension: String) {

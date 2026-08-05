@@ -297,6 +297,7 @@ fun AppNavigation(
                         backStack.removeAll { it == Screen.Profile }
                         backStack.add(Screen.Teams)
                     },
+                    onAccountDeleted = onLogout,
                     isNavProfile = true
                 )
             }
