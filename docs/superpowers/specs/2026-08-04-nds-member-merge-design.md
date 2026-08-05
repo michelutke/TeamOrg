@@ -70,8 +70,15 @@ code path. Add the guards it currently lacks:
   This rule already exists for the import path (`applyMappingSync`, `NdsRepository.kt:98`) — reuse
   `NdsMappingConflictException`.
 - **400** if the target user is provisional (never merge two placeholders).
-- **400** if the target user is not a member of the team's club (mirrors the import-path check at
-  `NdsRoutes.kt:322`).
+- **409** if this `nds_members` row is already linked to a *different*, non-provisional account
+  (the current holder isn't a placeholder, so `claimMember` must not treat it as one and strip
+  its data).
+- Considered and dropped: a 400 if the target user is not a member of the team's club (mirrors
+  the import-path check at `NdsRoutes.kt:322`). It regressed the pre-existing test
+  `club manager links an existing account to an imported player`, which links a brand-new
+  unaffiliated account on purpose, and `/link` itself calls `teamRepository.addMember` — it
+  *grants* the team role, so requiring prior club membership would refuse the endpoint's own
+  purpose.
 
 Existing coach/club_manager role guard and team-scoped member lookup stay as they are.
 
@@ -89,7 +96,7 @@ Response, one entry per unresolved roster row:
 {
   memberId, lastName, firstName, birthDate, personNumber, funktion,
   candidates: [{ userId, displayName, score }],   // HIGH | MEDIUM, max 5
-  willMove: { attendanceCount, subgroupCount, ruleCount }
+  willMove: { attendance, subgroups, rules }
 }
 ```
 

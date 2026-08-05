@@ -105,8 +105,10 @@ Drop the old "redeemedByUserId != userId → 409" guard; member-check + email-ma
   stay separate.
 - The team page surfaces this: it lists possible duplicates and lets a
   coach/club_manager merge via `POST /teams/{teamId}/nds/members/{id}/link`.
-- Per-member invites and the import wizard's `map` decision link automatically
-  and need no follow-up — only the generic-invite path needs the merge step.
+- Per-member invites link and merge automatically and need no follow-up. The
+  import wizard's `map` decision only repoints the roster row's `user_id` — it
+  does not merge placeholder data (attendance, subgroups, absence rules) and
+  does not delete the placeholder.
 
 ## App (composeApp + shared)
 - `shared/.../domain/Club.kt` `InviteDetails`: add `scope`, `invitedEmail: String?`,
