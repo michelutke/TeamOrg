@@ -59,6 +59,7 @@ fun appModule(environment: ApplicationEnvironment) = module {
     single { ch.teamorg.infra.nds.NdsExportService(get()) }
     single { SwissVolleySyncService(get(), get(), get(), get(), get(), get()) }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
+    single<UserDeletionRepository> { UserDeletionRepositoryImpl(get()) }
     single<AdminRepository> { AdminRepositoryImpl() }
     single<BillingRepository> { BillingRepositoryImpl() }
     single<MailService> { MailServiceImpl(environment.config) }

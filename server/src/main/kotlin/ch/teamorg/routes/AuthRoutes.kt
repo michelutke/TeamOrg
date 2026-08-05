@@ -2,7 +2,9 @@ package ch.teamorg.routes
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import ch.teamorg.domain.repositories.DeleteAccountOutcome
 import ch.teamorg.domain.repositories.TeamRepository
+import ch.teamorg.domain.repositories.UserDeletionRepository
 import ch.teamorg.domain.repositories.UserRepository
 import ch.teamorg.middleware.authenticateUser
 import ch.teamorg.plugins.RateLimits
@@ -45,9 +47,16 @@ data class AuthResponse(val token: String, val userId: String, val displayName: 
 @Serializable
 data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
 
+@Serializable
+data class DeleteAccountRequest(val password: String)
+
+@Serializable
+data class DeleteAccountConflict(val reason: String, val clubs: List<String>)
+
 fun Route.authRoutes() {
     val userRepository by inject<UserRepository>()
     val teamRepository by inject<TeamRepository>()
+    val userDeletionRepository by inject<UserDeletionRepository>()
     val fileStorageService by inject<FileStorageService>()
 
     val jwtSecret = application.environment.config.property("jwt.secret").getString()
@@ -141,6 +150,39 @@ fun Route.authRoutes() {
                         val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
                         userRepository.updatePasswordHash(userId, newHash)
                         call.respond(HttpStatusCode.OK)
+                    }
+                }
+
+                delete("/me") {
+                    val request = call.receive<DeleteAccountRequest>()
+                    call.authenticateUser(userRepository) { user ->
+                        val userId = UUID.fromString(user.id)
+                        val currentHash = userRepository.getPasswordHashById(userId)
+                        if (currentHash == null ||
+                            !BCrypt.checkpw(request.password.take(MAX_PASSWORD_LENGTH), currentHash)
+                        ) {
+                            return@authenticateUser call.respond(
+                                HttpStatusCode.Unauthorized,
+                                "Password is incorrect"
+                            )
+                        }
+                        // Read before the scrub nulls the column.
+                        val avatar = userDeletionRepository.avatarPath(userId)
+                        when (val outcome = userDeletionRepository.deleteAccount(userId)) {
+                            is DeleteAccountOutcome.OwnsClubs -> call.respond(
+                                HttpStatusCode.Conflict,
+                                DeleteAccountConflict("owns_clubs", outcome.clubNames)
+                            )
+                            DeleteAccountOutcome.Deleted -> {
+                                // Outside the transaction on purpose: an orphaned file is a
+                                // lesser harm than a rolled-back deletion.
+                                if (avatar != null) {
+                                    runCatching { fileStorageService.delete(avatar.removePrefix("/uploads/")) }
+                                        .onFailure { call.application.log.warn("avatar cleanup failed for $userId", it) }
+                                }
+                                call.respond(HttpStatusCode.NoContent)
+                            }
+                        }
                     }
                 }
             }
