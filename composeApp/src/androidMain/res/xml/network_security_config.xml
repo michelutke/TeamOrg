@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <debug-overrides>
+    <!-- Release: cleartext is impossible. The app talks HTTPS or it fails. -->
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
-        <base-config cleartextTrafficPermitted="true" />
-    </debug-overrides>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.0.2.2</domain>
-        <domain includeSubdomains="true">localhost</domain>
-    </domain-config>
+    </base-config>
 </network-security-config>

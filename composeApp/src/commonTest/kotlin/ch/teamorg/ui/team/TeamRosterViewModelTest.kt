@@ -1,7 +1,13 @@
 package ch.teamorg.ui.team
 
 import app.cash.turbine.test
+import ch.teamorg.domain.DuplicateCandidate
+import ch.teamorg.domain.DuplicateSuggestion
+import ch.teamorg.domain.LinkMemberResult
+import ch.teamorg.domain.MovableCounts
 import ch.teamorg.domain.TeamMember
+import ch.teamorg.domain.TeamRoleEntry
+import ch.teamorg.domain.UserRoles
 import ch.teamorg.fake.FakeClubRepository
 import ch.teamorg.fake.FakeTeamRepository
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -222,5 +228,131 @@ class TeamRosterViewModelTest {
         viewModel.resetInvite()
 
         viewModel.state.value.inviteUrl shouldBe null
+    }
+
+    // region — duplicate suggestions
+
+    private val suggestionLara = DuplicateSuggestion(
+        memberId = "m1",
+        lastName = "Müller",
+        firstName = "Lara",
+        birthDate = "2008-04-01",
+        personNumber = "123456789",
+        funktion = "Teilnehmer/in",
+        candidates = listOf(DuplicateCandidate("u9", "Lara Müller", "HIGH")),
+        willMove = MovableCounts(attendance = 12, subgroups = 1, rules = 0)
+    )
+
+    @Test
+    fun loadRoster_asCoach_exposesDuplicateSuggestions() = runTest {
+        givenCallerIsCoachOfTeam("t1")
+        fakeTeamRepo.duplicateSuggestionsResult = Result.success(listOf(suggestionLara))
+
+        viewModel.loadRoster("t1")
+
+        viewModel.state.value.duplicates shouldContainExactly listOf(suggestionLara)
+    }
+
+    @Test
+    fun loadRoster_asPlainPlayer_doesNotFetchSuggestions() = runTest {
+        givenCallerIsPlainPlayerOfTeam("t1")
+        fakeTeamRepo.duplicateSuggestionsResult = Result.success(listOf(suggestionLara))
+
+        viewModel.loadRoster("t1")
+
+        viewModel.state.value.duplicates.shouldBeEmpty()
+    }
+
+    @Test
+    fun loadRoster_whenSuggestionsFetchFails_leavesDuplicatesEmptyAndDoesNotSurfaceAnError() = runTest {
+        givenCallerIsCoachOfTeam("t1")
+        fakeTeamRepo.duplicateSuggestionsResult = Result.failure(RuntimeException("boom"))
+
+        viewModel.loadRoster("t1")
+
+        viewModel.state.value.duplicates.shouldBeEmpty()
+        viewModel.state.value.error shouldBe null
+    }
+
+    @Test
+    fun mergeDuplicate_onSuccess_dropsThatSuggestionAndCountsTheMerge() = runTest {
+        givenCallerIsCoachOfTeam("t1")
+        fakeTeamRepo.duplicateSuggestionsResult = Result.success(listOf(suggestionLara))
+        viewModel.loadRoster("t1")
+        fakeTeamRepo.linkNdsMemberResult = LinkMemberResult.Success
+        // The post-merge refresh must not resurrect the suggestion we just resolved.
+        fakeTeamRepo.duplicateSuggestionsResult = Result.success(emptyList())
+
+        viewModel.mergeDuplicate("t1", "m1", "u9")
+
+        val state = viewModel.state.value
+        state.duplicates.shouldBeEmpty()
+        state.mergedCount shouldBe 1
+        state.mergeError shouldBe null
+        state.mergeInProgress shouldBe false
+        fakeTeamRepo.linkNdsMemberCalls shouldContainExactly listOf(Triple("t1", "m1", "u9"))
+    }
+
+    @Test
+    fun mergeDuplicate_onConflict_showsTheAlreadyLinkedMessageAndKeepsTheSheetOpen() = runTest {
+        givenCallerIsCoachOfTeam("t1")
+        fakeTeamRepo.duplicateSuggestionsResult = Result.success(listOf(suggestionLara))
+        viewModel.loadRoster("t1")
+        viewModel.openDuplicatesSheet()
+        fakeTeamRepo.linkNdsMemberResult = LinkMemberResult.Conflict
+
+        viewModel.mergeDuplicate("t1", "m1", "u9")
+
+        val state = viewModel.state.value
+        state.mergeError shouldBe "This account is already linked to another member of this team."
+        state.showDuplicatesSheet shouldBe true
+        state.mergedCount shouldBe 0
+        state.mergeInProgress shouldBe false
+    }
+
+    @Test
+    fun mergeDuplicate_onNotLinkable_showsTheCannotBeLinkedMessage() = runTest {
+        givenCallerIsCoachOfTeam("t1")
+        fakeTeamRepo.linkNdsMemberResult = LinkMemberResult.NotLinkable
+
+        viewModel.mergeDuplicate("t1", "m1", "u9")
+
+        viewModel.state.value.mergeError shouldBe "This account can't be linked."
+    }
+
+    @Test
+    fun mergeDuplicate_onError_showsTheGenericRetryMessage() = runTest {
+        givenCallerIsCoachOfTeam("t1")
+        fakeTeamRepo.linkNdsMemberResult = LinkMemberResult.Error("linkNdsMember: 404 Not Found")
+
+        viewModel.mergeDuplicate("t1", "m1", "u9")
+
+        // Never leak the raw status string to a coach.
+        viewModel.state.value.mergeError shouldBe "Couldn't merge. Please try again."
+    }
+
+    @Test
+    fun clearMergeError_removesTheMessage() = runTest {
+        givenCallerIsCoachOfTeam("t1")
+        fakeTeamRepo.linkNdsMemberResult = LinkMemberResult.Conflict
+        viewModel.mergeDuplicate("t1", "m1", "u9")
+
+        viewModel.clearMergeError()
+
+        viewModel.state.value.mergeError shouldBe null
+    }
+
+    // endregion
+
+    private fun givenCallerIsCoachOfTeam(teamId: String) {
+        fakeTeamRepo.getMyRolesResult = Result.success(
+            UserRoles(teamRoles = listOf(TeamRoleEntry(teamId = teamId, clubId = "c1", role = "coach")))
+        )
+    }
+
+    private fun givenCallerIsPlainPlayerOfTeam(teamId: String) {
+        fakeTeamRepo.getMyRolesResult = Result.success(
+            UserRoles(teamRoles = listOf(TeamRoleEntry(teamId = teamId, clubId = "c1", role = "player")))
+        )
     }
 }

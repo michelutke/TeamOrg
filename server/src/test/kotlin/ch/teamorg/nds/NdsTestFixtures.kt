@@ -3,7 +3,9 @@ package ch.teamorg.nds
 import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.ByteArrayOutputStream
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 
 /**
  * Builds a synthetic NDS "Anwesenheitsliste" .xlsx mirroring the real export layout
@@ -11,15 +13,13 @@ import java.time.LocalDate
  */
 object NdsTestFixtures {
 
-    // 4 Mondays + 4 Wednesdays starting Mon 2026-08-03 → two clean weekly series.
-    val MONDAYS = listOf(
-        LocalDate.of(2026, 8, 3), LocalDate.of(2026, 8, 10),
-        LocalDate.of(2026, 8, 17), LocalDate.of(2026, 8, 24)
-    )
-    val WEDNESDAYS = listOf(
-        LocalDate.of(2026, 8, 5), LocalDate.of(2026, 8, 12),
-        LocalDate.of(2026, 8, 19), LocalDate.of(2026, 8, 26)
-    )
+    // First Monday at least a week out — keeps every fixture date safely in the future,
+    // which the route tests rely on (no pre-declines, no auto-finalize on import).
+    val FIRST_MONDAY: LocalDate = LocalDate.now().plusDays(7).with(TemporalAdjusters.next(DayOfWeek.MONDAY))
+
+    // 4 Mondays + 4 Wednesdays starting FIRST_MONDAY → two clean weekly series.
+    val MONDAYS = (0L until 4L).map { FIRST_MONDAY.plusWeeks(it) }
+    val WEDNESDAYS = MONDAYS.map { it.plusDays(2) }
     // Interleaved in column order: MO, MI, MO, MI, ... matching the real sheet.
     val ACTIVITY_DATES: List<LocalDate> = MONDAYS.zip(WEDNESDAYS).flatMap { listOf(it.first, it.second) }
 
@@ -109,9 +109,9 @@ object NdsTestFixtures {
      * Activity columns start at POI index 5 to mirror the real NDS export.
      */
     fun largeAnwesenheitslisteBytes(angebot: String = "LARGE-999"): ByteArray {
-        // 6 Mondays + 6 Wednesdays starting 2026-09-07 → 12 activity columns interleaved MO/MI.
-        val mondays = (0 until 6).map { LocalDate.of(2026, 9, 7).plusWeeks(it.toLong()) }
-        val wednesdays = (0 until 6).map { LocalDate.of(2026, 9, 9).plusWeeks(it.toLong()) }
+        // 6 Mondays + 6 Wednesdays starting five weeks after FIRST_MONDAY → 12 activity columns interleaved MO/MI.
+        val mondays = (0 until 6).map { FIRST_MONDAY.plusWeeks(5L + it) }
+        val wednesdays = mondays.map { it.plusDays(2) }
         val activityDates: List<LocalDate> = mondays.zip(wednesdays).flatMap { listOf(it.first, it.second) }
 
         // 2 leaders: their J marks for each week-index (0-based into activityDates).
@@ -221,7 +221,7 @@ object NdsTestFixtures {
                 r.createCell(1).setCellValue(p.last)
                 r.createCell(2).setCellValue(p.first)
                 r.createCell(3).setCellValue(p.birth)
-                r.createCell(4).setCellValue((2026 - p.birth.year).toDouble())
+                r.createCell(4).setCellValue((LocalDate.now().year - p.birth.year).toDouble())
                 participantJmarks[i].forEach { col -> r.createCell(firstCol + col).setCellValue("J") }
             }
 

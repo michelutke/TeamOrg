@@ -3,6 +3,9 @@ package ch.teamorg.data.repository
 import ch.teamorg.data.PushRegistration
 import ch.teamorg.domain.AuthResponse
 import ch.teamorg.domain.AuthUser
+import ch.teamorg.domain.DeleteAccountConflict
+import ch.teamorg.domain.DeleteAccountRequest
+import ch.teamorg.domain.DeleteAccountResult
 import ch.teamorg.domain.LoginRequest
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.domain.UserRoles
@@ -10,6 +13,7 @@ import ch.teamorg.preferences.UserPreferences
 import ch.teamorg.repository.AuthRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -94,6 +98,31 @@ class AuthRepositoryImpl(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteAccount(password: String): DeleteAccountResult {
+        return try {
+            val response = client.delete("/auth/me") {
+                setBody(DeleteAccountRequest(password))
+            }
+            when (response.status) {
+                HttpStatusCode.NoContent, HttpStatusCode.OK -> {
+                    // The token is dead server-side regardless; leaving it on disk would only
+                    // produce confusing 401s.
+                    logout()
+                    DeleteAccountResult.Success
+                }
+                HttpStatusCode.Unauthorized -> DeleteAccountResult.InvalidPassword
+                HttpStatusCode.Conflict -> {
+                    val clubs = runCatching { response.body<DeleteAccountConflict>().clubs }
+                        .getOrDefault(emptyList())
+                    DeleteAccountResult.OwnsClubs(clubs)
+                }
+                else -> DeleteAccountResult.Error("Delete failed: ${response.status}")
+            }
+        } catch (e: Exception) {
+            DeleteAccountResult.Error(e.message ?: "Delete failed")
         }
     }
 }

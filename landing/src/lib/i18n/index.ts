@@ -205,7 +205,7 @@ const de: Dict = {
 		title: 'Ein Preis. Keine Überraschungen.',
 		price: '2 CHF',
 		per: '/ Mitglied / Jahr',
-		example: 'Beispiel: 40 Mitglieder = 40 CHF pro Jahr',
+		example: 'Beispiel: 40 Mitglieder = 80 CHF pro Jahr',
 		fine: 'Jährliche Abrechnung. Nur aktive Mitglieder zählen.',
 		includesTitle: 'ALLES INKLUSIVE',
 		includes: [
@@ -370,7 +370,7 @@ const en: Dict = {
 		title: 'One price. No surprises.',
 		price: 'CHF 2',
 		per: '/ member / year',
-		example: 'Example: 40 members = CHF 40 per year',
+		example: 'Example: 40 members = CHF 80 per year',
 		fine: 'Billed yearly. Only active members count.',
 		includesTitle: 'EVERYTHING INCLUDED',
 		includes: [

@@ -55,6 +55,29 @@ export async function apiDelete(path: string, token: string): Promise<void> {
 	if (!res.ok) throw new ApiError(res.status, `API error: ${res.status} ${res.statusText}`);
 }
 
+/**
+ * DELETE with a JSON body, attaching the parsed error body to the thrown ApiError. Needed by
+ * account deletion: the password travels in the body and a 409 carries the club names that the
+ * user has to act on.
+ */
+export async function apiDeleteJson(path: string, token: string, body: unknown): Promise<void> {
+	const res = await fetch(`${API_BASE}${path}`, {
+		method: 'DELETE',
+		headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+	if (!res.ok) {
+		const text = await res.text();
+		let payload: unknown = undefined;
+		try {
+			payload = text ? JSON.parse(text) : undefined;
+		} catch {
+			payload = undefined;
+		}
+		throw new ApiError(res.status, `API error: ${res.status} ${res.statusText}`, payload);
+	}
+}
+
 /** Forwards a multipart FormData body (e.g. file upload). Do NOT set Content-Type —
  * fetch derives the multipart boundary from the FormData automatically. */
 export async function apiPostForm<T>(path: string, token: string, form: FormData): Promise<T> {

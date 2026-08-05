@@ -104,7 +104,8 @@ fun AppNavigation(
                 EmptyStateScreen(
                     viewModel = viewModel,
                     onNavigateToCreateTeamOrClub = { backStack.add(Screen.CreateTeamOrClub) },
-                    onNavigateToInvite = { token -> backStack.add(Screen.Invite(token)) }
+                    onNavigateToInvite = { token -> backStack.add(Screen.Invite(token)) },
+                    onAccountDeleted = onLogout
                 )
             }
             Screen.ClubSetup -> {
@@ -297,6 +298,7 @@ fun AppNavigation(
                         backStack.removeAll { it == Screen.Profile }
                         backStack.add(Screen.Teams)
                     },
+                    onAccountDeleted = onLogout,
                     isNavProfile = true
                 )
             }

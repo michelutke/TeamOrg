@@ -23,7 +23,8 @@ interface UserRepository {
 
 class UserRepositoryImpl : UserRepository {
     override fun findByEmail(email: String): User? = transaction {
-        UsersTable.selectAll().where { UsersTable.email eq email }
+        UsersTable.selectAll()
+            .where { (UsersTable.email eq email) and (UsersTable.deletedAt eq null) }
             .map(::rowToUser)
             .singleOrNull()
     }
@@ -51,11 +52,14 @@ class UserRepositoryImpl : UserRepository {
     }
 
     override fun existsByEmail(email: String): Boolean = transaction {
-        !UsersTable.selectAll().where { UsersTable.email eq email }.empty()
+        !UsersTable.selectAll()
+            .where { (UsersTable.email eq email) and (UsersTable.deletedAt eq null) }
+            .empty()
     }
 
     override fun getPasswordHash(email: String): String? = transaction {
-        UsersTable.select(UsersTable.passwordHash).where { UsersTable.email eq email }
+        UsersTable.select(UsersTable.passwordHash)
+            .where { (UsersTable.email eq email) and (UsersTable.deletedAt eq null) }
             .map { it[UsersTable.passwordHash] }
             .singleOrNull()
     }

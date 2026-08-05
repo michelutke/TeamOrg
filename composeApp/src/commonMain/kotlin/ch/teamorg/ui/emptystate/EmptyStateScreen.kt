@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ch.teamorg.ui.components.DeleteAccountDialog
 import ch.teamorg.ui.components.TeamorgTextField
 import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
@@ -23,9 +24,14 @@ import ch.teamorg.ui.theme.PillShape
 fun EmptyStateScreen(
     viewModel: EmptyStateViewModel,
     onNavigateToCreateTeamOrClub: () -> Unit,
-    onNavigateToInvite: (String) -> Unit
+    onNavigateToInvite: (String) -> Unit,
+    onAccountDeleted: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(state.accountDeleted) {
+        if (state.accountDeleted) onAccountDeleted()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -172,6 +178,17 @@ fun EmptyStateScreen(
                     }
                 }
             }
+
+            TextButton(
+                onClick = { viewModel.openDeleteDialog() },
+                modifier = Modifier.testTag("btn_delete_account")
+            ) {
+                Text(
+                    "Delete account",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         }
 
         // Messages
@@ -191,5 +208,15 @@ fun EmptyStateScreen(
                 action = { TextButton(onClick = { viewModel.dismissMessages() }) { Text("OK") } }
             ) { Text(info) }
         }
+    }
+
+    if (state.showDeleteDialog) {
+        DeleteAccountDialog(
+            deleteInProgress = state.deleteInProgress,
+            deleteError = state.deleteError,
+            showCoachWarning = false,
+            onConfirm = { password -> viewModel.deleteAccount(password) },
+            onDismiss = { viewModel.closeDeleteDialog() }
+        )
     }
 }

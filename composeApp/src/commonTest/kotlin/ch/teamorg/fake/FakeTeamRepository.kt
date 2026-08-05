@@ -1,5 +1,7 @@
 package ch.teamorg.fake
 
+import ch.teamorg.domain.DuplicateSuggestion
+import ch.teamorg.domain.LinkMemberResult
 import ch.teamorg.domain.SubGroup
 import ch.teamorg.domain.TeamMember
 import ch.teamorg.domain.UserRoles
@@ -26,6 +28,9 @@ class FakeTeamRepository : TeamRepository {
         lastRemovedUserId = null
         lastInviteTeamId = null
         lastInviteRole = null
+        linkNdsMemberResult = LinkMemberResult.Success
+        duplicateSuggestionsResult = Result.success(emptyList())
+        linkNdsMemberCalls.clear()
     }
 
     override suspend fun getTeamRoster(teamId: String): Result<List<TeamMember>> {
@@ -81,9 +86,18 @@ class FakeTeamRepository : TeamRepository {
     override suspend fun uploadAvatar(imageBytes: ByteArray, extension: String): Result<Unit> = uploadAvatarResult
 
     var addMemberResult: Result<Unit> = Result.success(Unit)
-    var linkNdsMemberResult: Result<Unit> = Result.success(Unit)
+    var linkNdsMemberResult: LinkMemberResult = LinkMemberResult.Success
+    var duplicateSuggestionsResult: Result<List<DuplicateSuggestion>> = Result.success(emptyList())
+    /** Every (teamId, memberId, userId) triple linkNdsMember was called with, in order. */
+    val linkNdsMemberCalls = mutableListOf<Triple<String, String, String>>()
 
     override suspend fun addMember(teamId: String, userId: String, role: String): Result<Unit> = addMemberResult
 
-    override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): Result<Unit> = linkNdsMemberResult
+    override suspend fun getDuplicateSuggestions(teamId: String): Result<List<DuplicateSuggestion>> =
+        duplicateSuggestionsResult
+
+    override suspend fun linkNdsMember(teamId: String, memberId: String, userId: String): LinkMemberResult {
+        linkNdsMemberCalls += Triple(teamId, memberId, userId)
+        return linkNdsMemberResult
+    }
 }

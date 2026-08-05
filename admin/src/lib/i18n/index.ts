@@ -175,6 +175,23 @@ export interface Dict {
 		passwordTooShort: string;
 		passwordWrongCurrent: string;
 		passwordChangeFailed: string;
+		deleteSectionTitle: string;
+		deleteSectionBody: string;
+		deleteSectionLink: string;
+		deleteTitle: string;
+		deleteIntro: string;
+		deleteRemovedTitle: string;
+		deleteRemovedBody: string;
+		deleteKeptTitle: string;
+		deleteKeptBody: string;
+		deleteCoachWarning: string;
+		deleteIrreversible: string;
+		deletePasswordLabel: string;
+		deleteButton: string;
+		deleteCancel: string;
+		deleteWrongPassword: string;
+		deleteOwnsClubs: string;
+		deleteFailed: string;
 	};
 	invite: {
 		eyebrow: string;
@@ -565,7 +582,28 @@ const de: Dict = {
 		passwordMismatch: 'Die Passwörter stimmen nicht überein.',
 		passwordTooShort: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
 		passwordWrongCurrent: 'Das aktuelle Passwort ist falsch.',
-		passwordChangeFailed: 'Passwort konnte nicht geändert werden. Bitte versuche es erneut.'
+		passwordChangeFailed: 'Passwort konnte nicht geändert werden. Bitte versuche es erneut.',
+		deleteSectionTitle: 'Konto löschen',
+		deleteSectionBody: 'Dein Konto und deine persönlichen Daten endgültig löschen.',
+		deleteSectionLink: 'Konto löschen',
+		deleteTitle: 'Konto endgültig löschen',
+		deleteIntro: 'Wenn du dein Konto löschst, werden deine persönlichen Daten sofort entfernt.',
+		deleteRemovedTitle: 'Das wird gelöscht',
+		deleteRemovedBody:
+			'E-Mail-Adresse und Name, Profilbild, alle Anwesenheits-Rückmeldungen und Abwesenheiten, Benachrichtigungen und deren Einstellungen, Team- und Vereins-Mitgliedschaften.',
+		deleteKeptTitle: 'Das bleibt für dein Team erhalten',
+		deleteKeptBody:
+			'Events, die du erstellt hast, und Anwesenheiten, die du erfasst hast, bleiben für dein Team erhalten. Dein Name wird dort durch "Gelöschtes Konto" ersetzt.',
+		deleteCoachWarning:
+			'Teams, die du als Trainer betreust, haben danach keinen Trainer mehr, bis ein Vereinsmanager einen neuen zuweist.',
+		deleteIrreversible: 'Das kann nicht rückgängig gemacht werden.',
+		deletePasswordLabel: 'Passwort bestätigen',
+		deleteButton: 'Konto löschen',
+		deleteCancel: 'Abbrechen',
+		deleteWrongPassword: 'Das Passwort ist falsch.',
+		deleteOwnsClubs:
+			'Du bist Besitzer von {clubs}. Kontaktiere info@teamorg.ch, damit wir den Verein übertragen oder auflösen können, bevor du dein Konto löschst.',
+		deleteFailed: 'Konto konnte nicht gelöscht werden. Bitte versuche es erneut.'
 	},
 	invite: {
 		eyebrow: 'EINLADUNG',
@@ -962,7 +1000,28 @@ const en: Dict = {
 		passwordMismatch: 'Passwords do not match.',
 		passwordTooShort: 'The password must be at least 8 characters long.',
 		passwordWrongCurrent: 'The current password is incorrect.',
-		passwordChangeFailed: 'Could not change password. Please try again.'
+		passwordChangeFailed: 'Could not change password. Please try again.',
+		deleteSectionTitle: 'Delete account',
+		deleteSectionBody: 'Permanently delete your account and personal data.',
+		deleteSectionLink: 'Delete account',
+		deleteTitle: 'Permanently delete your account',
+		deleteIntro: 'Deleting your account removes your personal data immediately.',
+		deleteRemovedTitle: 'What gets deleted',
+		deleteRemovedBody:
+			'Your email address and name, profile picture, all attendance replies and absences, notifications and their settings, and your team and club memberships.',
+		deleteKeptTitle: 'What stays with your team',
+		deleteKeptBody:
+			'Events you created and attendance you recorded stay with your team. Your name is replaced there with "Gelöschtes Konto".',
+		deleteCoachWarning:
+			'Teams you coach will have no coach until a club manager assigns a new one.',
+		deleteIrreversible: 'This cannot be undone.',
+		deletePasswordLabel: 'Confirm your password',
+		deleteButton: 'Delete account',
+		deleteCancel: 'Cancel',
+		deleteWrongPassword: 'That password is incorrect.',
+		deleteOwnsClubs:
+			'You own {clubs}. Contact info@teamorg.ch so we can transfer or close the club before you delete your account.',
+		deleteFailed: 'Could not delete your account. Please try again.'
 	},
 	invite: {
 		eyebrow: 'INVITATION',

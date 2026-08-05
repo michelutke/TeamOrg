@@ -10,10 +10,15 @@ import org.jetbrains.exposed.sql.count
 
 class AttendanceRepositoryImpl : AttendanceRepository {
 
-    override suspend fun getEventAttendance(eventId: UUID): List<AttendanceResponseRow> = transaction {
-        AttendanceResponsesTable.selectAll()
+    override suspend fun getEventAttendance(eventId: UUID, includeProvisional: Boolean): List<AttendanceResponseRow> = transaction {
+        val rows = AttendanceResponsesTable.selectAll()
             .where { AttendanceResponsesTable.eventId eq eventId }
             .map(::rowToResponse)
+        if (includeProvisional) rows
+        else {
+            val hidden = provisionalUserIds(rows.map { it.userId })
+            rows.filterNot { it.userId in hidden }
+        }
     }
 
     override suspend fun getMyResponse(eventId: UUID, userId: UUID): AttendanceResponseRow? = transaction {
@@ -103,10 +108,19 @@ class AttendanceRepositoryImpl : AttendanceRepository {
             buildRawQuery(userId = userId, teamId = null, from = from, to = to, restrictToTeamIds = restrictToTeamIds)
         }
 
-    override suspend fun getTeamAttendance(teamId: UUID, from: Instant?, to: Instant?): List<RawAttendanceRow> =
-        transaction {
-            buildRawQuery(userId = null, teamId = teamId, from = from, to = to)
+    override suspend fun getTeamAttendance(
+        teamId: UUID,
+        from: Instant?,
+        to: Instant?,
+        includeProvisional: Boolean
+    ): List<RawAttendanceRow> = transaction {
+        val rows = buildRawQuery(userId = null, teamId = teamId, from = from, to = to)
+        if (includeProvisional) rows
+        else {
+            val hidden = provisionalUserIds(rows.map { it.userId })
+            rows.filterNot { it.userId in hidden }
         }
+    }
 
     override suspend fun finalize(eventId: UUID, byUser: UUID): FinalizeResult = transaction {
         // Roster = all team_roles.userId across the event's teams (same as check-in roster).
@@ -238,6 +252,15 @@ class AttendanceRepositoryImpl : AttendanceRepository {
     }
 
     // --- Private helpers ---
+
+    /** Ids among [userIds] that belong to import placeholder accounts. */
+    private fun provisionalUserIds(userIds: List<UUID>): Set<UUID> {
+        if (userIds.isEmpty()) return emptySet()
+        return UsersTable.select(UsersTable.id)
+            .where { (UsersTable.id inList userIds.distinct()) and (UsersTable.provisional eq true) }
+            .map { it[UsersTable.id] }
+            .toSet()
+    }
 
     private fun buildRawQuery(
         userId: UUID?,

@@ -99,4 +99,17 @@
 			</button>
 		</form>
 	</section>
+
+	<section class="flex flex-col gap-3 rounded-[28px] border border-error/30 bg-surface p-6">
+		<h2 class="text-[12px] font-semibold uppercase tracking-wide text-error">
+			{data.m.profile.deleteSectionTitle}
+		</h2>
+		<p class="text-[14px] text-on-surface-variant">{data.m.profile.deleteSectionBody}</p>
+		<a
+			href="/app/profile/delete"
+			class="self-start text-[14px] font-bold text-error hover:underline"
+		>
+			{data.m.profile.deleteSectionLink}
+		</a>
+	</section>
 </div>
