@@ -179,7 +179,7 @@ class NdsRoutesTest : IntegrationTestBase() {
 
         // Attendance: total 'J' marks (coach 2 + Lara 3 + Tim 1) = 6 confirmed responses.
         // Non-attended dates only get a 'declined' write once the event is past — all fixture
-        // events are in the future (Aug 2026), so no declined responses are written at all here.
+        // events are in the future, so no declined responses are written at all here.
         val (confirmedCount, declinedCount, openCount) = transaction {
             val ids = EventTeamsTable.select(EventTeamsTable.eventId)
                 .where { EventTeamsTable.teamId eq teamId }.map { it[EventTeamsTable.eventId] }
@@ -189,7 +189,7 @@ class NdsRoutesTest : IntegrationTestBase() {
             val declined = AttendanceResponsesTable.selectAll()
                 .where { (AttendanceResponsesTable.eventId inList ids) and (AttendanceResponsesTable.status eq "declined") }
                 .count()
-            // All fixture events are in the future (Aug 2026) → none auto-finalized.
+            // All fixture events are in the future → none auto-finalized.
             val open = EventsTable.selectAll()
                 .where { (EventsTable.id inList ids) and EventsTable.checkInCompletedAt.isNull() }
                 .count()

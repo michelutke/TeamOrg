@@ -267,11 +267,15 @@ class IdorHardeningTest : IntegrationTestBase() {
         addPlayer(coachA.token, teamA, target.token)
         addPlayer(coachB.token, teamB, target.token)
 
+        // Both events must be in the future — the RSVP endpoint rejects responses past the cutoff.
+        val dayA = java.time.LocalDate.now().plusDays(30)
+        val dayB = java.time.LocalDate.now().plusDays(31)
+
         // Event in team A, target RSVPs
         val eventA = client.post("/events") {
             header(HttpHeaders.Authorization, "Bearer ${coachA.token}")
             contentType(ContentType.Application.Json)
-            setBody(CreateEventPayload("A Event", "training", "2026-08-01T10:00:00Z", "2026-08-01T12:00:00Z", listOf(teamA)))
+            setBody(CreateEventPayload("A Event", "training", "${dayA}T10:00:00Z", "${dayA}T12:00:00Z", listOf(teamA)))
         }.body<Event>()
         client.put("/events/${eventA.id}/attendance/me") {
             header(HttpHeaders.Authorization, "Bearer ${target.token}")
@@ -283,7 +287,7 @@ class IdorHardeningTest : IntegrationTestBase() {
         val eventB = client.post("/events") {
             header(HttpHeaders.Authorization, "Bearer ${coachB.token}")
             contentType(ContentType.Application.Json)
-            setBody(CreateEventPayload("B Event", "training", "2026-08-02T10:00:00Z", "2026-08-02T12:00:00Z", listOf(teamB)))
+            setBody(CreateEventPayload("B Event", "training", "${dayB}T10:00:00Z", "${dayB}T12:00:00Z", listOf(teamB)))
         }.body<Event>()
         client.put("/events/${eventB.id}/attendance/me") {
             header(HttpHeaders.Authorization, "Bearer ${target.token}")
