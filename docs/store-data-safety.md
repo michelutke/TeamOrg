@@ -35,3 +35,34 @@ Same answer for both stores.
 Deliberately not implemented. A Let's Encrypt chain rotation would brick every installed app
 with no server-side remedy, certificates rotate automatically via Coolify, and neither store
 requires pinning. See `docs/superpowers/specs/2026-08-05-transport-encryption-design.md`.
+
+## Account deletion
+
+Both stores require an account-deletion path. Apple guideline 5.1.1(v) requires it to be
+initiated **inside the app**; Google Play additionally wants a URL.
+
+| Requirement | Where it is satisfied |
+|---|---|
+| In-app deletion (iOS + Android) | Profile tab → "Delete account" → password-confirmed dialog (`composeApp/src/commonMain/kotlin/ch/teamorg/ui/team/PlayerProfileScreen.kt`). A user with no team never reaches the profile tab, so `EmptyStateScreen` (`composeApp/src/commonMain/kotlin/ch/teamorg/ui/emptystate/EmptyStateScreen.kt`) offers the same dialog (`ui/components/DeleteAccountDialog.kt`). |
+| Web URL for the Play Console form | `https://app.teamorg.ch/app/profile/delete` (sign-in required) |
+| Endpoint | `DELETE /auth/me`, password in the body, rate-limited with the auth bucket |
+
+**What deletion does:** the account is anonymized, not fully removed. Personal rows are deleted
+outright — absence rules, attendance responses, notifications and their settings, notification
+reminders, event reminder overrides, subgroup memberships, team roles, club roles. The imported
+roster link (`nds_members.user_id`) is detached rather than deleted, so a re-import can re-link
+it later. The avatar file is deleted from storage. The `users` row itself is retained in
+anonymized form (`deleted-<uuid>@deleted.invalid`, display name "Gelöschtes Konto", an unusable
+password hash, `deleted_at` set) because event authorship, recorded attendance and the audit log
+reference it under `ON DELETE RESTRICT`. The account cannot be logged into (the old address
+becomes registerable again), and every existing session token is rejected immediately (checked
+in the JWT `validate` block against `deleted_at`).
+
+Two effects beyond the personal-data tables above: the deleted user's address is also cleared
+from any `invite_links.invited_email` it appears in, and any impersonation session involving the
+user (as actor or target) is marked inactive so a previously minted impersonation token cannot
+outlive the deletion.
+
+**Preconditions:** a user who still owns a live club is refused with a 409 and told to transfer
+ownership or delete the club first — deleting them silently would leave a billed club without an
+owner.
