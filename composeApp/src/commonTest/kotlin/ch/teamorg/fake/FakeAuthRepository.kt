@@ -2,6 +2,7 @@ package ch.teamorg.fake
 
 import ch.teamorg.domain.AuthResponse
 import ch.teamorg.domain.AuthUser
+import ch.teamorg.domain.DeleteAccountResult
 import ch.teamorg.domain.LoginRequest
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.repository.AuthRepository
@@ -19,6 +20,8 @@ class FakeAuthRepository : AuthRepository {
     )
     var loggedIn: Boolean = false
     var hasTeamResult: Boolean = false
+    var deleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
+    var deleteAccountPasswords: MutableList<String> = mutableListOf()
 
     var lastLoginRequest: LoginRequest? = null
     var lastRegisterRequest: RegisterRequest? = null
@@ -36,6 +39,8 @@ class FakeAuthRepository : AuthRepository {
         )
         loggedIn = false
         hasTeamResult = false
+        deleteAccountResult = DeleteAccountResult.Success
+        deleteAccountPasswords = mutableListOf()
         lastLoginRequest = null
         lastRegisterRequest = null
         logoutCalled = false
@@ -63,4 +68,9 @@ class FakeAuthRepository : AuthRepository {
     override suspend fun getMe(): Result<AuthUser> = getMeResult
 
     override suspend fun hasTeam(): Boolean = hasTeamResult
+
+    override suspend fun deleteAccount(password: String): DeleteAccountResult {
+        deleteAccountPasswords.add(password)
+        return deleteAccountResult
+    }
 }

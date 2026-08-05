@@ -62,6 +62,7 @@ kotlin {
                 implementation(libs.testcontainers.junit)
                 implementation(libs.kotlinx.coroutinesTest)
                 implementation(libs.multiplatform.settings.test)
+                implementation(libs.ktor.clientMock)
             }
         }
     }

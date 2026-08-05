@@ -25,3 +25,9 @@ data class AuthResponse(
     val displayName: String,
     val avatarUrl: String?
 )
+
+@Serializable
+data class DeleteAccountRequest(val password: String)
+
+@Serializable
+data class DeleteAccountConflict(val reason: String = "", val clubs: List<String> = emptyList())
