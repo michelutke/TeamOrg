@@ -22,7 +22,7 @@ class AuthFlowTest {
     @get:Rule
     val composeRule = createEmptyComposeRule()
 
-    private val password = "instrumented-pw-1"
+    private val password = "instrumented-pw-1" // gitleaks:allow (disposable test-fixture password, not a real credential)
 
     /** Unique per run so repeated runs never collide on the email-uniqueness constraint. */
     private fun uniqueEmail(prefix: String) = "$prefix-${System.currentTimeMillis()}@example.com"
