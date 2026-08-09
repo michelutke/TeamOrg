@@ -120,19 +120,20 @@ jobs:
           EXPECTED_MIN_TESTS=6
 
           RESULTS_DIR="composeApp/build/outputs/androidTest-results/connected"
-          XML_FILES=$(find "$RESULTS_DIR" -name '*.xml' 2>/dev/null)
-
-          if [ -z "$XML_FILES" ]; then
-            echo "No androidTest result XML files found under $RESULTS_DIR — instrumented tests did not run at all."
-            exit 1
-          fi
 
           TOTAL=0
-          for f in $XML_FILES; do
+          FOUND_ANY=0
+          while IFS= read -r -d '' f; do
+            FOUND_ANY=1
             COUNT=$(grep -o '<testsuite[^>]*tests="[0-9]*"' "$f" | grep -o 'tests="[0-9]*"' | grep -o '[0-9]*' | head -1)
             COUNT=${COUNT:-0}
             TOTAL=$((TOTAL + COUNT))
-          done
+          done < <(find "$RESULTS_DIR" -name '*.xml' -print0 2>/dev/null)
+
+          if [ "$FOUND_ANY" -eq 0 ]; then
+            echo "No androidTest result XML files found under $RESULTS_DIR — instrumented tests did not run at all."
+            exit 1
+          fi
 
           echo "Instrumented tests executed: ${TOTAL}"
 
