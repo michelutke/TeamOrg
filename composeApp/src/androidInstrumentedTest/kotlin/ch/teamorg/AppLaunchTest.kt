@@ -11,8 +11,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Cold-start smoke test. Proves the Koin graph resolves, OneSignal init in
- * TeamorgApplication.onCreate survives, and the first screen composes.
+ * Cold-start smoke test. Proves the Koin graph resolves, TeamorgApplication.onCreate
+ * completes without throwing, and the first screen composes.
  *
  * Deliberately backend-free: with no stored token AuthViewModel short-circuits to
  * Unauthenticated without a network call, so this test stays fast and non-flaky.

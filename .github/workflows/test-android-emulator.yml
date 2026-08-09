@@ -109,6 +109,38 @@ jobs:
           emulator-options: -no-window -no-snapshot -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: ./gradlew :composeApp:connectedDebugAndroidTest
 
+      # AGP treats "no tests found" as a passing run, so a renamed package or a broken
+      # testInstrumentationRunner would go green with zero coverage. This step counts
+      # what actually ran and fails loudly instead. No `if:` here on purpose — this only
+      # runs if the emulator step succeeded, so a real test failure isn't masked by a
+      # confusing count error.
+      - name: Verify instrumented tests actually ran
+        run: |
+          # Raise this whenever tests are added to the instrumented suite.
+          EXPECTED_MIN_TESTS=6
+
+          RESULTS_DIR="composeApp/build/outputs/androidTest-results/connected"
+          XML_FILES=$(find "$RESULTS_DIR" -name '*.xml' 2>/dev/null)
+
+          if [ -z "$XML_FILES" ]; then
+            echo "No androidTest result XML files found under $RESULTS_DIR — instrumented tests did not run at all."
+            exit 1
+          fi
+
+          TOTAL=0
+          for f in $XML_FILES; do
+            COUNT=$(grep -o '<testsuite[^>]*tests="[0-9]*"' "$f" | grep -o 'tests="[0-9]*"' | grep -o '[0-9]*' | head -1)
+            COUNT=${COUNT:-0}
+            TOTAL=$((TOTAL + COUNT))
+          done
+
+          echo "Instrumented tests executed: ${TOTAL}"
+
+          if [ "$TOTAL" -lt "$EXPECTED_MIN_TESTS" ]; then
+            echo "Expected at least ${EXPECTED_MIN_TESTS} instrumented tests to run, but only ${TOTAL} ran. This usually means AGP silently found fewer/zero tests (renamed package, broken testInstrumentationRunner, emptied source set)."
+            exit 1
+          fi
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
