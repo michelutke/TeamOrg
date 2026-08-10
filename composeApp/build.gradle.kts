@@ -78,6 +78,7 @@ kotlin {
         val androidInstrumentedTest by getting {
             dependencies {
                 implementation(libs.androidx.test.ext.junit)
+                implementation(libs.androidx.test.runner)
                 implementation(libs.compose.uiTestJunit4)
             }
         }
@@ -105,6 +106,7 @@ android {
         applicationId = "ch.teamorg"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = System.getenv("ANDROID_VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = System.getenv("ANDROID_VERSION_NAME") ?: "1.0"
         val onesignalAppId: String by lazy {
