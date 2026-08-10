@@ -29,7 +29,7 @@ Sports team management platform. Create clubs, manage teams, invite members, and
 | iOS | SwiftUI · shared KMP framework |
 | Web admin | SvelteKit 2 · Svelte 5 · Tailwind 4 (`admin/`) · Playwright E2E |
 
-Kotlin 2.3.10 · JVM 21 · Android API 34–36
+Kotlin 2.3.10 · JVM 21 · Android API 29–36
 
 ## Architecture
 

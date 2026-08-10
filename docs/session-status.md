@@ -1,8 +1,10 @@
-# Session Status — 2026-07-31 (second window: prod QA + security hardening)
+# Session Status — 2026-08-05/06 (store compliance: transport encryption + account deletion)
 
-Snapshot of the latest development window. Older feature docs: `docs/self-serve-onboarding.md`,
-`docs/landing-status.md`, `docs/nds-import-export-design.md`. Infrastructure steps owed to a
-human: `docs/security-runbook.md`. QA detail: `docs/testing/2026-07-31-prod-live-qa.md`.
+Snapshot of the latest development window. The previous window (prod QA + security hardening,
+PRs #83/#84) is in git history; its QA report is `docs/testing/2026-07-31-prod-live-qa.md`.
+Older feature docs: `docs/self-serve-onboarding.md`, `docs/landing-status.md`,
+`docs/nds-import-export-design.md`. Infrastructure steps owed to a human:
+`docs/security-runbook.md`. Store questionnaire answers: `docs/store-data-safety.md`.
 
 ## Merge policy (ACTIVE)
 
@@ -10,159 +12,195 @@ PRs are **queued open, not merged**. On the user's "merge window" call: merge al
 into `main`, then promote `main → production` ONCE (one Coolify web redeploy + one "Release to
 Stores" run). Also in auto-memory (`teamorg-bulk-merge-policy`).
 
-## Released 2026-07-31, second window (PRs #83, #84 → main → production `b8ec450`)
+## Released this window — `main` `095d0bf` → `production` `8276e08`
 
-Both PRs merged, `main` promoted once, **Release to Stores run 30638103994 green** (iOS →
-TestFlight, Android → Play internal). Web verified live afterwards: all three domains 200,
-`/start` renders, security headers present on the wire (HSTS, nosniff, frame-deny, referrer
-policy on all three; CSP on both web apps; CORP on the API). The server booting at all
-confirms the production `JWT_SECRET` satisfies the new ≥32-character guard.
+Four PRs, all merged, one promote, **Release to Stores run 31021128217 green** (Play internal
+track + TestFlight build **13**, version 1.0.13).
 
-**Deploy cost an outage:** all three domains were unreachable for ~12 minutes while the
-containers rebuilt simultaneously (the server image runs a full Gradle build). Port 443 kept
-accepting connections throughout — only the upstreams were missing. Consider staggering
-redeploys next time.
+| PR | What |
+|---|---|
+| #85 | NDS duplicate merge — generically-joined accounts can be merged into imported roster rows (server, web, mobile) |
+| #86 | Store compliance — transport-encryption hardening + in-app account deletion |
+| #87 | Time-bomb test fix (unblocked CI on everything) |
+| #88 | Android release-lint fix + CI pipeline optimization + landing pricing correction |
 
-## PR #83 — live production web QA
+Specs/plans for #86: `docs/superpowers/specs/2026-08-05-transport-encryption-design.md`,
+`docs/superpowers/specs/2026-08-05-account-deletion-design.md`, plus the matching plans under
+`docs/superpowers/plans/`.
 
-Chrome-driven manual pass over landing, the self-serve funnel, NDS Import v2 and billing.
-Full report with repro steps in `docs/testing/2026-07-31-prod-live-qa.md`.
+## What shipped
 
-### Confirmed working
-Landing i18n incl. the hover-does-not-flip-the-cookie fix, Graphite Cyan theme, pricing copy,
-both CTAs → `/start`, bilingual legal pages, self-hosted fonts (zero Google requests).
-Anonymous `/` → `/start`; join codes give an identical error for unknown and malformed input
-(no oracle). Create wizard: declined card retryable, `4242` succeeds, client secret never in
-the URL, club activates with no charge. NDS import: 8 events with correct dates/type/location,
-6 J-attendances, mapping defaults, "bereits verknüpft" recognition, AWL-only subset parse, no
-duplicate events on re-import, conflict detection with per-date override and cancellation.
-Billing: card metadata, counts, update-card, and both conversions.
+### Account deletion (the store blocker)
 
-### Findings
-1. **NDS import writes wizard times as UTC (major, open).** Wizard 18:00 stores
-   `2026-08-03T18:00:00Z` and renders 20:00 in Europe/Zurich — off by the local offset (2 h
-   summer, 1 h winter). Isolated with a control: a manually created 18:00 event stores
-   `16:00Z` and renders correctly, so this is NDS-specific, not display. Every imported event
-   and its J+S attendance time is wrong. **Not yet fixed.**
-2. Re-import preview counts lie: claims "8 Events neu / 0 Konflikte" when nothing is created,
-   and the result box reports "3 Mitglieder" when none were added. Behaviour is correct
-   (idempotent); only the numbers mislead.
-3. Privacy policy names Proton Mail as the email processor; delivery actually runs over
-   Infomaniak SMTP.
-4. Landing scrolls horizontally 64 px at an 864 px viewport (culprit not isolated).
-5. Logo wordmark collides with the first nav link at that width.
-6. Club layer stays visible for a club of `kind=team`, though the spec says the UI hides it —
-   may be intentional for the owner view.
-7. `/join` clears the code field after an error.
+`DELETE /auth/me`, password in the body, auth rate-limit bucket. **204** success, **401** wrong
+password, **409** `{"reason":"owns_clubs","clubs":[…]}` when the caller still owns a live club.
 
-### Resolved by this run
-The **SMTP 535** open item in `docs/landing-status.md` is closed: a real submission was
-delivered to `info@teamorg.ch`.
+Deletion is an **anonymization, not a row delete**: six FKs reference `users(id)` with
+`ON DELETE RESTRICT` (event authorship, `attendance_records.set_by`, invites,
+`audit_log.actor_id`), so any user who ever created an event cannot be physically removed. One
+transaction deletes the personal rows (absence rules, attendance responses, notifications +
+settings + reminders, event reminder overrides, subgroup/team/club memberships), detaches
+`nds_members.user_id`, clears the address from `invite_links.invited_email` (matched
+case-insensitively against the real email read **before** the scrub), revokes impersonation
+sessions where the user is actor or target, and scrubs the `users` row to
+`deleted-<uuid>@deleted.invalid` / `Gelöschtes Konto` / unusable hash / `deleted_at`. The audit
+entry logs the **scrubbed** email — writing the real one would re-add the PII just removed. The
+avatar file is deleted best-effort **outside** the transaction (an orphaned file is a lesser harm
+than a rolled-back deletion).
 
-### Not covered
-Mobile apps; frozen/past-due banners; the 3DS card (the decline → success sequence completed
-setup first); the RSVP-loss warning's count variant (the conflict event had zero RSVPs);
-landing below 390 px (Chrome refused to size the window under ~864 CSS px); the billing
-owner-guard (only one account existed).
+**Session invalidation is in the JWT `validate` block** (`server/.../plugins/Auth.kt`), NOT in
+`authenticateUser`. Eleven of sixteen route files read the principal directly and never call it,
+so a check there would leave all of them reachable with a deleted user's token. Cost is one
+indexed PK lookup per authenticated request — do not "optimize" it away.
 
-## PR #84 — security hardening (server, web, infra, mobile)
+UI: web at `/app/profile/delete`, reached by a **link** rather than an inline button so a
+mis-click is never one step from deletion; mobile on the profile tab **and** on
+`EmptyStateScreen`, both using the shared `DeleteAccountDialog` with its expandable
+deleted/kept disclosure.
 
-### Server
-- Unhandled exceptions returned the exception type, message and 2000 chars of stack trace to
-  the client. Now a correlation id; details stay in the log.
-- **Impersonation revocation was cosmetic**: `/admin/impersonate/end` flipped `is_active` but
-  nothing ever read it, so the token kept working for its remaining hour and a leaked one
-  could never be killed. Sessions are now verified per authenticated request.
-- Login skipped bcrypt entirely for unknown addresses, making it an account-enumeration
-  oracle by timing. Now always constant-cost against a dummy hash.
-- Avatar **and club-logo** uploads trusted the client `Content-Type` and buffered the body
-  unbounded. Both now validate magic bytes (`storage/ImageValidation.kt`) and cap the read.
-- Rate limits on login/register/change-password (20/min) and invite short codes (20/min).
-- Startup refuses the placeholder or a sub-32-character JWT secret
-  (`ALLOW_WEAK_JWT_SECRET=true` for local dev, documented in `SETUP.md`).
-- Contact endpoint: length caps, CRLF header-injection guard on the fields that reach
-  `Reply-To`, constant-time shared-secret comparison.
-- Global security headers; uploads served with a sandboxing CSP and private caching.
+### Transport encryption
 
-### Web
-- **Session and impersonation cookies were written `secure: false` in production** — the code
-  even carried the comment "true in production". The session JWT could travel over plain
-  HTTP. Now `secure: !dev`.
-- CSP declared through SvelteKit's `csp` config on both apps, so hydration script hashes stay
-  correct; Stripe allowlisted on admin, Turnstile on landing, API origin appended at runtime.
+Production already had TLS (Traefik terminates, server emits HSTS, releases use HTTPS). Four gaps
+closed: Android release builds could speak cleartext (the permissive `domain-config` sat outside
+`debug-overrides`); iOS shipped an ATS exception for `localhost`; a wrong `API_BASE_URL` shipped
+silently (now `requireSecureBaseUrl` throws unless HTTPS or a local dev host, anchored on the host
+boundary so `localhost.evil.example` cannot pass); and **iOS never received `API_BASE_URL` at
+all** — `ApiConfig.ios.kt` read an Info.plist key nothing set, so every build including TestFlight
+resolved `http://localhost:8080`, which the new guard allow-lists. Now wired through
+`Config.xcconfig` → `Info.plist` (the mechanism `MARKETING_VERSION` already uses) with fail-loud
+CI injection.
 
-### Infra
-- `admin` and `landing` containers run as the image's unprivileged `node` user;
-  `no-new-privileges` on all three services.
-- The **server container deliberately stays root**: it writes to the pre-existing `uploads`
-  volume, and switching users without chowning it first breaks avatar and logo uploads. Steps
-  in the runbook.
+**No certificate pinning** — deliberate: a Let's Encrypt chain rotation would brick every
+installed app with no server-side remedy, and neither store requires it.
 
-### Mobile
-- Android: `allowBackup=false` plus `data_extraction_rules.xml` excluding `teamorg_prefs.xml`,
-  so the session JWT is no longer copied out by cloud backup or device-to-device transfer.
-- iOS: session storage moved from `NSUserDefaults` (a plain plist in the app container) to the
-  Keychain, with first-launch migration so no one is logged out.
+### CI pipeline
 
-### Adversarial review (Fable) — rejected the first pass, all findings fixed
-1. `XForwardedHeaders` used the default `useFirstProxy()`, trusting the client-supplied first
-   `X-Forwarded-For` entry. Rotating a fake header per request would have given a fresh
-   limiter key every time — unlimited login attempts plus unbounded key-map growth. Now
-   `useLastProxy()`.
-2. The auth limiter wrapped the whole `/auth` subtree including `/auth/me` and
-   `/auth/me/roles`, which the admin app calls server-to-server on every page load from one
-   container IP. All users would have shared a 10/min bucket (~5 page loads/min) and appeared
-   logged out. Rescoped to the three credential endpoints at 20/min.
-3. The contact limiter capped the entire internet at 5 submissions per 10 minutes, same root
-   cause. Removed — Turnstile, honeypot and shared secret already cover abuse.
-4. The club-logo upload was still unvalidated while a comment claimed otherwise. Fixed for
-   real.
-5. Over-engineering cut: CSP and Permissions-Policy on a JSON API (only produced duplicate
-   headers on `/uploads`), a redundant `X-Forwarded-Proto` re-check, and the duplicate
-   `nosniff`.
+Concurrency groups with `cancel-in-progress` on the test suite and both `main` deploys. Store
+releases deliberately **queue instead of cancelling** — killing a Play/ASC upload mid-flight can
+leave a half-ingested build and burn a version code that cannot be reused. Path filters so a docs,
+server or web commit no longer spends an Android or `macos-15` build. `test.yml` now also runs on
+push to `main`. Android unit tests no longer sit behind `needs` (it reported *skipping* instead of
+a verdict and hid Android-only breakage). `timeout-minutes` on every job. Suite wall-clock ~11 min
+→ ~6 min.
 
-Fable also confirmed as safe: the JWT guard against the test suites, the Ktor 2 → 3
-`/uploads` rewrite, the impersonation check (no per-request DB cost for normal tokens, no
-nested transaction), and `readRemaining` as correct Ktor 3 API.
+## Verified
 
-### Tests
-`:server:test` green (353, two new: login is limited while `/auth/me` is not; HTML disguised
-as `image/png` is rejected). `:shared:jvmTest` green. Both web apps type-check and build; iOS
-and Android targets compile. CSP verified in a real browser against local production builds —
-no violations, hydration intact, Turnstile rendering and passing.
+- `:server:test` **373 tests, 0 failures** on the integrated tree (357 base + #85 + #86).
+- `:shared:jvmTest` 48/0; `:composeApp:testDebugUnitTest` 250/0; Android and both iOS frameworks
+  compile; `admin && npm run check` 0 errors / 47 pre-existing warnings; `landing && npm run check`
+  0/0.
+- `main` CI green on all five checks; `production` store release green on both jobs.
+- **Deletion endpoint confirmed live on prod** by method/path discrimination against
+  `https://server.teamorg.ch`: unknown path → 404, wrong method → 405, `DELETE /auth/me` → 401.
+- **Mobile deletion tested by the user on TestFlight build 13 — works.**
 
-**Note on tooling:** the integration suites need a container runtime. Docker Desktop is not
-installed; **OrbStack** is (`docker context` → `orbstack`). With it stopped, ~288 server tests
-and 2 shared tests fail with `NoClassDefFoundError` — environmental, not real failures.
+## Owed verification
+
+Nothing here is a known defect; it is unexercised surface.
+
+- **Web deletion flow never walked by a human.** `/app/profile/delete` is its own code path
+  (SvelteKit action, `apiDeleteJson`, `ApiError.payload` parse, cookie clear + redirect).
+- **The NDS duplicate merge (#85) has no human walkthrough either**, and each merge is
+  irreversible. Import a roster, join with a generic link, confirm the banner appears and that the
+  merge carries attendance, subgroups and absence rules.
+- **Teamless deletion path on mobile**, if the tested one was the profile tab: register fresh,
+  never join a team, delete from `EmptyStateScreen`. That is the path an App Review tester hits,
+  and it nearly shipped missing.
+- An Updraft release build installed and confirmed to load data over HTTPS; a debug build still
+  reaching a local server at `10.0.2.2:8080`.
+- **Store questionnaires are not filled in.** Answers are recorded in `docs/store-data-safety.md`
+  but nobody has entered them. Play Data Safety needs "encrypted in transit: yes" plus the
+  deletion URL `https://app.teamorg.ch/app/profile/delete`; Apple App Privacy needs the same.
 
 ## Open items
 
-### Correctness
-- **NDS timezone bug (above) — unfixed and user-visible.**
-- Re-import preview counts (finding 2).
-- **Billing has never been exercised end-to-end.** Signup only captures a card via SetupIntent;
-  no invoice has ever been produced in either mode, and the CHF 2 × members charge, the
-  subscription quantity and the billed-count formula are all unverified. Worth advancing a
-  Stripe test clock against a test-mode subscription before real customers arrive.
-- Billed count excludes provisional members: a club whose roster came from an NDS import and
-  who never sign in bills as 1 member. Spec-conformant, but confirm it is intended.
+### Correctness / accuracy
+- **`api.teamorg.app` is a host that does not exist.** The real API is `server.teamorg.ch`
+  (`docs/deployment-status.md:17`). The fictional host is hardcoded as the release *default* in
+  `shared/build.gradle.kts`, as the iOS default in `iosApp/Configuration/Config.xcconfig`, and —
+  worst — cited as evidence in `docs/store-data-safety.md`, which is what gets read when filling in
+  the store forms. Release builds are unaffected (CI injects the secret), but a local build without
+  the secret silently points at a dead host. **Fix owed.**
+- `docs/store-data-safety.md` states "the avatar file is deleted from storage" as an unconditional
+  guarantee; it is best-effort outside the transaction and only logs on failure. Safe for the form
+  (it over-discloses deletion rather than hiding retention), but worth softening.
+- `docs/deployment.md` carries a stale generic example (`admin.teamorg.app`) that does not match the
+  real deployment.
+- The pricing figure corrected in #88 still survives in
+  `docs/superpowers/plans/2026-07-30-landing-final-redesign.md` — left as a historical record, but
+  that file is where the typo was copied from.
+- Carried over and still true: **NDS timezone bug**, re-import preview counts, **billing never
+  exercised end-to-end** (no invoice has ever been produced; the CHF 2 × members charge and the
+  subscription quantity are unverified — worth a Stripe test clock), and billed count excluding
+  provisional members.
+
+### Deferred, from this window's reviews
+- `Event.presentCount` is player-visible and still counts provisional confirmations.
+- The NDS import wizard's `map` action should route through the merge path when the target row's
+  current user is provisional.
+- A partial unique index on `nds_members (team_id, user_id) WHERE user_id IS NOT NULL` would make
+  the double-link 409 a real constraint instead of check-then-act.
+- `audit_log.actor_email` retains historical real addresses (that table is deliberately immutable).
+- Admin user listings still show scrubbed rows as "Gelöschtes Konto" — arguably intended.
+- Registering the literal `deleted-<uuid>@deleted.invalid` address would 500 on the unique
+  constraint (contrived).
+- The HTTPS base-URL guard is case-sensitive and does not allow-list IPv6 `::1`; no build config
+  uses either form.
+- Nothing documents how a developer points the iOS app at a local server now that the fallback is a
+  production URL — editing the checked-in xcconfig is the only route, which is a commit hazard.
 
 ### Infrastructure (see `docs/security-runbook.md`)
-- Server container still root (needs the uploads volume chowned first).
-- Published container ports likely bypass Traefik — verify before changing.
-- Production Stripe still on test keys; live webhook endpoint must be pinned to API version
-  `2025-05-28.basil` (confirmed as stripe-java 29.2.0's pin).
-- `www` → apex redirect still missing.
+- **HTTP → HTTPS redirect on all three domains — unconfirmed.** HSTS only protects a client that
+  has already completed one successful HTTPS request.
+- **Postgres `sslmode` decision — open.** Server → Postgres is plaintext over the internal Docker
+  network; the privacy answer needs a recorded position rather than an open question.
+- **Web/server deploys still stack.** Coolify builds them from its own git integration, so GitHub
+  concurrency cannot reach them. Options: Coolify's own queue behaviour and/or a dedicated Build
+  Server; or disable Coolify auto-deploy and trigger its webhook from a workflow with `paths` +
+  `cancel-in-progress` + a test gate — which would also stop Coolify shipping a red `main`. Full
+  write-up in the PR #88 comment thread.
+- Carried over: server container still root (needs the uploads volume chowned first); published
+  container ports likely bypass Traefik; production Stripe still on test keys; `www` → apex
+  redirect missing.
 
 ### Cleanup owed
-- Club **QA Prod 0731** `5b97b6a5-8aeb-4428-af40-fe9215540fd5` (team
-  `693bc58a-5b2a-438d-8bc3-55ae2578a40b`), its 8 NDS events, one cancelled probe event, the
-  Angebot and 3 provisional members — delete via `/admin/login` → Clubs (no owner-facing
-  delete exists). Account `utke.michel+prodqa0731@gmail.com`.
-- Its Stripe **test** customer, subscription, two saved cards and SetupIntents.
-- Carried over: `utke.michel+ccdebug@gmail.com` and pending club "Claude Debug Club DELETE ME".
+- Any throwaway accounts created while testing deletion — they are anonymized, not removed; look
+  for `deleted-*@deleted.invalid` rows.
+- Carried over: club **QA Prod 0731** `5b97b6a5-8aeb-4428-af40-fe9215540fd5` and its data, its
+  Stripe test customer/subscription/cards, plus `utke.michel+ccdebug@gmail.com` and the pending club
+  "Claude Debug Club DELETE ME". Delete via `/admin/login` → Clubs (no owner-facing delete exists).
 
-### Carried over
+## Gotchas learned this window
+
+1. **Four tests were failing on `main` for days, invisibly.** `test.yml` ran only
+   `on: pull_request`, so pushes to `main` never ran the suite and the red surfaced as an inherited
+   failure on unrelated PRs. `NdsTestFixtures` hardcoded August 2026 dates and asserted behaviour
+   that only holds while they are in the future. Fixture dates now derive from `LocalDate.now()`.
+   **Never hardcode a date that "is in the future".**
+2. **`assembleDebug` does not run lint; `lintVitalRelease` does.** An invalid
+   `network_security_config.xml` (a `<domain-config>` nested inside `<debug-overrides>`, which the
+   schema forbids) passed every local gate and failed only in the deploy, after merge. Run
+   `./gradlew :composeApp:lintVitalRelease` — about a second — on any manifest or resource change.
+3. **Variant-specific Android resources live in `src/androidDebug/res`** in this KMP module, not
+   `src/debug/res` (both are registered; the former matches the `androidMain` convention). Prove an
+   override actually lands by reading `composeApp/build/intermediates/packaged_res/debug/…` — a
+   wrong directory fails silently and breaks only local development.
+4. **A plan that cites another branch's files sends implementers chasing ghosts.** The
+   account-deletion plan referenced `LinkMemberResult` and `TeamRepositoryLinkResultTest`, which
+   existed only on the then-unmerged #85 branch.
+5. `attendance_records` was dropped by `V15__unified_attendance.sql`; attendance lives entirely in
+   `attendance_responses`. Several docs still implied otherwise.
+6. **Version codes are fine, contrary to an earlier worry of mine.** `ANDROID_VERSION_CODE` is
+   `github.run_number`, which is per-workflow, but Play only ever receives `release-stores` builds
+   (monotonic within that workflow), so the two counters never collide. It would only matter if an
+   Updraft-built APK were uploaded to Play.
+7. Concurrent Gradle/Testcontainers runs wedged the Docker daemon (`orb stop && orb start`
+   recovered it). Run server suites in the foreground, one at a time.
+8. 1Password commit signing stalls reliably here; every commit this window used
+   `git -c commit.gpgsign=false commit`, so they are unsigned.
+
+## Carried over
 - `feat/merch-badge` branch: unmerged, intentionally kept.
 - Local dev DB holds throwaway NDS-E2E data (`e2e.nds.*@example.com`, "E2E NDS Club").
-- 1Password commit signing intermittently locks — retry commits when it does.
+- Merged branches not deleted: `docs/nds-member-merge-spec`, `feat/store-compliance`,
+  `fix/time-bomb-tests`, `fix/android-release-lint`.
