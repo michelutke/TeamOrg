@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   test-android-emulator:
-    name: Android Instrumented Tests (API 34)
+    name: Android Instrumented Tests (API 29)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -101,13 +101,46 @@ jobs:
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 29
           target: default
           arch: x86_64
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -no-snapshot -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: ./gradlew :composeApp:connectedDebugAndroidTest
+
+      # AGP treats "no tests found" as a passing run, so a renamed package or a broken
+      # testInstrumentationRunner would go green with zero coverage. This step counts
+      # what actually ran and fails loudly instead. No `if:` here on purpose — this only
+      # runs if the emulator step succeeded, so a real test failure isn't masked by a
+      # confusing count error.
+      - name: Verify instrumented tests actually ran
+        run: |
+          # Raise this whenever tests are added to the instrumented suite.
+          EXPECTED_MIN_TESTS=6
+
+          RESULTS_DIR="composeApp/build/outputs/androidTest-results/connected"
+
+          TOTAL=0
+          FOUND_ANY=0
+          while IFS= read -r -d '' f; do
+            FOUND_ANY=1
+            COUNT=$(grep -o '<testsuite[^>]*tests="[0-9]*"' "$f" | grep -o 'tests="[0-9]*"' | grep -o '[0-9]*' | head -1)
+            COUNT=${COUNT:-0}
+            TOTAL=$((TOTAL + COUNT))
+          done < <(find "$RESULTS_DIR" -name '*.xml' -print0 2>/dev/null)
+
+          if [ "$FOUND_ANY" -eq 0 ]; then
+            echo "No androidTest result XML files found under $RESULTS_DIR — instrumented tests did not run at all."
+            exit 1
+          fi
+
+          echo "Instrumented tests executed: ${TOTAL}"
+
+          if [ "$TOTAL" -lt "$EXPECTED_MIN_TESTS" ]; then
+            echo "Expected at least ${EXPECTED_MIN_TESTS} instrumented tests to run, but only ${TOTAL} ran. This usually means AGP silently found fewer/zero tests (renamed package, broken testInstrumentationRunner, emptied source set)."
+            exit 1
+          fi
 
       - name: Upload test reports
         if: always()
