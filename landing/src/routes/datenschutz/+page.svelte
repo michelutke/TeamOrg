@@ -196,7 +196,7 @@
 				<h2 class="text-[17px] font-bold text-on-surface">9. Auftragsbearbeiter & Drittdienste</h2>
 				<ul class="mt-2 flex list-disc flex-col gap-2 pl-5">
 					<li>
-						<strong>E-Mail-Versand (Proton Mail / Proton AG, Schweiz):</strong> Deine Anfrage wird per E-Mail an info@teamorg.ch zugestellt und dort gespeichert.
+						<strong>E-Mail-Versand (Infomaniak Network AG, Schweiz):</strong> Deine Anfrage wird per E-Mail an info@teamorg.ch zugestellt und dort gespeichert.
 					</li>
 					<li>
 						<strong>E-Mail-Versand der App (Infomaniak Network AG, Schweiz):</strong> Einladungen zu Teams und Vereinen werden per E-Mail an die eingeladene Adresse versandt. Dabei werden die Adresse, der Name der einladenden Person, Verein bzw. Team und der Einladungslink übermittelt.
@@ -225,7 +225,7 @@
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">10. Bekanntgabe ins Ausland</h2>
 				<p class="mt-2">
-					Die E-Mail-Anbieter Proton und Infomaniak verarbeiten die Daten in der <strong>Schweiz</strong>;
+					Der E-Mail-Anbieter Infomaniak verarbeitet die Daten in der <strong>Schweiz</strong>;
 					das Hosting erfolgt bei Hetzner in <strong>Deutschland (EU)</strong>. Stripe Payments Europe
 					hat seinen Sitz in <strong>Irland (EU)</strong>. OneSignal, Stripe, Inc. und Cloudflare haben
 					ihren Sitz in den <strong>USA</strong>; dabei können Daten in die USA übermittelt werden
@@ -490,7 +490,7 @@
 				<h2 class="text-[17px] font-bold text-on-surface">9. Processors & third parties</h2>
 				<ul class="mt-2 flex list-disc flex-col gap-2 pl-5">
 					<li>
-						<strong>Email delivery (Proton Mail / Proton AG, Switzerland):</strong> your request is delivered by email to info@teamorg.ch and stored there.
+						<strong>Email delivery (Infomaniak Network AG, Switzerland):</strong> your request is delivered by email to info@teamorg.ch and stored there.
 					</li>
 					<li>
 						<strong>App email delivery (Infomaniak Network AG, Switzerland):</strong> invitations to teams and clubs are sent by email to the invited address. The address, the inviter’s name, the club or team and the invitation link are transmitted.
@@ -519,7 +519,7 @@
 			<section>
 				<h2 class="text-[17px] font-bold text-on-surface">10. Disclosure abroad</h2>
 				<p class="mt-2">
-					The email providers Proton and Infomaniak process the data in <strong>Switzerland</strong>;
+					The email provider Infomaniak processes the data in <strong>Switzerland</strong>;
 					hosting is provided by Hetzner in <strong>Germany (EU)</strong>. Stripe Payments Europe is
 					based in <strong>Ireland (EU)</strong>. OneSignal, Stripe, Inc. and Cloudflare are based in
 					the <strong>USA</strong>; data may therefore be transferred to the USA (push data for
