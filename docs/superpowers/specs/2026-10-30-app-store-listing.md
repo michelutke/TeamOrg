@@ -178,7 +178,7 @@ Tracking: **No**. All data below is linked to the user, used for App Functionali
 |---|---|
 | Sign-in required | Yes. Provide a dedicated reviewer account (coach / club manager role) with a seeded team, a few upcoming events and some absences. Do not use a personal account. |
 | Contact | Michel Utke, info@teamorg.ch, phone number |
-| Notes | `teamorg is a team organisation app for sports clubs. The demo account is a coach of the team "U15 Juniors" with upcoming events. Accounts can be deleted in Profile > Delete account. Push notifications are optional reminders for events.` |
+| Notes | `teamorg is a team organisation app for sports clubs. The demo account is a coach of the team "U15 Juniors" with upcoming events. Accounts can be deleted in Profile > Delete account. Push notifications are optional reminders for events. teamorg is billed to sports clubs as organisations (per club, for their members) under a direct agreement outside the app, per Guideline 3.1.3(c). The iOS app contains no purchases, no prices and no links or calls to action for purchasing; members join free via an invitation from their club.` |
 | Export compliance | Answered by `ITSAppUsesNonExemptEncryption = false` in Info.plist |
 
 ## 6. Status before submitting
