@@ -8,6 +8,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
+import ch.teamorg.payments.isBillingSupported
 import ch.teamorg.ui.billing.BillingScreen
 import ch.teamorg.ui.billing.BillingViewModel
 import ch.teamorg.ui.nds.NdsImportScreen
@@ -254,7 +255,7 @@ fun AppNavigation(
                     viewModel = viewModel,
                     onTeamClick = { teamId -> backStack.add(Screen.TeamRoster(teamId)) },
                     onMembersClick = { clubId -> backStack.add(Screen.ClubMembers(clubId)) },
-                    onBillingClick = { clubId -> backStack.add(Screen.Billing(clubId)) }
+                    onBillingClick = if (isBillingSupported) ({ clubId: String -> backStack.add(Screen.Billing(clubId)) }) else null
                 )
             }
             Screen.Inbox -> {
