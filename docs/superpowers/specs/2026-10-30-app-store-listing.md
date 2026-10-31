@@ -17,7 +17,7 @@ Play listing so both stores read as one campaign; App Store limits differ, see e
 | Age rating | Answer "None" / "No" to every questionnaire item, result 4+ |
 | Copyright | 2026 Michel Utke |
 | Price | Free, no in-app purchases |
-| Support URL | https://teamorg.ch |
+| Support URL | https://teamorg.ch/#kontakt |
 | Marketing URL | https://teamorg.ch |
 | Privacy Policy URL | https://teamorg.ch/datenschutz |
 
