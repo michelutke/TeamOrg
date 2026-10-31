@@ -98,7 +98,7 @@ fun TeamorgApp(
 
         val currentScreen = backStack.lastOrNull() ?: Screen.Loading
         val showBottomBar = currentScreen !in listOf(
-            Screen.Login, Screen.Register, Screen.EmptyState, Screen.Loading,
+            Screen.Login, Screen.Register, Screen.ForgotPassword, Screen.EmptyState, Screen.Loading,
             Screen.CreateEvent, Screen.CreateTeamOrClub
         ) && currentScreen !is Screen.CardSetup
           && currentScreen !is Screen.Invite

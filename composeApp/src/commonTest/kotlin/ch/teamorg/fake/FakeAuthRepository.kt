@@ -26,6 +26,9 @@ class FakeAuthRepository : AuthRepository {
     var deleteAccountPasswords: MutableList<String> = mutableListOf()
     var deleteAccountGate: CompletableDeferred<Unit>? = null
 
+    var forgotPasswordResult: Result<Unit> = Result.success(Unit)
+    var forgotPasswordEmails: MutableList<String> = mutableListOf()
+
     var lastLoginRequest: LoginRequest? = null
     var lastRegisterRequest: RegisterRequest? = null
     var logoutCalled: Boolean = false
@@ -46,6 +49,8 @@ class FakeAuthRepository : AuthRepository {
         deleteAccountResult = DeleteAccountResult.Success
         deleteAccountPasswords = mutableListOf()
         deleteAccountGate = null
+        forgotPasswordResult = Result.success(Unit)
+        forgotPasswordEmails = mutableListOf()
         lastLoginRequest = null
         lastRegisterRequest = null
         logoutCalled = false
@@ -61,6 +66,11 @@ class FakeAuthRepository : AuthRepository {
         lastRegisterRequest = request
         registerResult.onSuccess { loggedIn = true }
         return registerResult
+    }
+
+    override suspend fun forgotPassword(email: String): Result<Unit> {
+        forgotPasswordEmails.add(email)
+        return forgotPasswordResult
     }
 
     override fun logout() {

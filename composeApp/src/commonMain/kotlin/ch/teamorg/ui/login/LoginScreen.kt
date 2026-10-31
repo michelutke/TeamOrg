@@ -27,7 +27,8 @@ import ch.teamorg.ui.theme.PillShape
 fun LoginScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
@@ -99,7 +100,17 @@ fun LoginScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = onNavigateToForgotPassword,
+                enabled = !state.isLoading,
+                modifier = Modifier.align(Alignment.End).testTag("forgot_password_link")
+            ) {
+                Text(
+                    "Forgot password?",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             Button(
                 onClick = { viewModel.onLoginClick() },

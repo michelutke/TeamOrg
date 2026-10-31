@@ -9,6 +9,7 @@ import ch.teamorg.domain.RegisterRequest
 interface AuthRepository {
     suspend fun register(request: RegisterRequest): Result<AuthResponse>
     suspend fun login(request: LoginRequest): Result<AuthResponse>
+    suspend fun forgotPassword(email: String): Result<Unit>
     fun logout()
     fun isLoggedIn(): Boolean
     suspend fun getMe(): Result<AuthUser>

@@ -30,6 +30,9 @@ sealed class Screen(val route: String) {
     data object Register : Screen("register")
 
     @Serializable
+    data object ForgotPassword : Screen("forgot_password")
+
+    @Serializable
     data object EmptyState : Screen("empty_state")
 
     @Serializable

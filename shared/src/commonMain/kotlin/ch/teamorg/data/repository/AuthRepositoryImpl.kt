@@ -7,6 +7,7 @@ import ch.teamorg.domain.AuthUser
 import ch.teamorg.domain.DeleteAccountConflict
 import ch.teamorg.domain.DeleteAccountRequest
 import ch.teamorg.domain.DeleteAccountResult
+import ch.teamorg.domain.ForgotPasswordRequest
 import ch.teamorg.domain.LoginRequest
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.domain.UserRoles
@@ -58,6 +59,21 @@ class AuthRepositoryImpl(
                 Result.success(authResponse)
             } else {
                 Result.failure(Exception("Login failed: ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun forgotPassword(email: String): Result<Unit> {
+        return try {
+            val response = client.post("/auth/forgot-password") {
+                setBody(ForgotPasswordRequest(email))
+            }
+            if (response.status == HttpStatusCode.NoContent) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Password reset request failed: ${response.status}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
