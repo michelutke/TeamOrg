@@ -9,12 +9,18 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.koin.dsl.module
 import java.time.Instant
+import java.util.Date
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -181,6 +187,82 @@ class PasswordResetTest : IntegrationTestBase() {
         assertEquals(HttpStatusCode.BadRequest, reset(client, "not-a-real-token", "newpassword456").status)
         assertEquals(HttpStatusCode.BadRequest, reset(client, token, "short").status)
         assertEquals(HttpStatusCode.NoContent, reset(client, token, "newpassword456").status)
+    }
+
+    private suspend fun deleteAccount(client: HttpClient, auth: AuthResponse) {
+        val response = client.delete("/auth/me") {
+            bearerAuth(auth.token)
+            contentType(ContentType.Application.Json)
+            setBody(DeleteAccountRequest("password123"))
+        }
+        assertEquals(HttpStatusCode.NoContent, response.status)
+    }
+
+    @Test
+    fun `soft-deleted account gets 204 and no mail`() = withApp {
+        val client = createJsonClient()
+        val auth = register(client, "deleted-reset@example.com")
+        deleteAccount(client, auth)
+
+        assertEquals(HttpStatusCode.NoContent, forgot(client, "deleted-reset@example.com").status)
+        delay(300)
+
+        assertTrue(mail.sent.isEmpty())
+    }
+
+    @Test
+    fun `token issued before account deletion is rejected`() = withApp {
+        val client = createJsonClient()
+        val auth = register(client, "deleted-token-reset@example.com")
+        val token = requestToken(client, "deleted-token-reset@example.com")
+        deleteAccount(client, auth)
+
+        assertEquals(HttpStatusCode.BadRequest, reset(client, token, "newpassword456").status)
+    }
+
+    @Test
+    fun `jwt without token version claim works until a reset`() = withApp {
+        val client = createJsonClient()
+        val auth = register(client, "legacy-reset@example.com")
+        val legacyToken = JWT.create()
+            .withAudience("teamorg-users")
+            .withIssuer("teamorg")
+            .withSubject(auth.userId)
+            .withExpiresAt(Date(System.currentTimeMillis() + 3_600_000))
+            .sign(Algorithm.HMAC256("test_secret_32_chars_long_minimum_required"))
+        assertEquals(HttpStatusCode.OK, client.get("/auth/me") { bearerAuth(legacyToken) }.status)
+
+        val token = requestToken(client, "legacy-reset@example.com")
+        assertEquals(HttpStatusCode.NoContent, reset(client, token, "newpassword456").status)
+
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/auth/me") { bearerAuth(legacyToken) }.status)
+    }
+
+    @Test
+    fun `parallel resets with the same token succeed exactly once`() = withApp {
+        val client = createJsonClient()
+        register(client, "parallel-reset@example.com")
+        val token = requestToken(client, "parallel-reset@example.com")
+
+        val statuses = coroutineScope {
+            listOf(
+                async { reset(client, token, "newpassword456").status },
+                async { reset(client, token, "otherpassword789").status }
+            ).awaitAll()
+        }
+
+        assertEquals(1, statuses.count { it == HttpStatusCode.NoContent }, "got $statuses")
+        assertEquals(1, statuses.count { it == HttpStatusCode.BadRequest }, "got $statuses")
+    }
+
+    @Test
+    fun `forgot-password traffic does not exhaust the login bucket`() = withApp {
+        val client = createJsonClient()
+        register(client, "bucket-reset@example.com")
+
+        repeat(25) { forgot(client, "bucket-reset@example.com") }
+
+        assertEquals(HttpStatusCode.OK, login(client, "bucket-reset@example.com", "password123").status)
     }
 
     @Test

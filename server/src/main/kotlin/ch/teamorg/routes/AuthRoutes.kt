@@ -150,33 +150,35 @@ fun Route.authRoutes() {
             val token = generateToken(user.id)
             call.respond(AuthResponse(token, user.id, user.displayName, user.avatarUrl))
         }
+      }
 
+      rateLimit(RateLimits.PASSWORD_RESET) {
         post("/forgot-password") {
             val request = call.receive<ForgotPasswordRequest>()
             val email = request.email.trim()
             // Always 204, whether or not the account exists, so this is no enumeration oracle.
-            if (isValidEmail(email)) {
-                val user = userRepository.findByEmail(email)
-                if (user != null) {
-                    val token = generateResetToken()
-                    val now = Instant.now()
-                    passwordResetRepository.createToken(
-                        userId = UUID.fromString(user.id),
-                        tokenHash = hashResetToken(token),
-                        expiresAt = now.plus(PASSWORD_RESET_VALIDITY),
-                        now = now
-                    )
-                    val content = buildPasswordResetEmail("$appBaseUrl/reset/$token")
-                    call.application.launch {
-                        runCatching {
-                            mailService.send(
-                                to = user.email,
-                                subject = content.subject,
-                                plainText = content.plainText,
-                                html = content.html
-                            )
-                        }.onFailure { call.application.log.error("Password reset email send failed", it) }
-                    }
+            // Everything past the lookup runs in the background so known and unknown
+            // addresses answer after the same work.
+            val user = if (isValidEmail(email)) userRepository.findByEmail(email) else null
+            if (user != null) {
+                call.application.launch {
+                    runCatching {
+                        val token = generateResetToken()
+                        val now = Instant.now()
+                        passwordResetRepository.createToken(
+                            userId = UUID.fromString(user.id),
+                            tokenHash = hashResetToken(token),
+                            expiresAt = now.plus(PASSWORD_RESET_VALIDITY),
+                            now = now
+                        )
+                        val content = buildPasswordResetEmail("$appBaseUrl/reset/$token")
+                        mailService.send(
+                            to = user.email,
+                            subject = content.subject,
+                            plainText = content.plainText,
+                            html = content.html
+                        )
+                    }.onFailure { call.application.log.error("Password reset email failed", it) }
                 }
             }
             call.respond(HttpStatusCode.NoContent)
@@ -191,20 +193,22 @@ fun Route.authRoutes() {
             if (request.token.length > MAX_RESET_TOKEN_LENGTH) {
                 return@post call.respond(HttpStatusCode.BadRequest, INVALID_RESET_TOKEN)
             }
+            // Claim before hashing so garbage tokens never cost a bcrypt round. A crash after
+            // the claim only burns the token.
+            val result = passwordResetRepository.claimToken(hashResetToken(request.token), Instant.now())
+                ?: return@post call.respond(HttpStatusCode.BadRequest, INVALID_RESET_TOKEN)
             val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
-            val result = passwordResetRepository.consumeAndResetPassword(
-                tokenHash = hashResetToken(request.token),
-                newPasswordHash = newHash,
-                now = Instant.now()
-            ) ?: return@post call.respond(HttpStatusCode.BadRequest, INVALID_RESET_TOKEN)
+            passwordResetRepository.setPassword(result.userId, newHash)
 
-            auditLogRepository.log(
-                actorId = result.userId,
-                actorEmail = result.email,
-                action = "password.reset",
-                targetType = "user",
-                targetId = result.userId.toString()
-            )
+            runCatching {
+                auditLogRepository.log(
+                    actorId = result.userId,
+                    actorEmail = result.email,
+                    action = "password.reset",
+                    targetType = "user",
+                    targetId = result.userId.toString()
+                )
+            }.onFailure { call.application.log.error("Password reset audit entry failed for ${result.userId}", it) }
             call.respond(HttpStatusCode.NoContent)
         }
       }

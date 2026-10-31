@@ -3,6 +3,10 @@ package ch.teamorg.domain.repositories
 import ch.teamorg.db.tables.PasswordResetTokensTable
 import ch.teamorg.db.tables.UsersTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNotNull
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.and
@@ -17,18 +21,28 @@ import java.util.UUID
 data class PasswordResetResult(val userId: UUID, val email: String)
 
 interface PasswordResetRepository {
-    /** Stores the token hash and invalidates every older unused token of the user. */
+    /**
+     * Stores the token hash, deletes the user's used or expired tokens and invalidates every
+     * older unused one.
+     */
     fun createToken(userId: UUID, tokenHash: String, expiresAt: Instant, now: Instant)
 
     /**
-     * Consumes a valid (known, unused, unexpired) token, sets the new password hash and bumps
-     * the user's token version so all existing JWTs stop working. Null if the token is invalid.
+     * Atomically claims a valid (known, unused, unexpired) token of a live account. Null if the
+     * token is invalid. A claimed token is burnt even if the caller never completes the reset.
      */
-    fun consumeAndResetPassword(tokenHash: String, newPasswordHash: String, now: Instant): PasswordResetResult?
+    fun claimToken(tokenHash: String, now: Instant): PasswordResetResult?
+
+    /** Sets the new password hash and bumps the token version so all existing JWTs stop working. */
+    fun setPassword(userId: UUID, newPasswordHash: String)
 }
 
 class PasswordResetRepositoryImpl : PasswordResetRepository {
     override fun createToken(userId: UUID, tokenHash: String, expiresAt: Instant, now: Instant): Unit = transaction {
+        PasswordResetTokensTable.deleteWhere {
+            (PasswordResetTokensTable.userId eq userId) and
+                (PasswordResetTokensTable.usedAt.isNotNull() or (PasswordResetTokensTable.expiresAt lessEq now))
+        }
         PasswordResetTokensTable.update({
             (PasswordResetTokensTable.userId eq userId) and PasswordResetTokensTable.usedAt.isNull()
         }) {
@@ -41,11 +55,7 @@ class PasswordResetRepositoryImpl : PasswordResetRepository {
         }
     }
 
-    override fun consumeAndResetPassword(
-        tokenHash: String,
-        newPasswordHash: String,
-        now: Instant
-    ): PasswordResetResult? = transaction {
+    override fun claimToken(tokenHash: String, now: Instant): PasswordResetResult? = transaction {
         // The conditional update is the atomic claim: of two concurrent requests with the same
         // token only one sees a row count of 1.
         val claimed = PasswordResetTokensTable.update({
@@ -60,15 +70,17 @@ class PasswordResetRepositoryImpl : PasswordResetRepository {
         val userId = PasswordResetTokensTable.select(PasswordResetTokensTable.userId)
             .where { PasswordResetTokensTable.tokenHash eq tokenHash }
             .single()[PasswordResetTokensTable.userId]
-        val email = UsersTable.select(UsersTable.email, UsersTable.deletedAt)
+        val row = UsersTable.select(UsersTable.email, UsersTable.deletedAt)
             .where { UsersTable.id eq userId }
             .single()
-            .let { row -> if (row[UsersTable.deletedAt] != null) return@transaction null else row[UsersTable.email] }
+        if (row[UsersTable.deletedAt] != null) return@transaction null
+        PasswordResetResult(userId, row[UsersTable.email])
+    }
 
+    override fun setPassword(userId: UUID, newPasswordHash: String): Unit = transaction {
         UsersTable.update({ UsersTable.id eq userId }) {
             it[passwordHash] = newPasswordHash
             it[tokenVersion] = tokenVersion + 1
         }
-        PasswordResetResult(userId, email)
     }
 }

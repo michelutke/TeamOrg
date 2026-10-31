@@ -21,6 +21,13 @@ object RateLimits {
      */
     val AUTH = RateLimitName("auth")
 
+    /**
+     * forgot-password and reset-password. Separate from [AUTH] on purpose: the admin app calls
+     * the API from one container IP, so sharing a bucket would let reset traffic lock every
+     * user out of web login.
+     */
+    val PASSWORD_RESET = RateLimitName("password-reset")
+
     /** Invite-code resolution: stops enumeration of the 8-char short-code space. */
     val INVITE_CODE = RateLimitName("invite-code")
 }
@@ -113,6 +120,10 @@ fun Application.configureRateLimiting() {
         // leaving headroom for a club behind one NAT address and for test suites that
         // register a batch of users in one run.
         register(RateLimits.AUTH) {
+            rateLimiter(limit = 20, refillPeriod = 60.seconds)
+            requestKey { call -> call.clientKey() }
+        }
+        register(RateLimits.PASSWORD_RESET) {
             rateLimiter(limit = 20, refillPeriod = 60.seconds)
             requestKey { call -> call.clientKey() }
         }
