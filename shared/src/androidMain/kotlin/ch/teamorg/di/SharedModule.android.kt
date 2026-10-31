@@ -6,6 +6,7 @@ import ch.teamorg.data.EventCacheManager
 import ch.teamorg.data.MutationQueueManager
 import ch.teamorg.data.NotificationCacheManager
 import ch.teamorg.data.createDatabase
+import ch.teamorg.auth.SessionExpiredNotifier
 import ch.teamorg.data.network.HttpClientFactory
 import ch.teamorg.data.repository.AbwesenheitRepositoryImpl
 import ch.teamorg.data.repository.AttendanceRepositoryImpl
@@ -42,13 +43,14 @@ actual val sharedModule = module {
             )
         )
     }
-    single { HttpClientFactory.create(get()) }
+    single { SessionExpiredNotifier() }
+    single { HttpClientFactory.create(get(), get()) }
     single { DatabaseDriverFactory(get()) }
     single { createDatabase(get()) }
     singleOf(::EventCacheManager)
     singleOf(::AttendanceCacheManager)
     singleOf(::MutationQueueManager)
-    singleOf(::AuthRepositoryImpl) bind AuthRepository::class
+    single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
     singleOf(::ClubRepositoryImpl) bind ClubRepository::class
     singleOf(::TeamRepositoryImpl) bind TeamRepository::class
     singleOf(::InviteRepositoryImpl) bind InviteRepository::class
