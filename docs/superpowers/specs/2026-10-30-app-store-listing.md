@@ -17,7 +17,7 @@ Play listing so both stores read as one campaign; App Store limits differ, see e
 | Age rating | Answer "None" / "No" to every questionnaire item, result 4+ |
 | Copyright | 2026 Michel Utke |
 | Price | Free, no in-app purchases |
-| Support URL | https://teamorg.ch |
+| Support URL | https://teamorg.ch/#kontakt |
 | Marketing URL | https://teamorg.ch |
 | Privacy Policy URL | https://teamorg.ch/datenschutz |
 
@@ -145,8 +145,15 @@ App Store Connect does not ask for release notes on the first version.
 | iPhone 6.9" (1290×2796), en | `brand/store/ios/ios-phone-0{1..6}-*-en.png` |
 | iPad 13" (2064×2752), de | `brand/store/ipad/ipad-13-0{1..6}-*.png` |
 | iPad 13" (2064×2752), en | `brand/store/ipad/ipad-13-0{1..6}-*-en.png` |
+| iPhone 6.3" (1206×2622), de/en | `brand/store/ios-63/ios-phone-63-*.png` (6.9" set scaled to 1206 wide, 8 px background added at the bottom) |
+| Header (21:9, 3840×1646), de/en | `brand/store/creative/appstore-header-{de,en}.png` |
+| Search results (3:2, 3840×2560), de/en | `brand/store/creative/appstore-search-{de,en}.png` |
 | App icon | Taken from the build (`iosApp/.../AppIcon.appiconset/app-icon-1024.png`) |
 | App Preview video | None |
+
+Header and search results are creative assets (iOS 27+): Product Page Information, tab
+Header and Search Results. Opaque PNG, no alpha. Figma section "App Store Assets — Header &
+Search" `61450:6292`.
 
 Upload in numeric order. Screenshots are uploaded by hand in App Store Connect per
 localisation; the fastlane lanes skip metadata and screenshots.
