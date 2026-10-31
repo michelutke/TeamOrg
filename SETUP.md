@@ -18,6 +18,7 @@ Create `local.properties` in the repo root:
 ```properties
 API_BASE_URL=<server url>
 onesignal.appId=<OneSignal app id>
+SENTRY_DSN=<optional, release builds only; empty disables crash reporting>
 ```
 
 ## Running

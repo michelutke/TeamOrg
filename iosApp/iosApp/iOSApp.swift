@@ -41,6 +41,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        CrashReportingSetup.start()
         MainViewControllerKt.doInitKoin()
         StripeSetupBridge.register()
         PushBridgeSetup.register()
@@ -56,6 +57,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         #endif
 
         return true
+    }
+}
+
+enum CrashReportingSetup {
+    static func start() {
+        let info = Bundle.main.infoDictionary
+        let dsn = info?["SENTRY_DSN"] as? String ?? ""
+        let version = info?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let build = info?["CFBundleVersion"] as? String ?? "0"
+        #if DEBUG
+        let environment = "debug"
+        #else
+        let environment = "production"
+        #endif
+        MainViewControllerKt.startCrashReporting(
+            dsn: dsn,
+            environment: environment,
+            release: "ch.teamorg@\(version)+\(build)"
+        )
     }
 }
 

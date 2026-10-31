@@ -1,5 +1,7 @@
 package ch.teamorg.repository
 
+import ch.teamorg.crash.CrashReportingBridge
+import ch.teamorg.crash.RecordingCrashReporting
 import ch.teamorg.data.PushBridge
 import ch.teamorg.data.repository.AuthRepositoryImpl
 import ch.teamorg.domain.LoginRequest
@@ -40,7 +42,8 @@ class AuthRepositoryPushTest {
     private fun repository(
         status: HttpStatusCode,
         body: String,
-        push: PushBridge
+        push: PushBridge,
+        crashReporting: CrashReportingBridge = RecordingCrashReporting()
     ): AuthRepositoryImpl {
         val engine = MockEngine {
             respond(
@@ -53,7 +56,7 @@ class AuthRepositoryPushTest {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             install(DefaultRequest) { contentType(ContentType.Application.Json) }
         }
-        return AuthRepositoryImpl(client, UserPreferences(MapSettings()), push)
+        return AuthRepositoryImpl(client, UserPreferences(MapSettings()), push, crashReporting)
     }
 
     @Test
@@ -97,5 +100,48 @@ class AuthRepositoryPushTest {
         val push = RecordingPush()
         repository(HttpStatusCode.NoContent, "", push).deleteAccount("pw")
         assertEquals(listOf("logout"), push.calls)
+    }
+
+    @Test
+    fun `login sets the crash reporting user`() = runTest {
+        val crash = RecordingCrashReporting()
+        repository(HttpStatusCode.OK, authJson, RecordingPush(), crash).login(LoginRequest("a@b.ch", "pw"))
+        assertEquals(listOf("setUser:user-1"), crash.calls)
+    }
+
+    @Test
+    fun `failed login does not set the crash reporting user`() = runTest {
+        val crash = RecordingCrashReporting()
+        repository(HttpStatusCode.Unauthorized, "", RecordingPush(), crash).login(LoginRequest("a@b.ch", "pw"))
+        assertEquals(emptyList(), crash.calls)
+    }
+
+    @Test
+    fun `register sets the crash reporting user`() = runTest {
+        val crash = RecordingCrashReporting()
+        repository(HttpStatusCode.Created, authJson, RecordingPush(), crash)
+            .register(RegisterRequest("a@b.ch", "pw", "A"))
+        assertEquals(listOf("setUser:user-1"), crash.calls)
+    }
+
+    @Test
+    fun `session restore via getMe sets the crash reporting user`() = runTest {
+        val crash = RecordingCrashReporting()
+        repository(HttpStatusCode.OK, meJson, RecordingPush(), crash).getMe()
+        assertEquals(listOf("setUser:user-1"), crash.calls)
+    }
+
+    @Test
+    fun `logout clears the crash reporting user`() = runTest {
+        val crash = RecordingCrashReporting()
+        repository(HttpStatusCode.OK, "", RecordingPush(), crash).logout()
+        assertEquals(listOf("clearUser"), crash.calls)
+    }
+
+    @Test
+    fun `account deletion clears the crash reporting user`() = runTest {
+        val crash = RecordingCrashReporting()
+        repository(HttpStatusCode.NoContent, "", RecordingPush(), crash).deleteAccount("pw")
+        assertEquals(listOf("clearUser"), crash.calls)
     }
 }

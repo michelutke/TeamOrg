@@ -1,6 +1,8 @@
 package ch.teamorg.data.network
 
 import ch.teamorg.auth.SessionExpiredNotifier
+import ch.teamorg.crash.CrashReporting
+import ch.teamorg.crash.CrashReportingBridge
 import ch.teamorg.data.PushBridge
 import ch.teamorg.data.PushRegistration
 import ch.teamorg.preferences.UserPreferences
@@ -49,7 +51,8 @@ private fun isCredentialCheck(method: HttpMethod, path: String): Boolean =
 internal fun HttpClientConfig<*>.installSessionExpiryHandler(
     userPreferences: UserPreferences,
     notifier: SessionExpiredNotifier,
-    push: PushBridge
+    push: PushBridge,
+    crashReporting: CrashReportingBridge = CrashReporting
 ) {
     HttpResponseValidator {
         validateResponse { response ->
@@ -62,6 +65,7 @@ internal fun HttpClientConfig<*>.installSessionExpiryHandler(
                 !isCredentialCheck(request.method, request.url.encodedPath)
             ) {
                 push.logout()
+                crashReporting.clearUser()
                 userPreferences.clearToken()
                 notifier.notifyExpired()
             }

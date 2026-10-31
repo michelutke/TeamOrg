@@ -1,3 +1,4 @@
+import io.sentry.kotlin.multiplatform.gradle.AppleDependencyProvider
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -5,6 +6,7 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.sentryKmp)
 }
 
 kotlin {
@@ -108,6 +110,10 @@ android {
     buildFeatures {
         buildConfig = true
     }
+}
+
+sentryKmp {
+    autoInstall.apple.provider = AppleDependencyProvider.NONE
 }
 
 sqldelight {

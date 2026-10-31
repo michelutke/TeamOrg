@@ -62,6 +62,7 @@ jobs:
         run: bundle exec fastlane android_play
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -106,6 +107,7 @@ jobs:
         run: bundle exec fastlane ios_testflight
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}

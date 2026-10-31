@@ -37,6 +37,32 @@ tracking, purpose App Functionality: Name, Email Address, Photos (profile avatar
 Content (absence reasons, event responses), Health (optional injury and body-part details on
 absences), User ID, Device ID (OneSignal push token).
 
+### Crash reporting (Sentry)
+
+Release builds send crash logs and diagnostics to Sentry when a `SENTRY_DSN` is configured
+(`shared/src/commonMain/kotlin/ch/teamorg/crash/CrashReporting.kt`). Debug, local and test builds
+have an empty DSN and never initialize Sentry. Collected: stack traces, device model, OS version,
+app version and build, app hang and crash diagnostics, non-HTTP breadcrumbs, and the internal user id
+(no email, name or IP: `sendDefaultPii = false`, event user reduced to the id, HTTP breadcrumbs
+dropped because request paths contain invite tokens). No screenshots, view hierarchy, session replay or tracing. Not
+used for tracking, not shared with third parties other than Sentry as processor. The Sentry
+project should be created in the EU data region.
+
+| Store | Form answers for crash reporting |
+|---|---|
+| Google Play Data Safety | Data type "App info and performance", "Crash logs": collected, not shared, optional = no, purpose "Analytics" (Sentry docs suggest analytics) and "App functionality". Data type "App info and performance", "Diagnostics": same answers. Data type "Personal info", "User IDs" (already declared for push): add purpose "App functionality" for the crash user id. All encrypted in transit (HTTPS). |
+| Apple App Privacy | Add "Crash Data" and "Performance Data" and "Other Diagnostic Data" (Diagnostics): linked to the user (user id is attached), not used for tracking, purpose "App Functionality". Mirrored in `iosApp/iosApp/PrivacyInfo.xcprivacy` (`NSPrivacyCollectedDataTypes`). |
+
+Sentry Cocoa ships its own privacy manifest, and Xcode copies the `Sentry.framework`
+`PrivacyInfo.xcprivacy` into the app bundle. The app manifest's required-reason API entries
+(UserDefaults `CA92.1`, FileTimestamp `C617.1`, SystemBootTime `35F9.1`) are a harmless duplicate
+of what Sentry declares.
+
+Symbolication: readable iOS stack traces need dSYMs and readable Android stack traces need the
+R8 mapping file uploaded to Sentry. Neither upload is part of this setup (no Sentry Gradle plugin
+upload and no `sentry-cli` step in CI). Add them later with a `SENTRY_AUTH_TOKEN`, org and
+project, enabled only when the token is present.
+
 ## Certificate pinning
 
 Deliberately not implemented. A Let's Encrypt chain rotation would brick every installed app
