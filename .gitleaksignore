@@ -1,0 +1,7 @@
+# Disposable password fixture used by the Android instrumented auth tests
+# (composeApp/src/androidInstrumentedTest/kotlin/ch/teamorg/AuthFlowTest.kt) against a local,
+# throwaway backend — not a real credential. Historical commits can't be rewritten (no rebase),
+# so the two findings from those commits are allowlisted by fingerprint. New occurrences are
+# additionally marked with a `// gitleaks:allow` inline comment.
+57475baf02eee328b052b592398e5f15d5c054d5:composeApp/src/androidInstrumentedTest/kotlin/ch/teamorg/AuthFlowTest.kt:generic-api-key:25
+2dd2a3b6bc184ecd7cece09ff24ce35385ff7247:docs/superpowers/plans/2026-08-07-minsdk-29.md:generic-api-key:454

@@ -12,6 +12,7 @@ import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.domain.UserRoles
 import ch.teamorg.preferences.UserPreferences
 import ch.teamorg.repository.AuthRepository
+import ch.teamorg.repository.EmailAlreadyRegisteredException
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -37,6 +38,8 @@ class AuthRepositoryImpl(
                 userPreferences.saveUserId(authResponse.userId)
                 push.login(authResponse.userId)
                 Result.success(authResponse)
+            } else if (response.status == HttpStatusCode.Conflict) {
+                Result.failure(EmailAlreadyRegisteredException())
             } else {
                 Result.failure(Exception("Registration failed: ${response.status}"))
             }
