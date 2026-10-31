@@ -124,6 +124,31 @@ export async function login(
 	return { success: true, user };
 }
 
+/** Asks the API to mail a reset link. The API answers 204 whether or not the account exists. */
+export async function requestPasswordReset(email: string): Promise<boolean> {
+	const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ email })
+	});
+	return res.status === 204;
+}
+
+/** Sets a new password from an emailed reset token. */
+export async function resetPassword(
+	token: string,
+	newPassword: string
+): Promise<'ok' | 'invalid_token' | 'error'> {
+	const res = await fetch(`${API_BASE}/auth/reset-password`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ token, newPassword })
+	});
+	if (res.status === 204) return 'ok';
+	if (res.status === 400) return 'invalid_token';
+	return 'error';
+}
+
 /** Registers a new account, sets the session cookie, and returns the user. */
 export async function register(
 	email: string,

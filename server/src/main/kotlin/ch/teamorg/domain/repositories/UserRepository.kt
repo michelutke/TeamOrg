@@ -15,6 +15,7 @@ interface UserRepository {
     fun getPasswordHash(email: String): String?
     fun getPasswordHashById(userId: UUID): String?
     fun updatePasswordHash(userId: UUID, passwordHash: String)
+    fun getTokenVersion(userId: UUID): Int
     fun updateAvatarUrl(userId: UUID, avatarUrl: String?): User
     fun findAll(page: Int, pageSize: Int): List<User>
     fun countAll(): Long
@@ -74,6 +75,12 @@ class UserRepositoryImpl : UserRepository {
         UsersTable.update({ UsersTable.id eq userId }) {
             it[UsersTable.passwordHash] = passwordHash
         }
+    }
+
+    override fun getTokenVersion(userId: UUID): Int = transaction {
+        UsersTable.select(UsersTable.tokenVersion).where { UsersTable.id eq userId }
+            .map { it[UsersTable.tokenVersion] }
+            .singleOrNull() ?: 0
     }
 
     override fun updateAvatarUrl(userId: UUID, avatarUrl: String?): User = transaction {

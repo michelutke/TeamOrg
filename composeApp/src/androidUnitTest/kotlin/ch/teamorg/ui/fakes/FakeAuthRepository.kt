@@ -21,6 +21,7 @@ class FakeAuthRepository : AuthRepository {
 
     override suspend fun login(request: LoginRequest): Result<AuthResponse> = loginResult
     override suspend fun register(request: RegisterRequest): Result<AuthResponse> = registerResult
+    override suspend fun forgotPassword(email: String): Result<Unit> = Result.success(Unit)
     override fun logout() {}
     override fun isLoggedIn(): Boolean = false
     override suspend fun getMe(): Result<AuthUser> = getMeResult

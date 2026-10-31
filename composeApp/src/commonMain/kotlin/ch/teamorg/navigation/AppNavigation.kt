@@ -15,8 +15,6 @@ import ch.teamorg.ui.nds.NdsImportScreen
 import ch.teamorg.ui.nds.NdsImportViewModel
 import ch.teamorg.ui.club.ClubMembersScreen
 import ch.teamorg.ui.club.ClubMembersViewModel
-import ch.teamorg.ui.club.ClubSetupScreen
-import ch.teamorg.ui.club.ClubSetupViewModel
 import ch.teamorg.ui.emptystate.EmptyStateScreen
 import ch.teamorg.ui.emptystate.EmptyStateViewModel
 import ch.teamorg.ui.events.CreateEditEventScreen
@@ -28,6 +26,8 @@ import ch.teamorg.ui.events.EventListViewModel
 import ch.teamorg.ui.events.EventViewMode
 import ch.teamorg.ui.invite.InviteScreen
 import ch.teamorg.ui.invite.InviteViewModel
+import ch.teamorg.ui.login.ForgotPasswordScreen
+import ch.teamorg.ui.login.ForgotPasswordViewModel
 import ch.teamorg.ui.login.LoginScreen
 import ch.teamorg.ui.login.LoginViewModel
 import ch.teamorg.ui.inbox.InboxScreen
@@ -89,7 +89,15 @@ fun AppNavigation(
                 LoginScreen(
                     viewModel = viewModel,
                     onLoginSuccess = { onAuthSuccess() },
-                    onNavigateToRegister = { backStack.add(Screen.Register) }
+                    onNavigateToRegister = { backStack.add(Screen.Register) },
+                    onNavigateToForgotPassword = { backStack.add(Screen.ForgotPassword) }
+                )
+            }
+            Screen.ForgotPassword -> {
+                val viewModel: ForgotPasswordViewModel = viewModel { KoinPlatform.getKoin().get() }
+                ForgotPasswordScreen(
+                    viewModel = viewModel,
+                    onBackToLogin = { backStack.add(Screen.Login) }
                 )
             }
             Screen.Register -> {
@@ -107,14 +115,6 @@ fun AppNavigation(
                     onNavigateToCreateTeamOrClub = { backStack.add(Screen.CreateTeamOrClub) },
                     onNavigateToInvite = { token -> backStack.add(Screen.Invite(token)) },
                     onAccountDeleted = onLogout
-                )
-            }
-            Screen.ClubSetup -> {
-                val viewModel: ClubSetupViewModel = viewModel { KoinPlatform.getKoin().get() }
-                ClubSetupScreen(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeAt(backStack.lastIndex) },
-                    onClubCreated = { _ -> backStack.add(Screen.Teams) }
                 )
             }
             Screen.CreateTeamOrClub -> {

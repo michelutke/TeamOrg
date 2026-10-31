@@ -21,9 +21,13 @@ class FakeAuthRepository : AuthRepository {
     )
     var loggedIn: Boolean = false
     var hasTeamResult: Boolean = false
+    var onHasTeam: (() -> Unit)? = null
     var deleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
     var deleteAccountPasswords: MutableList<String> = mutableListOf()
     var deleteAccountGate: CompletableDeferred<Unit>? = null
+
+    var forgotPasswordResult: Result<Unit> = Result.success(Unit)
+    var forgotPasswordEmails: MutableList<String> = mutableListOf()
 
     var lastLoginRequest: LoginRequest? = null
     var lastRegisterRequest: RegisterRequest? = null
@@ -41,9 +45,12 @@ class FakeAuthRepository : AuthRepository {
         )
         loggedIn = false
         hasTeamResult = false
+        onHasTeam = null
         deleteAccountResult = DeleteAccountResult.Success
         deleteAccountPasswords = mutableListOf()
         deleteAccountGate = null
+        forgotPasswordResult = Result.success(Unit)
+        forgotPasswordEmails = mutableListOf()
         lastLoginRequest = null
         lastRegisterRequest = null
         logoutCalled = false
@@ -61,6 +68,11 @@ class FakeAuthRepository : AuthRepository {
         return registerResult
     }
 
+    override suspend fun forgotPassword(email: String): Result<Unit> {
+        forgotPasswordEmails.add(email)
+        return forgotPasswordResult
+    }
+
     override fun logout() {
         logoutCalled = true
         loggedIn = false
@@ -70,7 +82,10 @@ class FakeAuthRepository : AuthRepository {
 
     override suspend fun getMe(): Result<AuthUser> = getMeResult
 
-    override suspend fun hasTeam(): Boolean = hasTeamResult
+    override suspend fun hasTeam(): Boolean {
+        onHasTeam?.invoke()
+        return hasTeamResult
+    }
 
     override suspend fun deleteAccount(password: String): DeleteAccountResult {
         deleteAccountPasswords.add(password)

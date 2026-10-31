@@ -35,6 +35,7 @@ fun TeamorgApp(
     val authState by viewModel.state.collectAsState()
     val backStack = remember { mutableStateListOf<Screen>(Screen.Loading) }
     val pendingToken by DeepLinkHandler.pendingToken
+    val pendingScreen by DeepLinkHandler.pendingScreen
     var unreadCount by remember { mutableLongStateOf(0L) }
 
     // Poll unread count while authenticated
@@ -67,6 +68,7 @@ fun TeamorgApp(
             when (val state = authState) {
                 is AuthState.Loading -> Unit
                 is AuthState.Unauthenticated -> {
+                    DeepLinkHandler.pendingScreen.value = null
                     backStack.clear()
                     backStack.add(Screen.Login)
                     // token stays in DeepLinkHandler until after login/register
@@ -85,10 +87,19 @@ fun TeamorgApp(
             }
         }
 
+        LaunchedEffect(authState, pendingScreen) {
+            val screen = pendingScreen
+            val state = authState
+            if (screen != null && state is AuthState.Authenticated) {
+                DeepLinkHandler.pendingScreen.value = null
+                if (state.hasTeam) backStack.add(screen)
+            }
+        }
+
         val currentScreen = backStack.lastOrNull() ?: Screen.Loading
         val showBottomBar = currentScreen !in listOf(
-            Screen.Login, Screen.Register, Screen.EmptyState, Screen.Loading,
-            Screen.CreateEvent, Screen.CreateTeamOrClub, Screen.ClubSetup
+            Screen.Login, Screen.Register, Screen.ForgotPassword, Screen.EmptyState, Screen.Loading,
+            Screen.CreateEvent, Screen.CreateTeamOrClub
         ) && currentScreen !is Screen.CardSetup
           && currentScreen !is Screen.Invite
           && currentScreen !is Screen.EventDetail
@@ -112,6 +123,7 @@ fun TeamorgApp(
                     onLogout = {
                         DeepLinkHandler.pendingToken.value = null
                         DeepLinkHandler.pendingInviteEmail.value = null
+                        DeepLinkHandler.pendingScreen.value = null
                         viewModel.logout()
                     }
                 )
