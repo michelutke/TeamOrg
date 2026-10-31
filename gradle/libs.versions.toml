@@ -1,7 +1,7 @@
 [versions]
 agp = "8.13.2"
 android-compileSdk = "36"
-android-minSdk = "34"
+android-minSdk = "29"
 android-targetSdk = "36"
 kotlin = "2.3.10"
 kotlinx-coroutines = "1.10.2"
@@ -32,6 +32,7 @@ turbine = "1.2.0"
 kotest = "5.9.1"
 robolectric = "4.14"
 androidx-test-ext-junit = "1.2.1"
+androidx-test-runner = "1.6.2"
 testcontainers = "1.21.0"
 kizitonwose-calendar = "2.7.0"
 onesignal = "5.7.6"
@@ -48,6 +49,7 @@ turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext-junit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 testcontainers-junit = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 compose-uiTestJunit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", version.ref = "composeMultiplatform" }
