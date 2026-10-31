@@ -35,3 +35,7 @@ fun handleDeepLink(url: String) {
         DeepLinkHandler.pendingToken.value = token
     }
 }
+
+fun handleNotificationTap(entityType: String?, entityId: String?) {
+    DeepLinkHandler.openNotification(entityType, entityId)
+}

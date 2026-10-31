@@ -1,6 +1,8 @@
 package ch.teamorg.data
 
-expect object PushRegistration {
+interface PushBridge {
     fun login(userId: String)
     fun logout()
 }
+
+expect object PushRegistration : PushBridge

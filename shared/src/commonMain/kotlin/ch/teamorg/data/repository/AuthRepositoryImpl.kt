@@ -1,5 +1,6 @@
 package ch.teamorg.data.repository
 
+import ch.teamorg.data.PushBridge
 import ch.teamorg.data.PushRegistration
 import ch.teamorg.domain.AuthResponse
 import ch.teamorg.domain.AuthUser
@@ -21,7 +22,8 @@ import io.ktor.http.HttpStatusCode
 
 class AuthRepositoryImpl(
     private val client: HttpClient,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val push: PushBridge = PushRegistration
 ) : AuthRepository {
 
     override suspend fun register(request: RegisterRequest): Result<AuthResponse> {
@@ -33,7 +35,7 @@ class AuthRepositoryImpl(
                 val authResponse = response.body<AuthResponse>()
                 userPreferences.saveToken(authResponse.token)
                 userPreferences.saveUserId(authResponse.userId)
-                PushRegistration.login(authResponse.userId)
+                push.login(authResponse.userId)
                 Result.success(authResponse)
             } else {
                 Result.failure(Exception("Registration failed: ${response.status}"))
@@ -52,7 +54,7 @@ class AuthRepositoryImpl(
                 val authResponse = response.body<AuthResponse>()
                 userPreferences.saveToken(authResponse.token)
                 userPreferences.saveUserId(authResponse.userId)
-                PushRegistration.login(authResponse.userId)
+                push.login(authResponse.userId)
                 Result.success(authResponse)
             } else {
                 Result.failure(Exception("Login failed: ${response.status}"))
@@ -63,7 +65,7 @@ class AuthRepositoryImpl(
     }
 
     override fun logout() {
-        PushRegistration.logout()
+        push.logout()
         userPreferences.clearToken()
     }
 
@@ -89,7 +91,9 @@ class AuthRepositoryImpl(
         return try {
             val response = client.get("/auth/me")
             if (response.status == HttpStatusCode.OK) {
-                Result.success(response.body<AuthUser>())
+                val user = response.body<AuthUser>()
+                push.login(user.userId)
+                Result.success(user)
             } else {
                 if (response.status == HttpStatusCode.Unauthorized) {
                     logout()

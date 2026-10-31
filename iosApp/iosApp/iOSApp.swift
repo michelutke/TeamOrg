@@ -43,6 +43,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         MainViewControllerKt.doInitKoin()
         StripeSetupBridge.register()
+        PushBridgeSetup.register()
 
         // OneSignal init
         #if canImport(OneSignalFramework)
@@ -51,8 +52,40 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         OneSignal.Notifications.requestPermission({ accepted in
             print("Push permission: \(accepted)")
         }, fallbackToSettings: true)
+        OneSignal.Notifications.addClickListener(NotificationClickHandler.shared)
         #endif
 
         return true
     }
 }
+
+enum PushBridgeSetup {
+    static func register() {
+        PushBridge_iosKt.setPushBridge(
+            login: { userId in
+                #if canImport(OneSignalFramework)
+                OneSignal.login(userId)
+                #endif
+            },
+            logout: {
+                #if canImport(OneSignalFramework)
+                OneSignal.logout()
+                #endif
+            }
+        )
+    }
+}
+
+#if canImport(OneSignalFramework)
+final class NotificationClickHandler: NSObject, OSNotificationClickListener {
+    static let shared = NotificationClickHandler()
+
+    func onClick(event: OSNotificationClickEvent) {
+        let data = event.notification.additionalData
+        MainViewControllerKt.handleNotificationTap(
+            entityType: data?["entity_type"] as? String,
+            entityId: data?["entity_id"] as? String
+        )
+    }
+}
+#endif

@@ -1,13 +1,21 @@
 package ch.teamorg.data
 
-// iOS OneSignal SDK is a native Swift framework — cannot be called from Kotlin/Native.
-// OneSignal.login(userId) is called from iOSApp.swift after successful auth.
-actual object PushRegistration {
-    actual fun login(userId: String) {
-        // no-op: handled natively in iOSApp.swift
+// The iOS OneSignal SDK is a native Swift framework and cannot be called from Kotlin/Native.
+// iOSApp.swift registers the native login/logout handlers at startup.
+actual object PushRegistration : PushBridge {
+    private var loginHandler: ((String) -> Unit)? = null
+    private var logoutHandler: (() -> Unit)? = null
+
+    fun register(login: (String) -> Unit, logout: () -> Unit) {
+        loginHandler = login
+        logoutHandler = logout
     }
 
-    actual fun logout() {
-        // no-op: handled natively in iOSApp.swift
+    override fun login(userId: String) {
+        loginHandler?.invoke(userId)
+    }
+
+    override fun logout() {
+        logoutHandler?.invoke()
     }
 }
