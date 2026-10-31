@@ -15,8 +15,6 @@ import ch.teamorg.ui.nds.NdsImportScreen
 import ch.teamorg.ui.nds.NdsImportViewModel
 import ch.teamorg.ui.club.ClubMembersScreen
 import ch.teamorg.ui.club.ClubMembersViewModel
-import ch.teamorg.ui.club.ClubSetupScreen
-import ch.teamorg.ui.club.ClubSetupViewModel
 import ch.teamorg.ui.emptystate.EmptyStateScreen
 import ch.teamorg.ui.emptystate.EmptyStateViewModel
 import ch.teamorg.ui.events.CreateEditEventScreen
@@ -107,14 +105,6 @@ fun AppNavigation(
                     onNavigateToCreateTeamOrClub = { backStack.add(Screen.CreateTeamOrClub) },
                     onNavigateToInvite = { token -> backStack.add(Screen.Invite(token)) },
                     onAccountDeleted = onLogout
-                )
-            }
-            Screen.ClubSetup -> {
-                val viewModel: ClubSetupViewModel = viewModel { KoinPlatform.getKoin().get() }
-                ClubSetupScreen(
-                    viewModel = viewModel,
-                    onBack = { backStack.removeAt(backStack.lastIndex) },
-                    onClubCreated = { _ -> backStack.add(Screen.Teams) }
                 )
             }
             Screen.CreateTeamOrClub -> {
@@ -300,6 +290,7 @@ fun AppNavigation(
                         backStack.add(Screen.Teams)
                     },
                     onAccountDeleted = onLogout,
+                    onLogout = onLogout,
                     isNavProfile = true
                 )
             }
@@ -311,7 +302,8 @@ fun AppNavigation(
                     userId = screen.userId,
                     viewModel = viewModel,
                     onBack = { backStack.removeAt(backStack.lastIndex) },
-                    onLeftTeam = { backStack.removeAt(backStack.lastIndex) }
+                    onLeftTeam = { backStack.removeAt(backStack.lastIndex) },
+                    onLogout = onLogout
                 )
             }
             is Screen.ClubMembers -> {

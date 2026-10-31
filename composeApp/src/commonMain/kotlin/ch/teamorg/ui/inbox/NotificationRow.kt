@@ -1,5 +1,6 @@
 package ch.teamorg.ui.inbox
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,6 +46,7 @@ fun NotificationRow(
             .fillMaxWidth()
             .clip(RowShape)
             .then(containerModifier)
+            .testTag("inbox_row_${notification.id}")
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,

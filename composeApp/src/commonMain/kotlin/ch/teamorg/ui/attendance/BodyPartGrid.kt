@@ -1,5 +1,6 @@
 package ch.teamorg.ui.attendance
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,7 +61,8 @@ fun BodyPartGrid(
                                 ) else Modifier
                             )
                             .clickable { onToggle(part) }
-                            .semantics { contentDescription = part },
+                            .semantics { contentDescription = part }
+                            .testTag("btn_body_part_$part"),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(

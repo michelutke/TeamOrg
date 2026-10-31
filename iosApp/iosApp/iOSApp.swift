@@ -43,16 +43,62 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         MainViewControllerKt.doInitKoin()
         StripeSetupBridge.register()
+        PushBridgeSetup.register()
 
         // OneSignal init
         #if canImport(OneSignalFramework)
         OneSignal.Debug.setLogLevel(.LL_NONE)
         OneSignal.initialize("2281f6c6-e979-49e3-a16b-d7b7628b67ea", withLaunchOptions: launchOptions)
-        OneSignal.Notifications.requestPermission({ accepted in
-            print("Push permission: \(accepted)")
-        }, fallbackToSettings: true)
+        OneSignal.Notifications.addClickListener(NotificationClickHandler.shared)
         #endif
 
         return true
     }
 }
+
+#if canImport(OneSignalFramework)
+private let pushPermissionRequestedKey = "pushPermissionRequested"
+
+private func requestPushPermissionOnce() {
+    let defaults = UserDefaults.standard
+    guard !defaults.bool(forKey: pushPermissionRequestedKey) else { return }
+    defaults.set(true, forKey: pushPermissionRequestedKey)
+    DispatchQueue.main.async {
+        OneSignal.Notifications.requestPermission({ accepted in
+            print("Push permission: \(accepted)")
+        }, fallbackToSettings: false)
+    }
+}
+#endif
+
+enum PushBridgeSetup {
+    static func register() {
+        PushBridge_iosKt.setPushBridge(
+            login: { userId in
+                #if canImport(OneSignalFramework)
+                OneSignal.login(userId)
+                requestPushPermissionOnce()
+                #endif
+            },
+            logout: {
+                #if canImport(OneSignalFramework)
+                OneSignal.logout()
+                #endif
+            }
+        )
+    }
+}
+
+#if canImport(OneSignalFramework)
+final class NotificationClickHandler: NSObject, OSNotificationClickListener {
+    static let shared = NotificationClickHandler()
+
+    func onClick(event: OSNotificationClickEvent) {
+        let data = event.notification.additionalData
+        MainViewControllerKt.handleNotificationTap(
+            entityType: data?["entity_type"] as? String,
+            entityId: data?["entity_id"] as? String
+        )
+    }
+}
+#endif

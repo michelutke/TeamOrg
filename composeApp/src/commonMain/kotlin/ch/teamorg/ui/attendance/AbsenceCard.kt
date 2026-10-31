@@ -1,5 +1,6 @@
 package ch.teamorg.ui.attendance
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -70,6 +71,7 @@ fun AbsenceCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .testTag("absence_card_${rule.id}")
             .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .combinedClickable(

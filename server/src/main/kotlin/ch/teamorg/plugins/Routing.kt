@@ -6,6 +6,8 @@ import ch.teamorg.routes.attendanceRoutes
 import ch.teamorg.routes.authRoutes
 import ch.teamorg.routes.clubRoutes
 import ch.teamorg.routes.contactRoutes
+import ch.teamorg.routes.e2eSeedRoutes
+import ch.teamorg.routes.isE2ESeedEnabled
 import ch.teamorg.routes.eventRoutes
 import ch.teamorg.routes.impersonationRoutes
 import ch.teamorg.routes.integrationRoutes
@@ -42,5 +44,9 @@ fun Application.configureRouting() {
         integrationRoutes()
         ndsRoutes()
         stripeWebhookRoutes()
+        if (isE2ESeedEnabled()) {
+            application.log.warn("E2E_SEED_ENABLED is set: /e2e/seed routes are open. Never use outside local E2E runs.")
+            e2eSeedRoutes()
+        }
     }
 }

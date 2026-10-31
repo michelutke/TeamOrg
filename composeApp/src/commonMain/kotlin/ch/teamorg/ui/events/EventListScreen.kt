@@ -1,5 +1,6 @@
 package ch.teamorg.ui.events
 
+import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -114,7 +115,7 @@ fun EventListScreen(
             if (state.isCoach) {
                 ExtendedFloatingActionButton(
                     onClick = onCreateClick,
-                    modifier = Modifier.padding(bottom = 96.dp),
+                    modifier = Modifier.padding(bottom = 96.dp).testTag("fab_create_event"),
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = ch.teamorg.ui.theme.PillShape,
@@ -333,11 +334,16 @@ private fun EmptyEventsList(
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = if (isCoach) "No events yet" else "No upcoming events",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag("txt_events_empty")
             )
             if (isCoach) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onCreateClick, shape = ch.teamorg.ui.theme.PillShape) {
+                Button(
+                    onClick = onCreateClick,
+                    shape = ch.teamorg.ui.theme.PillShape,
+                    modifier = Modifier.testTag("btn_create_first_event")
+                ) {
                     Text("Create your first event")
                 }
             }
@@ -430,7 +436,7 @@ private fun MonthView(
                         "Today",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable(
+                        modifier = Modifier.testTag("btn_calendar_today").clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
                         ) { goToday() }
@@ -438,14 +444,14 @@ private fun MonthView(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { goPrev() }) {
+                IconButton(onClick = { goPrev() }, modifier = Modifier.testTag("btn_calendar_prev")) {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = "Previous month",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                IconButton(onClick = { goNext() }) {
+                IconButton(onClick = { goNext() }, modifier = Modifier.testTag("btn_calendar_next")) {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Next month",
@@ -616,6 +622,7 @@ private fun DayCell(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag("calendar_day_$date")
             .clickable(
                 enabled = !isOutside,
                 onClick = onClick,

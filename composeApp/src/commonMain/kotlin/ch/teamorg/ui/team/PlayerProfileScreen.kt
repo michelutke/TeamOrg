@@ -1,5 +1,7 @@
 package ch.teamorg.ui.team
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,6 +43,7 @@ fun PlayerProfileScreen(
     onBack: () -> Unit,
     onLeftTeam: () -> Unit,
     onAccountDeleted: () -> Unit = {},
+    onLogout: () -> Unit = {},
     isNavProfile: Boolean = false  // true = bottom nav profile tab, false = member detail
 ) {
     val state by viewModel.state.collectAsState()
@@ -79,7 +82,7 @@ fun PlayerProfileScreen(
                 ) {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.align(Alignment.CenterStart)
+                        modifier = Modifier.align(Alignment.CenterStart).testTag("btn_back")
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -111,8 +114,19 @@ fun PlayerProfileScreen(
                         }
                         if (isNavProfile) {
                             TextButton(
+                                onClick = onLogout,
+                                modifier = Modifier.fillMaxWidth().height(48.dp).testTag("profile_btn_logout"),
+                                shape = PillShape
+                            ) {
+                                Text(
+                                    "Log out",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            TextButton(
                                 onClick = { viewModel.openDeleteDialog() },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp).testTag("btn_delete_account"),
                                 shape = PillShape,
                                 colors = ButtonDefaults.textButtonColors(
                                     contentColor = MaterialTheme.colorScheme.error
@@ -157,20 +171,27 @@ fun PlayerProfileScreen(
                             }
                             if (showAvatarSourceDialog && takePhoto != null) {
                                 AlertDialog(
+                                    modifier = Modifier.testTagsAsResourceId(),
                                     onDismissRequest = { showAvatarSourceDialog = false },
                                     title = { Text("Profile photo") },
                                     text = { Text("Take a new photo or choose one from your library.") },
                                     confirmButton = {
-                                        TextButton(onClick = {
-                                            showAvatarSourceDialog = false
-                                            takePhoto()
-                                        }) { Text("Take photo") }
+                                        TextButton(
+                                            onClick = {
+                                                showAvatarSourceDialog = false
+                                                takePhoto()
+                                            },
+                                            modifier = Modifier.testTag("btn_avatar_take_photo")
+                                        ) { Text("Take photo") }
                                     },
                                     dismissButton = {
-                                        TextButton(onClick = {
-                                            showAvatarSourceDialog = false
-                                            pickImage()
-                                        }) { Text("Choose from library") }
+                                        TextButton(
+                                            onClick = {
+                                                showAvatarSourceDialog = false
+                                                pickImage()
+                                            },
+                                            modifier = Modifier.testTag("btn_avatar_choose_library")
+                                        ) { Text("Choose from library") }
                                     }
                                 )
                             }
@@ -194,7 +215,11 @@ fun PlayerProfileScreen(
                                         .clip(CircleShape)
                                         .background(avatarContainer)
                                         .then(
-                                            if (state.isOwnProfile) Modifier.clickable { onAvatarClick() } else Modifier
+                                            if (state.isOwnProfile) {
+                                                Modifier.testTag("btn_avatar").clickable { onAvatarClick() }
+                                            } else {
+                                                Modifier
+                                            }
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -234,7 +259,8 @@ fun PlayerProfileScreen(
                             Text(
                                 text = member.displayName,
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.testTag("txt_profile_name")
                             )
 
                             val info = listOfNotNull(
@@ -256,7 +282,7 @@ fun PlayerProfileScreen(
                             ) {
                                 Text(
                                     text = member.role.replaceFirstChar { it.uppercase() },
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp).testTag("txt_profile_role"),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -275,7 +301,8 @@ fun PlayerProfileScreen(
                             text = "My absences",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("txt_absences_header")
                         )
 
                         Spacer(Modifier.height(12.dp))
@@ -295,7 +322,8 @@ fun PlayerProfileScreen(
                                 Text(
                                     text = "No absences",
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.testTag("txt_absences_empty")
                                 )
                                 Text(
                                     text = "Add an absence rule to automatically decline events.",
@@ -304,7 +332,10 @@ fun PlayerProfileScreen(
                                 )
                             }
                         } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(
+                                modifier = Modifier.testTag("list_absences"),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 displayedRules.forEach { rule ->
                                     AbsenceCard(
                                         rule = rule,
@@ -374,7 +405,10 @@ fun PlayerProfileScreen(
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
-                                    TextButton(onClick = { showJerseyDialog = true }) {
+                                    TextButton(
+                                        onClick = { showJerseyDialog = true },
+                                        modifier = Modifier.testTag("btn_edit_jersey")
+                                    ) {
                                         Text("Edit")
                                     }
                                 }
@@ -400,7 +434,10 @@ fun PlayerProfileScreen(
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
-                                    TextButton(onClick = { showPositionDialog = true }) {
+                                    TextButton(
+                                        onClick = { showPositionDialog = true },
+                                        modifier = Modifier.testTag("btn_edit_position")
+                                    ) {
                                         Text("Edit")
                                     }
                                 }
@@ -411,7 +448,7 @@ fun PlayerProfileScreen(
                         if (state.isOwnProfile && member.role == "player") {
                             TextButton(
                                 onClick = { showLeaveDialog = true },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp).testTag("btn_leave_team"),
                                 shape = PillShape,
                                 colors = ButtonDefaults.textButtonColors(
                                     contentColor = MaterialTheme.colorScheme.error
@@ -426,10 +463,25 @@ fun PlayerProfileScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
+                        if (state.isOwnProfile) {
+                            TextButton(
+                                onClick = onLogout,
+                                modifier = Modifier.fillMaxWidth().height(48.dp).testTag("profile_btn_logout"),
+                                shape = PillShape
+                            ) {
+                                Text(
+                                    "Log out",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                        }
+
                         if (isNavProfile) {
                             TextButton(
                                 onClick = { viewModel.openDeleteDialog() },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp).testTag("btn_delete_account"),
                                 shape = PillShape,
                                 colors = ButtonDefaults.textButtonColors(
                                     contentColor = MaterialTheme.colorScheme.error
@@ -461,7 +513,8 @@ fun PlayerProfileScreen(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = if (isNavProfile) 112.dp else 24.dp),
+                    .padding(end = 20.dp, bottom = if (isNavProfile) 112.dp else 24.dp)
+                    .testTag("fab_add_absence"),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(20.dp)
@@ -505,6 +558,7 @@ fun PlayerProfileScreen(
     // Delete confirm dialog
     deleteTargetRule?.let { rule ->
         AlertDialog(
+            modifier = Modifier.testTagsAsResourceId(),
             onDismissRequest = { deleteTargetRule = null },
             shape = RoundedCornerShape(28.dp),
             title = { Text("Delete absence rule?", fontWeight = FontWeight.Bold) },
@@ -515,13 +569,17 @@ fun PlayerProfileScreen(
                         viewModel.deleteAbsence(rule.id)
                         deleteTargetRule = null
                     },
+                    modifier = Modifier.testTag("btn_delete_rule_confirm"),
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Delete Rule")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTargetRule = null }) {
+                TextButton(
+                    onClick = { deleteTargetRule = null },
+                    modifier = Modifier.testTag("btn_delete_rule_cancel")
+                ) {
                     Text("Keep Rule")
                 }
             }
@@ -531,6 +589,7 @@ fun PlayerProfileScreen(
     // Leave confirmation dialog
     if (showLeaveDialog) {
         AlertDialog(
+            modifier = Modifier.testTagsAsResourceId(),
             onDismissRequest = { showLeaveDialog = false },
             shape = RoundedCornerShape(28.dp),
             title = { Text("Leave Team", fontWeight = FontWeight.Bold) },
@@ -541,11 +600,15 @@ fun PlayerProfileScreen(
                         showLeaveDialog = false
                         viewModel.leaveTeam(teamId)
                     },
+                    modifier = Modifier.testTag("btn_leave_confirm"),
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("Leave") }
             },
             dismissButton = {
-                TextButton(onClick = { showLeaveDialog = false }) { Text("Cancel") }
+                TextButton(
+                    onClick = { showLeaveDialog = false },
+                    modifier = Modifier.testTag("btn_leave_cancel")
+                ) { Text("Cancel") }
             }
         )
     }
@@ -602,6 +665,7 @@ private fun TextFieldDialog(
 ) {
     var value by remember { mutableStateOf(initialValue) }
     AlertDialog(
+        modifier = Modifier.testTagsAsResourceId(),
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(28.dp),
         title = { Text(title, fontWeight = FontWeight.Bold) },
@@ -612,14 +676,21 @@ private fun TextFieldDialog(
                 placeholder = { Text(placeholder) },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                modifier = Modifier.testTag("tf_profile_field")
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(value) }) { Text("Save") }
+            TextButton(
+                onClick = { onConfirm(value) },
+                modifier = Modifier.testTag("btn_profile_field_save")
+            ) { Text("Save") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("btn_profile_field_cancel")
+            ) { Text("Cancel") }
         }
     )
 }

@@ -3,7 +3,6 @@ package ch.teamorg.di
 import ch.teamorg.auth.AuthViewModel
 import ch.teamorg.ui.billing.BillingViewModel
 import ch.teamorg.ui.club.ClubMembersViewModel
-import ch.teamorg.ui.club.ClubSetupViewModel
 import ch.teamorg.ui.events.CreateEditEventViewModel
 import ch.teamorg.ui.events.EventDetailViewModel
 import ch.teamorg.ui.events.EventListViewModel
@@ -22,11 +21,10 @@ import ch.teamorg.ui.selfserve.CreateTeamOrClubViewModel
 import org.koin.dsl.module
 
 val uiModule = module {
-    factory { AuthViewModel(get()) }
+    factory { AuthViewModel(get(), get()) }
     factory { LoginViewModel(get()) }
     factory { RegisterViewModel(get()) }
     factory { EmptyStateViewModel(get(), get()) }
-    factory { ClubSetupViewModel(get()) }
     factory { CreateTeamOrClubViewModel(get(), get()) }
     factory { CardSetupViewModel(get()) }
     factory { BillingViewModel(get()) }

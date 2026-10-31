@@ -1,5 +1,6 @@
 package ch.teamorg.ui.components
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -78,6 +79,7 @@ private fun FloatingNavItem(
         modifier = Modifier
             .clip(PillShape)
             .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
+            .testTag("bottom_nav_${label.lowercase()}")
             .clickable { onNavigate(screen) }
             .padding(13.dp),
         verticalAlignment = Alignment.CenterVertically
