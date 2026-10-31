@@ -17,7 +17,7 @@ ANDROID_SECRETS = %w[ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PAS
 PLAY_SECRETS = (ANDROID_SECRETS + %w[PLAY_SERVICE_ACCOUNT_JSON]).freeze
 UPDRAFT_SECRETS = (ANDROID_SECRETS + %w[UPDRAFT_APP_KEY UPDRAFT_API_KEY]).freeze
 IOS_SECRETS = %w[APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 IOS_DIST_CERT_P12_BASE64 IOS_DIST_CERT_PASSWORD].freeze
-ALL_SECRETS = (PLAY_SECRETS + UPDRAFT_SECRETS + IOS_SECRETS + %w[API_BASE_URL ONESIGNAL_APP_ID]).uniq.freeze
+ALL_SECRETS = (PLAY_SECRETS + UPDRAFT_SECRETS + IOS_SECRETS + %w[API_BASE_URL ONESIGNAL_APP_ID SENTRY_DSN]).uniq.freeze
 
 def require_env!(*keys)
   missing = keys.flatten.select { |k| ENV[k].to_s.empty? }
@@ -135,6 +135,10 @@ lane :ios_testflight do
          config.include?("API_BASE_URL=#{api_base_url}")
     UI.user_error!("Failed to inject TEAM_ID/CURRENT_PROJECT_VERSION/API_BASE_URL into #{XCODE_CONFIG_FILE}")
   end
+  sentry_dsn = ENV["SENTRY_DSN"].to_s.strip
+  sentry_line = "SENTRY_DSN=#{sentry_dsn.sub('://', ':/$()/')}"
+  config = config.sub(/^SENTRY_DSN=.*$/) { sentry_line }
+  UI.user_error!("Failed to inject SENTRY_DSN into #{XCODE_CONFIG_FILE}") unless sentry_dsn.empty? || config.include?(sentry_line)
   File.write(config_path, config)
 
   # Signing must be scoped to the app target via the pbxproj: passing it as

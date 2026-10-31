@@ -69,7 +69,8 @@ Feature docs live in [docs/](docs/) — e.g. [unified attendance](docs/unified-a
 |---|---|
 | `DATABASE_URL` | PostgreSQL JDBC URL, e.g. `jdbc:postgresql://localhost:5432/teamorg` |
 | `JWT_SECRET` | Secret string for signing JWT tokens |
-| `API_BASE_URL` | Server base URL used by clients (default: `https://api.teamorg.app`) |
+| `API_BASE_URL` | Server base URL used by clients (default: `https://server.teamorg.ch`) |
+| `SENTRY_DSN` | Optional Sentry DSN for mobile crash reporting (env var or `local.properties`). Empty disables Sentry (default for debug and local builds) |
 | `API_URL` | Server base URL the **admin web app** proxies to (default: `http://localhost:8080`) |
 | `invite.base-url` (server config) | Base URL for generated invite links (default: `https://teamorg.ch`, whose `/i/*` landing forwards to the app) |
 

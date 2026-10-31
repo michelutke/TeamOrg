@@ -98,6 +98,21 @@ configurations.all {
     resolutionStrategy.force("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
 }
 
+// Resolve SENTRY_DSN from (in order): env var, local.properties. Empty disables crash reporting.
+// A non-empty value that is not an https DSN fails the build instead of shipping a broken config.
+fun resolveSentryDsn(): String {
+    val raw = System.getenv("SENTRY_DSN")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: rootProject.file("local.properties").takeIf { it.exists() }
+            ?.readLines()
+            ?.firstOrNull { it.startsWith("SENTRY_DSN=") }
+            ?.substringAfter("=")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        ?: return ""
+    require(raw.startsWith("https://") && "@" in raw) { "SENTRY_DSN must be an https DSN containing '@'" }
+    return raw
+}
+
 android {
     namespace = "ch.teamorg"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -117,6 +132,7 @@ android {
             props
         }
         buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
+        buildConfigField("String", "SENTRY_DSN", "\"\"")
     }
 
     signingConfigs {
@@ -132,6 +148,7 @@ android {
         getByName("release") {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
+            buildConfigField("String", "SENTRY_DSN", "\"${resolveSentryDsn()}\"")
         }
     }
 

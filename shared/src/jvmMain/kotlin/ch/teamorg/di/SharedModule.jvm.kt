@@ -1,5 +1,6 @@
 package ch.teamorg.di
 
+import ch.teamorg.auth.SessionExpiredNotifier
 import ch.teamorg.data.network.HttpClientFactory
 import ch.teamorg.data.repository.AuthRepositoryImpl
 import ch.teamorg.data.repository.BillingRepositoryImpl
@@ -22,8 +23,9 @@ import org.koin.dsl.module
 
 actual val sharedModule = module {
     single { UserPreferences(PreferencesSettings(Preferences.userRoot().node("ch.teamorg"))) }
-    single { HttpClientFactory.create(get()) }
-    singleOf(::AuthRepositoryImpl) bind AuthRepository::class
+    single { SessionExpiredNotifier() }
+    single { HttpClientFactory.create(get(), get()) }
+    single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
     singleOf(::ClubRepositoryImpl) bind ClubRepository::class
     singleOf(::TeamRepositoryImpl) bind TeamRepository::class
     singleOf(::InviteRepositoryImpl) bind InviteRepository::class
