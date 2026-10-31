@@ -176,4 +176,14 @@ class AuthViewModelTest {
 
         viewModel.state.value.shouldBeInstanceOf<AuthState.Unauthenticated>()
     }
+
+    @Test
+    fun logout_callsRepositoryLogout() = runTest(testDispatcher) {
+        fakeAuth.loggedIn = true
+        viewModel = AuthViewModel(fakeAuth)
+
+        viewModel.logout()
+
+        fakeAuth.logoutCalled shouldBe true
+    }
 }
