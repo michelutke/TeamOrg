@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ch.teamorg.payments.isBillingSupported
 import ch.teamorg.ui.components.DeleteAccountDialog
 import ch.teamorg.ui.components.TeamorgTextField
 import ch.teamorg.ui.testTagsAsResourceId
@@ -89,13 +90,22 @@ fun EmptyStateScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Create a team or club — primary CTA
-            Button(
-                onClick = { viewModel.onCreateClubClick() },
-                modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_create_team_or_club"),
-                shape = PillShape
-            ) {
-                Text("Create a team or club", style = MaterialTheme.typography.titleMedium)
+            if (isBillingSupported) {
+                // Create a team or club — primary CTA
+                Button(
+                    onClick = { viewModel.onCreateClubClick() },
+                    modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_create_team_or_club"),
+                    shape = PillShape
+                ) {
+                    Text("Create a team or club", style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                Text(
+                    text = "Ask your coach for an invite link.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             }
 
             // Join a team — invite redemption card
