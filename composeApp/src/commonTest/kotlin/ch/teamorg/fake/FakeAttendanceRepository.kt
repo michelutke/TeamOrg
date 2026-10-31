@@ -27,6 +27,7 @@ class FakeAttendanceRepository : AttendanceRepository {
     var lastSetMemberUnexcused: Boolean? = null
     var lastFinalizeEventId: String? = null
     var lastReopenEventId: String? = null
+    val submitCalls = mutableListOf<Pair<String, SubmitResponseRequest>>()
 
     fun reset() {
         getEventAttendanceResult = Result.success(emptyList())
@@ -47,13 +48,17 @@ class FakeAttendanceRepository : AttendanceRepository {
         lastSetMemberUnexcused = null
         lastFinalizeEventId = null
         lastReopenEventId = null
+        submitCalls.clear()
     }
 
     override suspend fun getEventAttendance(eventId: String): Result<List<AttendanceResponse>> = getEventAttendanceResult
 
     override suspend fun getMyResponse(eventId: String): Result<AttendanceResponse?> = getMyResponseResult
 
-    override suspend fun submitResponse(eventId: String, request: SubmitResponseRequest): Result<AttendanceResponse> = submitResponseResult
+    override suspend fun submitResponse(eventId: String, request: SubmitResponseRequest): Result<AttendanceResponse> {
+        submitCalls += eventId to request
+        return submitResponseResult
+    }
 
     override suspend fun setMemberResponse(
         eventId: String,
