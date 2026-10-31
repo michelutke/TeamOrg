@@ -25,16 +25,14 @@ abstract class IntegrationTestBase {
             .also { it.start() }
     }
 
-    fun withTeamorgTestApplication(block: suspend ApplicationTestBuilder.() -> Unit) =
-        withTeamorgTestApplication(koinOverride = null, block = block)
-
     /**
-     * Variant that loads an extra Koin module (with override enabled) after the production
+     * Optionally loads an extra Koin module (with override enabled) after the production
      * [module] has wired the default bindings — lets a test swap a `single` (e.g. the
-     * SwissVolleyClient) for a fake/stub.
+     * SwissVolleyClient) for a fake/stub. [extraConfig] adds or overrides config entries.
      */
     fun withTeamorgTestApplication(
-        koinOverride: Module?,
+        koinOverride: Module? = null,
+        extraConfig: Map<String, String> = emptyMap(),
         block: suspend ApplicationTestBuilder.() -> Unit
     ) = testApplication {
         val testConfig = MapApplicationConfig(
@@ -49,7 +47,8 @@ abstract class IntegrationTestBase {
             "database.password" to postgres.password,
             // Never run the background SwissVolley poller in tests: it would hit the real API
             // and race the shared test DB. Tests drive SwissVolleySyncService directly instead.
-            "swissvolley.sync-enabled" to "false"
+            "swissvolley.sync-enabled" to "false",
+            *extraConfig.toList().toTypedArray()
         )
 
         environment { config = testConfig }
