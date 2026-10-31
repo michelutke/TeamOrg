@@ -290,6 +290,7 @@ fun AppNavigation(
                         backStack.add(Screen.Teams)
                     },
                     onAccountDeleted = onLogout,
+                    onLogout = onLogout,
                     isNavProfile = true
                 )
             }
@@ -301,7 +302,8 @@ fun AppNavigation(
                     userId = screen.userId,
                     viewModel = viewModel,
                     onBack = { backStack.removeAt(backStack.lastIndex) },
-                    onLeftTeam = { backStack.removeAt(backStack.lastIndex) }
+                    onLeftTeam = { backStack.removeAt(backStack.lastIndex) },
+                    onLogout = onLogout
                 )
             }
             is Screen.ClubMembers -> {

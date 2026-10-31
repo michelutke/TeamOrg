@@ -1,5 +1,7 @@
 package ch.teamorg.ui.team
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -28,6 +30,8 @@ fun TeamEditSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_team_edit")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp),
@@ -43,7 +47,7 @@ fun TeamEditSheet(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Team name") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("tf_team_name"),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp)
             )
@@ -52,7 +56,7 @@ fun TeamEditSheet(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description (optional)") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("tf_team_description"),
                 minLines = 2,
                 maxLines = 4,
                 shape = RoundedCornerShape(16.dp)
@@ -67,7 +71,8 @@ fun TeamEditSheet(
                 enabled = name.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(57.dp),
+                    .height(57.dp)
+                    .testTag("btn_team_save"),
                 shape = PillShape
             ) {
                 Text(

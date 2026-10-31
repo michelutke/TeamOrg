@@ -19,6 +19,7 @@ import ch.teamorg.auth.AuthViewModel
 import ch.teamorg.navigation.AppNavigation
 import ch.teamorg.navigation.Screen
 import ch.teamorg.ui.components.TeamorgBottomBar
+import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.TeamorgTheme
 import ch.teamorg.ui.components.PlatformBackHandler
 import ch.teamorg.ui.components.TeamorgSplash
@@ -111,7 +112,7 @@ fun TeamorgApp(
             backStack.removeAt(backStack.lastIndex)
         }
 
-        Box {
+        Box(Modifier.testTagsAsResourceId()) {
             Box(
                 modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
             ) {

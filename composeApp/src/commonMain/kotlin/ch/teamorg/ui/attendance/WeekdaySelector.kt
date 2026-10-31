@@ -1,5 +1,6 @@
 package ch.teamorg.ui.attendance
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,7 +44,8 @@ fun WeekdaySelector(
                         }
                     )
                     .clickable { onToggle(index) }
-                    .semantics { contentDescription = WEEKDAY_FULL[index] },
+                    .semantics { contentDescription = WEEKDAY_FULL[index] }
+                    .testTag("btn_weekday_$index"),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

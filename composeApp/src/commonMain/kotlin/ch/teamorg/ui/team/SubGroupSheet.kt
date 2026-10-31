@@ -1,5 +1,7 @@
 package ch.teamorg.ui.team
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +40,8 @@ fun SubGroupSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_subgroups")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp)
@@ -77,12 +81,13 @@ fun SubGroupSheet(
                     value = newGroupName,
                     onValueChange = { newGroupName = it },
                     placeholder = { Text("Sub-group name") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("tf_subgroup_name"),
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     trailingIcon = {
                         Row {
                             TextButton(
+                                modifier = Modifier.testTag("btn_subgroup_add"),
                                 onClick = {
                                     if (newGroupName.isNotBlank()) {
                                         onCreateSubGroup(newGroupName.trim())
@@ -91,7 +96,10 @@ fun SubGroupSheet(
                                     }
                                 }
                             ) { Text("Add") }
-                            TextButton(onClick = { showAddField = false; newGroupName = "" }) { Text("Cancel") }
+                            TextButton(
+                                onClick = { showAddField = false; newGroupName = "" },
+                                modifier = Modifier.testTag("btn_subgroup_cancel")
+                            ) { Text("Cancel") }
                         }
                     }
                 )
@@ -103,7 +111,8 @@ fun SubGroupSheet(
                     onClick = { showAddField = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(57.dp),
+                        .height(57.dp)
+                        .testTag("btn_subgroup_new"),
                     shape = PillShape
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
@@ -130,6 +139,7 @@ private fun SubGroupRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag("subgroup_row_${subGroup.id}")
             .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(horizontal = 18.dp, vertical = 12.dp),
@@ -152,7 +162,10 @@ private fun SubGroupRow(
             )
         }
         if (isCoachOrManager) {
-            IconButton(onClick = { showDeleteDialog = true }) {
+            IconButton(
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier.testTag("btn_subgroup_delete_${subGroup.id}")
+            ) {
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Delete sub-group",
@@ -164,6 +177,7 @@ private fun SubGroupRow(
 
     if (showDeleteDialog) {
         AlertDialog(
+            modifier = Modifier.testTagsAsResourceId(),
             onDismissRequest = { showDeleteDialog = false },
             shape = RoundedCornerShape(28.dp),
             title = { Text("Delete Sub-group", fontWeight = FontWeight.Bold) },
@@ -171,11 +185,15 @@ private fun SubGroupRow(
             confirmButton = {
                 TextButton(
                     onClick = { showDeleteDialog = false; onDelete() },
+                    modifier = Modifier.testTag("btn_subgroup_delete_confirm"),
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    modifier = Modifier.testTag("btn_subgroup_delete_cancel")
+                ) { Text("Cancel") }
             }
         )
     }

@@ -1,5 +1,7 @@
 package ch.teamorg.ui.inbox
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -48,6 +50,8 @@ fun ReminderPickerSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_reminder")
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp),
@@ -73,7 +77,8 @@ fun ReminderPickerSheet(
                             minutesText = if (m > 0) m.toString() else ""
                         },
                         label = { Text(preset.label) },
-                        shape = PillShape
+                        shape = PillShape,
+                        modifier = Modifier.testTag("chip_reminder_preset_${preset.minutes}")
                     )
                 }
             }
@@ -90,7 +95,7 @@ fun ReminderPickerSheet(
                     label = { Text("Hours") },
                     suffix = { Text("h") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testTag("tf_reminder_hours"),
                     singleLine = true
                 )
                 OutlinedTextField(
@@ -99,7 +104,7 @@ fun ReminderPickerSheet(
                     label = { Text("Minutes") },
                     suffix = { Text("min") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testTag("tf_reminder_minutes"),
                     singleLine = true
                 )
             }
@@ -110,7 +115,8 @@ fun ReminderPickerSheet(
                 enabled = isValid,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(57.dp),
+                    .height(57.dp)
+                    .testTag("btn_reminder_set"),
                 shape = PillShape
             ) {
                 Text("Set Reminder", style = MaterialTheme.typography.titleMedium)
@@ -120,7 +126,7 @@ fun ReminderPickerSheet(
             if (onRemove != null) {
                 TextButton(
                     onClick = onRemove,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("btn_reminder_remove")
                 ) {
                     Text("No reminder", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import ch.teamorg.payments.SetupResult
 import ch.teamorg.payments.rememberCardSetupSheet
 import ch.teamorg.ui.components.TeamorgLoader
-import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 import kotlinx.coroutines.flow.collectLatest
 
@@ -57,7 +56,6 @@ fun BillingScreen(
     }
 
     Scaffold(
-        modifier = Modifier.testTagsAsResourceId(),
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
