@@ -13,6 +13,7 @@ object UsersTable : Table("users") {
     val isSuperAdmin = bool("is_super_admin").default(false)
     val provisional = bool("provisional").default(false)
     val deletedAt = timestamp("deleted_at").nullable()
+    val tokenVersion = integer("token_version").default(0)
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
 
