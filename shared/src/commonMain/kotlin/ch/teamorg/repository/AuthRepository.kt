@@ -6,6 +6,8 @@ import ch.teamorg.domain.DeleteAccountResult
 import ch.teamorg.domain.LoginRequest
 import ch.teamorg.domain.RegisterRequest
 
+class EmailAlreadyRegisteredException : Exception("An account with this email already exists. Log in instead.")
+
 interface AuthRepository {
     suspend fun register(request: RegisterRequest): Result<AuthResponse>
     suspend fun login(request: LoginRequest): Result<AuthResponse>
