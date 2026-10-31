@@ -65,7 +65,7 @@ class EmptyStateScreenTest {
     }
 
     @Test
-    fun emptyStateScreen_showsCreateTeamOrClubButton_forSuperAdmin() {
+    fun emptyStateScreen_hidesCreateTeamOrClubButton_forSuperAdmin() {
         val superAdmin = FakeAuthRepository().apply {
             getMeResult = Result.success(
                 AuthUser(
@@ -79,14 +79,21 @@ class EmptyStateScreenTest {
         }
         launchScreen(authRepository = superAdmin)
 
-        composeTestRule.onNodeWithTag("btn_create_team_or_club").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("btn_create_team_or_club").assertDoesNotExist()
     }
 
     @Test
-    fun emptyStateScreen_showsCreateTeamOrClubButton_forNonSuperAdmin() {
+    fun emptyStateScreen_showsAskCoachForInviteHint() {
         launchScreen()
 
-        composeTestRule.onNodeWithTag("btn_create_team_or_club").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ask your coach for an invite link.").assertIsDisplayed()
+    }
+
+    @Test
+    fun emptyStateScreen_hidesCreateTeamOrClubButton_forNonSuperAdmin() {
+        launchScreen()
+
+        composeTestRule.onNodeWithTag("btn_create_team_or_club").assertDoesNotExist()
     }
 
     @Test

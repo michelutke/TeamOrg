@@ -10,12 +10,16 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Clock
 
 class MutationQueueManager(
     private val db: TeamorgDb,
     private val httpClient: HttpClient
 ) {
+    private val flushMutex = Mutex()
+
     fun enqueue(type: String, endpoint: String, method: String, body: String?) {
         db.attendanceQueries.enqueueMutation(
             type = type,
@@ -26,7 +30,7 @@ class MutationQueueManager(
         )
     }
 
-    suspend fun flushQueue(): List<FlushResult> {
+    suspend fun flushQueue(): List<FlushResult> = flushMutex.withLock {
         val pending = db.attendanceQueries.getPendingMutations().executeAsList()
         val results = mutableListOf<FlushResult>()
         for (mutation in pending) {
@@ -54,7 +58,7 @@ class MutationQueueManager(
                 results.add(FlushResult.Error(mutation.id, e.message ?: "Unknown error"))
             }
         }
-        return results
+        results
     }
 
     fun hasPendingMutations(): Boolean =
