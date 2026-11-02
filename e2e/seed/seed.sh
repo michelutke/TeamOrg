@@ -94,6 +94,13 @@ SINGLE="$(api POST /events "$COACH_TOKEN" "$(jq -nc --arg t "$SINGLE_TITLE" --ar
   '{title:$t,type:"training",startAt:$s,endAt:$e,location:"E2E Hall",teamIds:[$team]}')")"
 SINGLE_ID="$(jq -r .id <<<"$SINGLE")"
 
+PAST_START="$(iso_at -1 18)"
+PAST_END="$(iso_at -1 19.5)"
+PAST_TITLE="E2E Past Training $RUN_ID"
+PAST="$(api POST /events "$COACH_TOKEN" "$(jq -nc --arg t "$PAST_TITLE" --arg s "$PAST_START" --arg e "$PAST_END" --arg team "$TEAM_ID" \
+  '{title:$t,type:"training",startAt:$s,endAt:$e,location:"E2E Hall",teamIds:[$team]}')")"
+PAST_ID="$(jq -r .id <<<"$PAST")"
+
 SERIES_START="$(iso_at 2 19)"
 SERIES_END="$(iso_at 2 20.5)"
 SERIES_UNTIL="$(date_at 58)"
@@ -105,6 +112,10 @@ SERIES="$(api POST /events "$COACH_TOKEN" "$(jq -nc --arg t "$SERIES_TITLE" --ar
     recurring:{patternType:"weekly",weekdays:[$wd],seriesEndDate:$until}}')")"
 SERIES_EVENT_ID="$(jq -r .id <<<"$SERIES")"
 SERIES_ID="$(jq -r .seriesId <<<"$SERIES")"
+
+log "creating reusable player invite"
+INVITE="$(api POST "/teams/$TEAM_ID/invites" "$COACH_TOKEN" '{"role":"player","reusable":true}')"
+INVITE_TOKEN="$(jq -r .token <<<"$INVITE")"
 
 log "player responses (create coach notifications)"
 rsvp() { api PUT "/events/$SINGLE_ID/attendance/me" "$(jq -r .token <<<"$1")" "$2" >/dev/null; }
@@ -139,13 +150,17 @@ RESULT="$(jq -n \
   --argjson coach "$(player_json "$COACH" "$COACH_EMAIL")" \
   --argjson players "$PLAYERS_JSON" \
   --arg singleId "$SINGLE_ID" --arg singleTitle "$SINGLE_TITLE" --arg singleStart "$SINGLE_START" \
+  --arg pastId "$PAST_ID" --arg pastTitle "$PAST_TITLE" \
   --arg seriesEventId "$SERIES_EVENT_ID" --arg seriesId "$SERIES_ID" --arg seriesTitle "$SERIES_TITLE" --arg seriesStart "$SERIES_START" \
+  --arg inviteToken "$INVITE_TOKEN" \
   --argjson coachUnread "$COACH_UNREAD" --argjson player1Unread "$PLAYER1_UNREAD" \
   '{baseUrl:$baseUrl,password:$password,runId:$runId,
     club:{id:$clubId,name:$clubName},team:{id:$teamId,name:$teamName},
     manager:$manager,coach:$coach,players:$players,
     events:{single:{id:$singleId,title:$singleTitle,startAt:$singleStart},
+            past:{id:$pastId,title:$pastTitle},
             series:{eventId:$seriesEventId,seriesId:$seriesId,title:$seriesTitle,firstStartAt:$seriesStart}},
+    invite:{token:$inviteToken,url:("https://teamorg.ch/i/" + $inviteToken),scheme:("teamorg://invite/team/" + $inviteToken)},
     notifications:{coachUnread:$coachUnread,player1Unread:$player1Unread}}')"
 
 if [[ "$OUTPUT" == "env" ]]; then
@@ -157,8 +172,10 @@ if [[ "$OUTPUT" == "env" ]]; then
     "E2E_COACH_NAME=\(.coach.displayName)",
     (.players | to_entries[] | "E2E_PLAYER\(.key + 1)_EMAIL=\(.value.email)", "E2E_PLAYER\(.key + 1)_NAME=\(.value.displayName)", "E2E_PLAYER\(.key + 1)_ID=\(.value.id)"),
     "E2E_SINGLE_EVENT_ID=\(.events.single.id)", "E2E_SINGLE_EVENT_TITLE=\(.events.single.title)",
+    "E2E_PAST_EVENT_ID=\(.events.past.id)", "E2E_PAST_EVENT_TITLE=\(.events.past.title)",
     "E2E_SERIES_EVENT_ID=\(.events.series.eventId)", "E2E_SERIES_ID=\(.events.series.seriesId)",
-    "E2E_SERIES_TITLE=\(.events.series.title)"' <<<"$RESULT"
+    "E2E_SERIES_TITLE=\(.events.series.title)",
+    "E2E_INVITE_TOKEN=\(.invite.token)"' <<<"$RESULT"
 else
   printf '%s\n' "$RESULT"
 fi

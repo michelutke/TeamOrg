@@ -1,0 +1,7 @@
+appId: ch.teamorg
+---
+# Cold start with wiped app data. The runner also resets the iOS simulator keychain, which survives clearState.
+- launchApp:
+    clearState: true
+    stopApp: true
+- runFlow: dismiss-alerts.yaml

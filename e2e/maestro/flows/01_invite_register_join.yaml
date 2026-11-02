@@ -1,0 +1,60 @@
+appId: ch.teamorg
+name: Invite link, register, join team
+tags: [invite]
+---
+# Universal/app links are not wired on iOS yet, so both platforms use the custom scheme teamorg://invite/team/{token}.
+- evalScript: ${output.newEmail = 'e2e-new-' + Date.now() + '@e2e.teamorg.test'}
+- runFlow: ../subflows/fresh-start.yaml
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: ${INVITE_SCHEME_URL}
+# Logged out, the app keeps the token pending and shows login; the invite screen follows registration.
+- extendedWaitUntil:
+    visible:
+      id: btn_navigate_register
+    timeout: 20000
+- tapOn:
+    id: btn_navigate_register
+- extendedWaitUntil:
+    visible:
+      id: tf_display_name
+    timeout: 10000
+- tapOn:
+    id: tf_display_name
+- inputText: Nora Newplayer
+- tapOn:
+    id: tf_email
+- inputText: ${output.newEmail}
+- tapOn:
+    id: tf_password
+- inputText: ${PASSWORD}
+# The iOS keyboard covers the lower fields: dismiss it before tapping them.
+- hideKeyboard
+- tapOn:
+    id: tf_confirm_password
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: btn_create_account
+- runFlow:
+    when:
+      platform: iOS
+      visible:
+        id: btn_create_account
+    commands:
+      - tapOn:
+          id: btn_create_account
+- runFlow: ../subflows/dismiss-alerts.yaml
+- extendedWaitUntil:
+    visible:
+      id: btn_join_team
+    timeout: 20000
+- tapOn:
+    id: btn_join_team
+- runFlow: ../subflows/dismiss-alerts.yaml
+- extendedWaitUntil:
+    visible:
+      id: bottom_nav_events
+    timeout: 30000
+- assertVisible: ${SINGLE_EVENT_TITLE}

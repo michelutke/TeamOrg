@@ -1,0 +1,26 @@
+appId: ch.teamorg
+---
+# Needs env EMAIL and PASSWORD. Starts from the login screen.
+- extendedWaitUntil:
+    visible:
+      id: tf_email
+    timeout: 20000
+- tapOn:
+    id: tf_email
+- inputText: ${EMAIL}
+- tapOn:
+    id: tf_password
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: btn_sign_in
+# iOS swallows the first tap after typing (it only dismisses the keyboard); tap again if the form is still shown.
+- runFlow:
+    when:
+      platform: iOS
+      visible:
+        id: btn_sign_in
+    commands:
+      - tapOn:
+          id: btn_sign_in
+- runFlow: dismiss-alerts.yaml

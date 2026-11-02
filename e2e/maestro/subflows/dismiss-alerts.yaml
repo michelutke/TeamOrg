@@ -1,0 +1,7 @@
+appId: ch.teamorg
+---
+# System permission alerts (push notifications, photos) differ by platform and locale. All taps are optional:
+# an optional tapOn waits briefly for the alert and moves on when none shows up.
+- tapOn:
+    text: "Allow|Erlauben|Zulassen"
+    optional: true
