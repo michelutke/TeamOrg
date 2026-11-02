@@ -1,0 +1,37 @@
+appId: ch.teamorg
+name: Player changes the profile avatar from the photo library
+tags: [profile, skip-ios, wip]
+---
+# skip-ios: on the simulator the system photo picker does not show up under automation after
+# btn_avatar_choose_library, so no photo can be selected.
+# wip: the Android photo picker steps are not verified yet (CI only). Remove wip once they pass on the emulator.
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${PLAYER2_EMAIL}
+      PASSWORD: ${PASSWORD}
+- addMedia:
+    - ../fixtures/avatar.png
+- runFlow:
+    file: ../subflows/open-tab.yaml
+    env:
+      TAB_ID: bottom_nav_profile
+- extendedWaitUntil:
+    visible:
+      id: btn_avatar
+    timeout: 15000
+- assertVisible: PP
+- tapOn:
+    id: btn_avatar
+- extendedWaitUntil:
+    visible:
+      id: btn_avatar_choose_library
+    timeout: 10000
+- tapOn:
+    id: btn_avatar_choose_library
+- runFlow: ../subflows/dismiss-alerts.yaml
+- tapOn:
+    id: com.google.android.providers.media.module:id/icon_thumbnail
+- extendedWaitUntil:
+    notVisible: PP
+    timeout: 20000

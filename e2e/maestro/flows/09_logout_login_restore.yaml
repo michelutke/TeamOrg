@@ -1,0 +1,49 @@
+appId: ch.teamorg
+name: Logout, login again, session restore after a cold start
+tags: [session]
+---
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${PLAYER3_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-tab.yaml
+    env:
+      TAB_ID: bottom_nav_profile
+- scrollUntilVisible:
+    element:
+      id: profile_btn_logout
+- tapOn:
+    id: profile_btn_logout
+- extendedWaitUntil:
+    visible:
+      id: tf_email
+    timeout: 20000
+
+# Login again. The login form keeps the previous input after logout and eraseText only deletes before
+# the cursor, so the form is reset by a fresh start (logout was asserted above).
+- runFlow: ../subflows/fresh-start.yaml
+- runFlow:
+    file: ../subflows/login.yaml
+    env:
+      EMAIL: ${PLAYER3_EMAIL}
+      PASSWORD: ${PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: bottom_nav_events
+    timeout: 30000
+- runFlow: ../subflows/dismiss-alerts.yaml
+
+# Cold start without clearing app data restores the session
+- stopApp
+- launchApp:
+    stopApp: true
+- runFlow: ../subflows/dismiss-alerts.yaml
+- extendedWaitUntil:
+    visible:
+      id: bottom_nav_events
+    timeout: 30000
+- assertNotVisible:
+    id: tf_email
+- assertVisible: ${SINGLE_EVENT_TITLE}

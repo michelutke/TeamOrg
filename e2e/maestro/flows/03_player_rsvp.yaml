@@ -1,0 +1,70 @@
+appId: ch.teamorg
+name: Player RSVPs yes, then no with a reason, coach sees the result
+tags: [attendance]
+---
+# Uses the first series occurrence: the seeded single event already carries RSVPs of all players.
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${PLAYER1_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-event.yaml
+    env:
+      EVENT_TITLE: ${SERIES_TITLE}
+- tapOn:
+    id: btn_rsvp_going
+- extendedWaitUntil:
+    visible:
+      id: member_response_row_${PLAYER1_ID}
+    timeout: 15000
+- runScript:
+    file: ../scripts/assert-attendance.js
+    env:
+      EVENT_ID_TO_CHECK: ${SERIES_EVENT_ID}
+      USER_ID_TO_CHECK: ${PLAYER1_ID}
+      EXPECTED_STATUS: confirmed
+- tapOn:
+    id: btn_rsvp_declined
+- extendedWaitUntil:
+    visible:
+      id: sheet_begruendung
+    timeout: 10000
+- tapOn:
+    id: tf_reason
+- inputText: E2E cannot make it
+# The keyboard covers the submit button. The reason field is multiline, so Enter would add a line break.
+# The sheet may already be gone when Maestro retries the tap, the assertions below check the outcome.
+- hideKeyboard:
+    optional: true
+- tapOn:
+    id: btn_reason_submit
+    optional: true
+- extendedWaitUntil:
+    notVisible:
+      id: sheet_begruendung
+    timeout: 10000
+- runScript:
+    file: ../scripts/assert-attendance.js
+    env:
+      EVENT_ID_TO_CHECK: ${SERIES_EVENT_ID}
+      USER_ID_TO_CHECK: ${PLAYER1_ID}
+      EXPECTED_STATUS: declined
+      EXPECTED_REASON: E2E cannot make it
+
+# Coach sees the response in the member list
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${COACH_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-event.yaml
+    env:
+      EVENT_TITLE: ${SERIES_TITLE}
+- scrollUntilVisible:
+    element:
+      id: member_response_row_${PLAYER1_ID}
+- assertVisible:
+    id: txt_member_annotation_${PLAYER1_ID}
+- assertVisible: E2E cannot make it

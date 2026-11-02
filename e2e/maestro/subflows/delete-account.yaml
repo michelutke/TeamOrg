@@ -1,0 +1,35 @@
+appId: ch.teamorg
+---
+# Needs env PASSWORD. Starts with btn_delete_account on screen (scrolls to it), confirms the dialog
+# and waits for the login screen.
+- scrollUntilVisible:
+    element:
+      id: btn_delete_account
+- tapOn:
+    id: btn_delete_account
+- extendedWaitUntil:
+    visible:
+      id: tf_delete_account_password
+    timeout: 10000
+- tapOn:
+    id: tf_delete_account_password
+- inputText: ${PASSWORD}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey:
+          key: Enter
+          optional: true
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard:
+          optional: true
+- tapOn:
+    id: btn_delete_account_confirm
+- extendedWaitUntil:
+    visible:
+      id: tf_email
+    timeout: 30000

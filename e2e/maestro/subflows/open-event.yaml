@@ -1,0 +1,16 @@
+appId: ch.teamorg
+---
+# Needs env EVENT_TITLE. Starts on the Events tab and opens the first card with that title.
+- tapOn:
+    id: bottom_nav_events
+- retry:
+    maxRetries: 3
+    commands:
+      - scrollUntilVisible:
+          element: ${EVENT_TITLE}
+          timeout: 20000
+      - tapOn: ${EVENT_TITLE}
+      - extendedWaitUntil:
+          visible:
+            id: txt_event_title
+          timeout: 8000

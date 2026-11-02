@@ -1,0 +1,65 @@
+appId: ch.teamorg
+name: Coach overrides a player's attendance and finalizes the check-in
+tags: [attendance]
+---
+# Finalizing needs a response for every roster member (including players that joined in earlier flows),
+# so everybody is set through the API first.
+- runScript:
+    file: ../scripts/set-all-attendance.js
+    env:
+      EVENT_ID_TO_SET: ${PAST_EVENT_ID}
+      STATUS_TO_SET: confirmed
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${COACH_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-event.yaml
+    env:
+      EVENT_TITLE: ${PAST_EVENT_TITLE}
+
+# Override player 2 from going to absent
+- scrollUntilVisible:
+    element:
+      id: btn_edit_attendance_${PLAYER2_ID}
+- tapOn:
+    id: btn_edit_attendance_${PLAYER2_ID}
+- extendedWaitUntil:
+    visible:
+      id: sheet_coach_edit
+    timeout: 10000
+- tapOn:
+    id: chip_coach_absent
+- tapOn:
+    id: btn_coach_edit_save
+- extendedWaitUntil:
+    notVisible:
+      id: sheet_coach_edit
+    timeout: 10000
+- runScript:
+    file: ../scripts/assert-attendance.js
+    env:
+      EVENT_ID_TO_CHECK: ${PAST_EVENT_ID}
+      USER_ID_TO_CHECK: ${PLAYER2_ID}
+      EXPECTED_STATUS: declined
+
+# Finalize
+- scrollUntilVisible:
+    element:
+      id: btn_finalize_checkin
+# A tap right after the scroll is sometimes lost on the simulator, so tap and verify together.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: btn_finalize_checkin
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: btn_reopen_checkin
+          timeout: 8000
+- runScript:
+    file: ../scripts/assert-event-finalized.js
+    env:
+      EVENT_ID_TO_CHECK: ${PAST_EVENT_ID}

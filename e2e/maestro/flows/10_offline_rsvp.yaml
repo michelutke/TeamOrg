@@ -1,0 +1,34 @@
+appId: ch.teamorg
+name: RSVP while offline is synced after the network is back
+tags: [offline, skip-ios]
+---
+# skip-ios: the iOS simulator shares the host network and cannot go offline. Android uses airplane mode.
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${PLAYER2_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-event.yaml
+    env:
+      EVENT_TITLE: ${SERIES_TITLE}
+- setAirplaneMode: enabled
+- tapOn:
+    id: btn_rsvp_going
+- waitForAnimationToEnd
+- setAirplaneMode: disabled
+# The queued mutation is flushed when the app comes back to the foreground.
+- stopApp
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: bottom_nav_events
+    timeout: 60000
+- runScript:
+    file: ../scripts/assert-attendance.js
+    env:
+      EVENT_ID_TO_CHECK: ${SERIES_EVENT_ID}
+      USER_ID_TO_CHECK: ${PLAYER2_ID}
+      EXPECTED_STATUS: confirmed
+      WAIT_SECONDS: "30"

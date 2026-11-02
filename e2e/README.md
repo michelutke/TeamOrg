@@ -94,3 +94,44 @@ Compact RSVP pills (event list) use `btn_rsvp_*_compact`; the event detail ones 
   dismiss the system alert after signing in (`- tapOn: "Erlauben"` / `"Allow"`, optional) before using `id:` selectors.
 - The simulator build is ad-hoc signed on purpose; an unsigned app crashes at launch with Keychain error -34018.
 - Logout: `profile_btn_logout` on the own profile (also shown on the no-team Profile tab); `btn_logout` on the invite screen.
+- The iOS simulator keyboard can stay up after `hideKeyboard` and covers buttons below the field. Single-line
+  fields: `subflows/close-keyboard.yaml` (hideKeyboard plus Enter). The absence/RSVP reason field is multiline, so
+  Enter adds a line break there; that flow only calls `hideKeyboard`.
+- The iOS keychain survives `clearState`: `subflows/fresh-start.yaml` calls `clearKeychain` on iOS, which is needed when
+  one flow signs in as several users.
+- Maestro has no `assertTrue`: assertion scripts in `e2e/maestro/scripts` use a local `check()` that throws.
+- The login form keeps the previous input after logout, and `eraseText` only deletes before the cursor.
+- `checked:` selectors are not reliable for Compose switches on iOS, so settings are asserted through the API.
+- Always pass `--device` to Maestro (run.sh does): without it Maestro picks any connected phone first.
+- A simulator that stops reacting to taps (every tap "COMPLETED" with no effect) needs `xcrun simctl shutdown` and `boot`.
+
+## 6. Flows
+
+`e2e/maestro/run.sh <android|ios> [filter ...]` seeds a club (see section 2) and runs `e2e/maestro/flows/*.yaml` in
+order. All flows share one seed, so a flow that removes a seeded user changes what later flows can use:
+
+| Flow | Covers | Notes |
+|---|---|---|
+| 00 | coach login | |
+| 01 | invite link, register, join team | |
+| 02 | coach creates a single event and a weekly series | |
+| 03 | player RSVPs yes, then no with a reason, coach sees it | uses the first series occurrence |
+| 04 | coach overrides a player and finalizes the check-in | past event, other members set through the API |
+| 05 | inbox row, mark read, delete all | |
+| 06 | notification settings per team, persist after relaunch | |
+| 07 | profile absence, leave team | player 1 leaves the team |
+| 07b | avatar from the photo library | `wip`, `skip-ios` (picker does not show under automation) |
+| 08 | account deletion from the profile tab and from the empty state | fresh accounts |
+| 09 | logout, login again, session restore after a cold start | |
+| 10 | RSVP while offline, synced afterwards | `skip-ios`, Android airplane mode |
+
+Tags `wip`, `skip-ios` and `skip-android` exclude a flow on the platform (a `tags: [...]` line in the flow header).
+Password reset lives in another branch and has no flow here.
+
+## 7. CI
+
+- `.github/workflows/test-android-emulator.yml` starts Postgres (service) and the server with `E2E_SEED_ENABLED=true`,
+  runs the instrumented tests, then installs the debug app and runs `e2e/maestro/run.sh android` on the same emulator.
+- `.github/workflows/test-ios-e2e.yml` (macos-15) installs Postgres with Homebrew, starts the server, builds the app with
+  `e2e/ios/build-sim.sh`, boots a simulator and runs `e2e/maestro/run.sh ios`.
+- Both upload `build/maestro-artifacts` when a run fails.
