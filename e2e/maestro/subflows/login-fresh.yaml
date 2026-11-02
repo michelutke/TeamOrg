@@ -1,0 +1,10 @@
+appId: ch.teamorg
+---
+# Fresh start, then log in as EMAIL / PASSWORD and wait for the main screen.
+- runFlow: fresh-start.yaml
+- runFlow: login.yaml
+- extendedWaitUntil:
+    visible:
+      id: bottom_nav_events
+    timeout: 30000
+- runFlow: dismiss-alerts.yaml

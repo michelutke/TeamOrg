@@ -1,0 +1,7 @@
+appId: ch.teamorg
+---
+# Needs env LINK. iOS asks before opening a custom-scheme URL, Android may show nothing.
+- openLink: ${LINK}
+- tapOn:
+    text: "Open|Öffnen"
+    optional: true

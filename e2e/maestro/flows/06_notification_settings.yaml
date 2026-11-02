@@ -1,0 +1,65 @@
+appId: ch.teamorg
+name: Notification settings per team persist after relaunch
+tags: [settings]
+---
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${COACH_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-tab.yaml
+    env:
+      TAB_ID: bottom_nav_inbox
+- tapOn:
+    id: btn_notification_settings
+- extendedWaitUntil:
+    visible:
+      id: txt_notification_settings_title
+    timeout: 10000
+- tapOn:
+    id: chip_team_${TEAM_ID}
+- extendedWaitUntil:
+    visible:
+      id: switch_events_new
+    timeout: 10000
+- runScript:
+    file: ../scripts/assert-notification-setting.js
+    env:
+      SETTING_NAME: eventsNew
+      EXPECTED_VALUE: "true"
+- tapOn:
+    id: switch_events_new
+- waitForAnimationToEnd
+- runScript:
+    file: ../scripts/assert-notification-setting.js
+    env:
+      SETTING_NAME: eventsNew
+      EXPECTED_VALUE: "false"
+
+# Cold start without clearing app data, the session and the setting survive
+- stopApp
+- launchApp:
+    stopApp: true
+- runFlow: ../subflows/dismiss-alerts.yaml
+- extendedWaitUntil:
+    visible:
+      id: bottom_nav_events
+    timeout: 30000
+- runFlow:
+    file: ../subflows/open-tab.yaml
+    env:
+      TAB_ID: bottom_nav_inbox
+- tapOn:
+    id: btn_notification_settings
+- tapOn:
+    id: chip_team_${TEAM_ID}
+- extendedWaitUntil:
+    visible:
+      id: switch_events_new
+    timeout: 10000
+- runScript:
+    file: ../scripts/assert-notification-setting.js
+    env:
+      SETTING_NAME: eventsNew
+      EXPECTED_VALUE: "false"

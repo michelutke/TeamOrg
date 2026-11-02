@@ -1,0 +1,88 @@
+appId: ch.teamorg
+name: Coach creates a single event and a weekly series
+tags: [events]
+---
+- evalScript: ${output.singleTitle = 'E2E Created Single ' + Date.now()}
+- evalScript: ${output.seriesTitle = 'E2E Created Series ' + Date.now()}
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${COACH_EMAIL}
+      PASSWORD: ${PASSWORD}
+
+# Single event
+- tapOn:
+    id: fab_create_event
+- extendedWaitUntil:
+    visible:
+      id: tf_event_title
+    timeout: 10000
+- tapOn:
+    id: tf_event_title
+- inputText: ${output.singleTitle}
+- runFlow: ../subflows/close-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: tf_event_location
+- tapOn:
+    id: tf_event_location
+- inputText: E2E Hall
+- runFlow: ../subflows/close-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: pill_team_${TEAM_ID}
+- tapOn:
+    id: pill_team_${TEAM_ID}
+- scrollUntilVisible:
+    element:
+      id: btn_save_event
+- tapOn:
+    id: btn_save_event
+- extendedWaitUntil:
+    visible: ${output.singleTitle}
+    timeout: 20000
+
+# Weekly series, no end date
+- tapOn:
+    id: fab_create_event
+- extendedWaitUntil:
+    visible:
+      id: tf_event_title
+    timeout: 10000
+- tapOn:
+    id: tf_event_title
+- inputText: ${output.seriesTitle}
+- runFlow: ../subflows/close-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: pill_team_${TEAM_ID}
+- tapOn:
+    id: pill_team_${TEAM_ID}
+- scrollUntilVisible:
+    element:
+      id: switch_recurring
+- tapOn:
+    id: switch_recurring
+# The switch already opens the sheet on iOS; open it through the row when it did not.
+- runFlow:
+    when:
+      notVisible:
+        id: sheet_recurring_pattern
+    commands:
+      - tapOn:
+          id: row_recurring
+- extendedWaitUntil:
+    visible:
+      id: sheet_recurring_pattern
+    timeout: 10000
+- tapOn:
+    id: btn_recurring_done
+- tapOn:
+    id: btn_save_event
+- extendedWaitUntil:
+    visible: ${output.seriesTitle}
+    timeout: 20000
+- runScript:
+    file: ../scripts/assert-series-events.js
+    env:
+      SERIES_TITLE_TO_CHECK: ${output.seriesTitle}

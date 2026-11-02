@@ -1,0 +1,65 @@
+appId: ch.teamorg
+name: Player adds an absence and leaves the team
+tags: [profile]
+---
+# Leaves the seeded team as player 1, so no later flow may rely on player 1.
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${PLAYER1_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-tab.yaml
+    env:
+      TAB_ID: bottom_nav_profile
+- extendedWaitUntil:
+    visible:
+      id: txt_profile_name
+    timeout: 15000
+- assertVisible:
+    id: txt_absences_empty
+
+# Add a recurring absence
+- tapOn:
+    id: fab_add_absence
+- extendedWaitUntil:
+    visible:
+      id: sheet_add_absence
+    timeout: 10000
+- tapOn:
+    id: tile_reason_holidays
+- scrollUntilVisible:
+    element:
+      id: btn_weekday_2
+- tapOn:
+    id: btn_weekday_2
+- scrollUntilVisible:
+    element:
+      id: btn_absence_save
+- tapOn:
+    id: btn_absence_save
+- extendedWaitUntil:
+    notVisible:
+      id: sheet_add_absence
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: list_absences
+    timeout: 15000
+
+# Leave the team
+- scrollUntilVisible:
+    element:
+      id: btn_leave_team
+- tapOn:
+    id: btn_leave_team
+- extendedWaitUntil:
+    visible:
+      id: btn_leave_confirm
+    timeout: 10000
+- tapOn:
+    id: btn_leave_confirm
+- extendedWaitUntil:
+    visible:
+      id: txt_teams_empty
+    timeout: 20000

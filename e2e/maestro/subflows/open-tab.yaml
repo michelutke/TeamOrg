@@ -1,0 +1,6 @@
+appId: ch.teamorg
+---
+# Needs env TAB_ID (bottom_nav_events|teams|inbox|profile).
+- tapOn:
+    id: ${TAB_ID}
+- waitForAnimationToEnd

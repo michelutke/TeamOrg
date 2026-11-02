@@ -1,0 +1,35 @@
+appId: ch.teamorg
+---
+# Needs env DISPLAY_NAME, EMAIL and PASSWORD. Starts from the login screen and submits the registration form.
+- extendedWaitUntil:
+    visible:
+      id: btn_navigate_register
+    timeout: 20000
+- tapOn:
+    id: btn_navigate_register
+- extendedWaitUntil:
+    visible:
+      id: tf_display_name
+    timeout: 10000
+- tapOn:
+    id: tf_display_name
+- inputText: ${DISPLAY_NAME}
+- tapOn:
+    id: tf_email
+- inputText: ${EMAIL}
+- tapOn:
+    id: tf_password
+- inputText: ${PASSWORD}
+# The iOS keyboard covers the lower fields: dismiss it before tapping them.
+- runFlow: close-keyboard.yaml
+- tapOn:
+    id: tf_confirm_password
+- inputText: ${PASSWORD}
+- runFlow: close-keyboard.yaml
+- tapOn:
+    id: btn_create_account
+# iOS sometimes swallows the first tap (keyboard dismissal), sometimes not: retry only if the button is still there.
+- tapOn:
+    id: btn_create_account
+    optional: true
+- runFlow: dismiss-alerts.yaml

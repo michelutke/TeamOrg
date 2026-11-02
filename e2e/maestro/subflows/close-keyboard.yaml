@@ -1,0 +1,12 @@
+appId: ch.teamorg
+---
+# hideKeyboard alone leaves the iOS simulator keyboard up in some cases; Enter closes it on single-line fields.
+- hideKeyboard:
+    optional: true
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey:
+          key: Enter
+          optional: true

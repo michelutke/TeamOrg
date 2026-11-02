@@ -1,0 +1,12 @@
+appId: ch.teamorg
+name: Smoke, coach login shows main screen
+tags: [smoke]
+---
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${COACH_EMAIL}
+      PASSWORD: ${PASSWORD}
+- assertVisible:
+    id: bottom_nav_events
+- assertVisible: ${SINGLE_EVENT_TITLE}

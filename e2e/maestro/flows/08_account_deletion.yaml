@@ -1,0 +1,75 @@
+appId: ch.teamorg
+name: Account deletion from the profile tab and from the empty state
+tags: [account]
+---
+# Fresh registered accounts, so the seeded users stay intact.
+- evalScript: ${output.profileEmail = 'e2e-del-profile-' + Date.now() + '@e2e.teamorg.test'}
+- evalScript: ${output.emptyEmail = 'e2e-del-empty-' + Date.now() + '@e2e.teamorg.test'}
+
+# From the profile tab (account that joined the seeded team)
+- runFlow: ../subflows/fresh-start.yaml
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: ${INVITE_SCHEME_URL}
+- runFlow:
+    file: ../subflows/register.yaml
+    env:
+      DISPLAY_NAME: Dora Delete
+      EMAIL: ${output.profileEmail}
+      PASSWORD: ${PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: btn_join_team
+    timeout: 20000
+- tapOn:
+    id: btn_join_team
+- runFlow: ../subflows/dismiss-alerts.yaml
+- extendedWaitUntil:
+    visible:
+      id: bottom_nav_events
+    timeout: 30000
+- runFlow:
+    file: ../subflows/open-tab.yaml
+    env:
+      TAB_ID: bottom_nav_profile
+- extendedWaitUntil:
+    visible:
+      id: txt_profile_name
+    timeout: 15000
+- runFlow:
+    file: ../subflows/delete-account.yaml
+    env:
+      PASSWORD: ${PASSWORD}
+- runScript:
+    file: ../scripts/assert-login-fails.js
+    env:
+      DELETED_EMAIL: ${output.profileEmail}
+      PASSWORD: ${PASSWORD}
+
+# From the empty state (account without a team)
+- runFlow: ../subflows/fresh-start.yaml
+- runFlow:
+    file: ../subflows/register.yaml
+    env:
+      DISPLAY_NAME: Emma Empty
+      EMAIL: ${output.emptyEmail}
+      PASSWORD: ${PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: btn_join_team
+    timeout: 20000
+- runFlow: ../subflows/dismiss-alerts.yaml
+- extendedWaitUntil:
+    visible:
+      id: btn_delete_account
+    timeout: 20000
+- runFlow:
+    file: ../subflows/delete-account.yaml
+    env:
+      PASSWORD: ${PASSWORD}
+- runScript:
+    file: ../scripts/assert-login-fails.js
+    env:
+      DELETED_EMAIL: ${output.emptyEmail}
+      PASSWORD: ${PASSWORD}

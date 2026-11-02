@@ -1,0 +1,52 @@
+appId: ch.teamorg
+name: Inbox shows the RSVP notification, mark as read, delete
+tags: [inbox]
+---
+- runFlow:
+    file: ../subflows/login-fresh.yaml
+    env:
+      EMAIL: ${COACH_EMAIL}
+      PASSWORD: ${PASSWORD}
+- runFlow:
+    file: ../subflows/open-tab.yaml
+    env:
+      TAB_ID: bottom_nav_inbox
+- extendedWaitUntil:
+    visible:
+      id: list_inbox
+    timeout: 15000
+- assertVisible: "RSVP: ${PLAYER1_NAME}"
+
+# Opening a notification marks it read and shows the event
+- tapOn: "RSVP: ${PLAYER1_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: txt_event_title
+    timeout: 15000
+- tapOn:
+    id: btn_back
+- extendedWaitUntil:
+    visible:
+      id: btn_mark_all_read
+    timeout: 10000
+- tapOn:
+    id: btn_mark_all_read
+- waitForAnimationToEnd
+- runScript:
+    file: ../scripts/assert-unread-count.js
+    env:
+      EXPECTED_COUNT: "0"
+
+# Delete all
+- tapOn:
+    id: btn_delete_all
+- extendedWaitUntil:
+    visible:
+      id: btn_delete_all_confirm
+    timeout: 10000
+- tapOn:
+    id: btn_delete_all_confirm
+- extendedWaitUntil:
+    visible:
+      id: txt_inbox_empty
+    timeout: 15000
