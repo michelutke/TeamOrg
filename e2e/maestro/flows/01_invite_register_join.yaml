@@ -30,11 +30,13 @@ tags: [invite]
     id: tf_password
 - inputText: ${PASSWORD}
 # The iOS keyboard covers the lower fields: dismiss it before tapping them.
-- hideKeyboard
+- hideKeyboard:
+    optional: true
 - tapOn:
     id: tf_confirm_password
 - inputText: ${PASSWORD}
-- hideKeyboard
+- hideKeyboard:
+    optional: true
 - tapOn:
     id: btn_create_account
 - runFlow:

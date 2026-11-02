@@ -20,11 +20,22 @@ tags: [events]
 - tapOn:
     id: tf_event_title
 - inputText: ${output.singleTitle}
+- runFlow: ../subflows/close-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: tf_event_location
 - tapOn:
     id: tf_event_location
 - inputText: E2E Hall
+- runFlow: ../subflows/close-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: pill_team_${TEAM_ID}
 - tapOn:
     id: pill_team_${TEAM_ID}
+- scrollUntilVisible:
+    element:
+      id: btn_save_event
 - tapOn:
     id: btn_save_event
 - extendedWaitUntil:
@@ -41,6 +52,10 @@ tags: [events]
 - tapOn:
     id: tf_event_title
 - inputText: ${output.seriesTitle}
+- runFlow: ../subflows/close-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: pill_team_${TEAM_ID}
 - tapOn:
     id: pill_team_${TEAM_ID}
 - scrollUntilVisible:
@@ -48,8 +63,14 @@ tags: [events]
       id: switch_recurring
 - tapOn:
     id: switch_recurring
-- tapOn:
-    id: row_recurring
+# The switch already opens the sheet on iOS; open it through the row when it did not.
+- runFlow:
+    when:
+      notVisible:
+        id: sheet_recurring_pattern
+    commands:
+      - tapOn:
+          id: row_recurring
 - extendedWaitUntil:
     visible:
       id: sheet_recurring_pattern

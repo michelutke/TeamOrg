@@ -1,6 +1,12 @@
 appId: ch.teamorg
 ---
-# Cold start with wiped app data. The runner also resets the iOS simulator keychain, which survives clearState.
+# Cold start with wiped app data. The iOS keychain survives clearState, so it is cleared explicitly
+# (needed when one flow signs in as several users).
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - clearKeychain
 - launchApp:
     clearState: true
     stopApp: true

@@ -65,6 +65,12 @@ for flow in "$ROOT"/e2e/maestro/flows/*.yaml; do
     for filter in "$@"; do [[ "$name" == *"$filter"* ]] && match=1; done
     (( match )) || continue
   fi
+  skip=0
+  flow_tags="$(sed -n 's/^tags: *\[\(.*\)\].*/\1/p' "$flow" | head -1)"
+  for tag in ${EXCLUDE_TAGS//,/ }; do
+    [[ ",${flow_tags// /}," == *",$tag,"* ]] && skip=1
+  done
+  if (( skip )); then echo "[maestro] === $name (skipped, excluded tag)" >&2; continue; fi
   echo "[maestro] === $name" >&2
   reset_device_state
   out="$ARTIFACTS/$name"
