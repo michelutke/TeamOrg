@@ -14,6 +14,7 @@ on:
       - 'composeApp/**'
       - 'shared/**'
       - 'gradle/**'
+      - 'e2e/**'
       - '.github/workflows/test-android-emulator.yml'
   push:
     branches: [ main, 'release/**' ]
@@ -26,7 +27,7 @@ jobs:
   test-android-emulator:
     name: Android Instrumented Tests (API 29)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     services:
       postgres:
         image: postgres:16-alpine
@@ -81,6 +82,7 @@ jobs:
           JWT_SECRET: ci-instrumented-tests-not-a-real-secret-0123456789
           SWISSVOLLEY_SYNC_ENABLED: 'false'
           STRIPE_SECRET_KEY: sk_test_ci_dummy
+          E2E_SEED_ENABLED: 'true'
         run: |
           server/build/install/server/bin/server > server.log 2>&1 &
           echo $! > server.pid
@@ -141,6 +143,35 @@ jobs:
             echo "Expected at least ${EXPECTED_MIN_TESTS} instrumented tests to run, but only ${TOTAL} ran. This usually means AGP silently found fewer/zero tests (renamed package, broken testInstrumentationRunner, emptied source set)."
             exit 1
           fi
+
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.0.10
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run Maestro E2E flows
+        timeout-minutes: 25
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: |
+            ./gradlew :composeApp:installDebug
+            e2e/maestro/run.sh android
+
+      - name: Upload Maestro artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-artifacts-android
+          path: build/maestro-artifacts
+          retention-days: 7
 
       - name: Upload test reports
         if: always()
