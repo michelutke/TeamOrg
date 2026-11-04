@@ -1,5 +1,7 @@
 package ch.teamorg.ui.attendance
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,6 +54,8 @@ fun CoachOverrideSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_coach_override")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp),
@@ -93,7 +97,7 @@ fun CoachOverrideSheet(
                 )
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.semantics { contentDescription = "Close" }
+                    modifier = Modifier.semantics { contentDescription = "Close" }.testTag("btn_override_close")
                 ) {
                     Icon(
                         Icons.Default.Close,
@@ -122,7 +126,7 @@ fun CoachOverrideSheet(
                     description = "Mark as Present",
                     selected = selectedStatus == "present",
                     accentColor = MaterialTheme.extendedColors.going,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testTag("btn_override_present"),
                     onClick = { selectedStatus = "present" }
                 )
                 StatusButton(
@@ -130,7 +134,7 @@ fun CoachOverrideSheet(
                     description = "Mark as Absent",
                     selected = selectedStatus == "absent",
                     accentColor = MaterialTheme.extendedColors.declined,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testTag("btn_override_absent"),
                     onClick = { selectedStatus = "absent" }
                 )
                 StatusButton(
@@ -138,7 +142,7 @@ fun CoachOverrideSheet(
                     description = "Mark as Excused",
                     selected = selectedStatus == "excused",
                     accentColor = MaterialTheme.extendedColors.unsure,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testTag("btn_override_excused"),
                     onClick = { selectedStatus = "excused" }
                 )
             }
@@ -149,7 +153,7 @@ fun CoachOverrideSheet(
                 value = note,
                 onValueChange = { note = it },
                 label = { Text("Note (optional)") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("tf_override_note"),
                 shape = RoundedCornerShape(18.dp),
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -170,7 +174,8 @@ fun CoachOverrideSheet(
                 enabled = selectedStatus != null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(57.dp),
+                    .height(57.dp)
+                    .testTag("btn_override_save"),
                 shape = PillShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary

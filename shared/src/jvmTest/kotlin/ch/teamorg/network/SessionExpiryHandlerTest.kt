@@ -1,6 +1,7 @@
 package ch.teamorg.network
 
 import ch.teamorg.auth.SessionExpiredNotifier
+import ch.teamorg.crash.RecordingCrashReporting
 import ch.teamorg.data.PushBridge
 import ch.teamorg.data.network.installSessionExpiryHandler
 import ch.teamorg.preferences.UserPreferences
@@ -39,8 +40,9 @@ class SessionExpiryHandlerTest {
         val prefs = UserPreferences(MapSettings()).also { it.saveToken("token123") }
         val notifier = SessionExpiredNotifier()
         val push = RecordingPush()
+        val crash = RecordingCrashReporting()
         val client = HttpClient(MockEngine { respond(content = "", status = status) }) {
-            installSessionExpiryHandler(prefs, notifier, push)
+            installSessionExpiryHandler(prefs, notifier, push, crash)
         }
         val events = mutableListOf<Unit>()
 
@@ -60,6 +62,7 @@ class SessionExpiryHandlerTest {
 
         assertNull(f.prefs.getToken())
         assertEquals(1, f.push.logoutCount)
+        assertEquals(listOf("clearUser"), f.crash.calls)
         assertEquals(1, f.events.size)
     }
 

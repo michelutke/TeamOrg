@@ -1,5 +1,6 @@
 package ch.teamorg.ui.team
 
+import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -25,7 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
-import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -67,7 +67,6 @@ fun TeamRosterScreen(
     }
 
     Scaffold(
-        modifier = Modifier.testTagsAsResourceId(),
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
@@ -76,7 +75,8 @@ fun TeamRosterScreen(
                         Text(
                             text = state.teamName.ifBlank { "Team Roster" },
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.testTag("txt_team_name")
                         )
                         val coachCount = state.members.count { it.role != "player" }
                         if (state.members.isNotEmpty()) {
@@ -89,7 +89,7 @@ fun TeamRosterScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("btn_back")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -247,6 +247,7 @@ fun TeamRosterScreen(
     // ClubManager member action dialog (promote / remove)
     memberAction?.let { member ->
         AlertDialog(
+            modifier = Modifier.testTagsAsResourceId(),
             onDismissRequest = { memberAction = null },
             shape = RoundedCornerShape(28.dp),
             title = { Text(member.displayName, fontWeight = FontWeight.Bold) },
@@ -280,7 +281,10 @@ fun TeamRosterScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { memberAction = null }) { Text("Cancel") }
+                TextButton(
+                    onClick = { memberAction = null },
+                    modifier = Modifier.testTag("btn_member_action_cancel")
+                ) { Text("Cancel") }
             }
         )
     }
@@ -288,6 +292,7 @@ fun TeamRosterScreen(
     // Promote confirmation dialog
     memberToPromote?.let { member ->
         AlertDialog(
+            modifier = Modifier.testTagsAsResourceId(),
             onDismissRequest = { memberToPromote = null },
             shape = RoundedCornerShape(28.dp),
             title = { Text("Promote to Coach", fontWeight = FontWeight.Bold) },
@@ -304,7 +309,10 @@ fun TeamRosterScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { memberToPromote = null }) { Text("Cancel") }
+                TextButton(
+                    onClick = { memberToPromote = null },
+                    modifier = Modifier.testTag("btn_promote_cancel")
+                ) { Text("Cancel") }
             }
         )
     }
@@ -312,6 +320,7 @@ fun TeamRosterScreen(
     // Remove confirmation dialog
     memberToRemove?.let { member ->
         AlertDialog(
+            modifier = Modifier.testTagsAsResourceId(),
             onDismissRequest = { memberToRemove = null },
             shape = RoundedCornerShape(28.dp),
             title = { Text("Remove Member", fontWeight = FontWeight.Bold) },
@@ -349,6 +358,7 @@ fun TeamRosterScreen(
             val hasEmail = inviteEmail.isNotBlank()
             Column(
                 modifier = Modifier
+                    .testTagsAsResourceId()
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 40.dp),
@@ -418,6 +428,7 @@ fun TeamRosterScreen(
         ) {
             Column(
                 modifier = Modifier
+                    .testTagsAsResourceId()
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 40.dp),
@@ -453,6 +464,7 @@ fun TeamRosterScreen(
         ) {
             Column(
                 modifier = Modifier
+                    .testTagsAsResourceId()
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 40.dp),
@@ -531,6 +543,7 @@ fun TeamRosterScreen(
         ) {
             Column(
                 modifier = Modifier
+                    .testTagsAsResourceId()
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 32.dp)

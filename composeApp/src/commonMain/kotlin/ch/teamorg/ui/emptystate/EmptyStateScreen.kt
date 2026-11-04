@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import ch.teamorg.payments.isBillingSupported
 import ch.teamorg.ui.components.DeleteAccountDialog
 import ch.teamorg.ui.components.TeamorgTextField
-import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 
 @Composable
@@ -48,7 +47,6 @@ fun EmptyStateScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
-            .testTagsAsResourceId()
     ) {
         Column(
             modifier = Modifier

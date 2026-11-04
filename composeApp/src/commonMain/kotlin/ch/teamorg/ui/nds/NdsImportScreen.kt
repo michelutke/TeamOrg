@@ -1,5 +1,7 @@
 package ch.teamorg.ui.nds
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,9 +40,12 @@ fun NdsImportScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text("NDS-Import", fontWeight = FontWeight.Bold) },
+                title = { Text("NDS-Import", fontWeight = FontWeight.Bold, modifier = Modifier.testTag("txt_nds_title")) },
                 navigationIcon = {
-                    IconButton(onClick = { if (state.step == 1) onBack() else viewModel.goBack() }) {
+                    IconButton(
+                        onClick = { if (state.step == 1) onBack() else viewModel.goBack() },
+                        modifier = Modifier.testTag("btn_back")
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                     }
                 },
@@ -67,7 +72,7 @@ fun NdsImportScreen(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                     action = { }
                 ) {
-                    Text(error)
+                    Text(error, modifier = Modifier.testTag("txt_nds_error"))
                 }
             }
         }
@@ -104,7 +109,7 @@ private fun NdsFilesStep(viewModel: NdsImportViewModel, clubId: String, teamId: 
                 viewModel.pickFile(spec.slot, fileName, bytes)
             }
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("card_nds_file_${spec.slot}"),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 shape = RoundedCornerShape(20.dp)
             ) {
@@ -124,13 +129,21 @@ private fun NdsFilesStep(viewModel: NdsImportViewModel, clubId: String, teamId: 
                         Text(
                             picked?.fileName ?: "Keine Datei ausgewählt",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("txt_nds_file_${spec.slot}")
                         )
                     }
                     if (picked != null) {
-                        TextButton(onClick = { viewModel.removeFile(spec.slot) }) { Text("Entfernen") }
+                        TextButton(
+                            onClick = { viewModel.removeFile(spec.slot) },
+                            modifier = Modifier.testTag("btn_nds_remove_${spec.slot}")
+                        ) { Text("Entfernen") }
                     } else {
-                        Button(onClick = launchPicker, shape = PillShape) { Text("Wählen") }
+                        Button(
+                            onClick = launchPicker,
+                            shape = PillShape,
+                            modifier = Modifier.testTag("btn_nds_pick_${spec.slot}")
+                        ) { Text("Wählen") }
                     }
                 }
             }
@@ -141,7 +154,7 @@ private fun NdsFilesStep(viewModel: NdsImportViewModel, clubId: String, teamId: 
         Button(
             onClick = { viewModel.parseFiles(clubId, teamId) },
             enabled = viewModel.canProceedFromFiles(),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).testTag("btn_nds_files_next"),
             shape = PillShape
         ) {
             Text("Weiter", fontWeight = FontWeight.Bold)
@@ -176,6 +189,7 @@ private fun NdsMappingStep(viewModel: NdsImportViewModel) {
                 val key = NdsImportViewModel.rowKey(row.funktion, row.lastName, row.firstName)
                 val suggestion = suggestionsByKey[key]
                 MappingRow(
+                    rowKey = key,
                     funktion = row.funktion,
                     name = "${row.firstName} ${row.lastName}",
                     locked = suggestion?.alreadyLinkedUserId != null,
@@ -188,7 +202,7 @@ private fun NdsMappingStep(viewModel: NdsImportViewModel) {
         }
         Button(
             onClick = { viewModel.proceedFromMapping() },
-            modifier = Modifier.fillMaxWidth().padding(20.dp).height(52.dp),
+            modifier = Modifier.fillMaxWidth().padding(20.dp).height(52.dp).testTag("btn_nds_mapping_next"),
             shape = PillShape
         ) {
             Text("Weiter", fontWeight = FontWeight.Bold)
@@ -199,6 +213,7 @@ private fun NdsMappingStep(viewModel: NdsImportViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MappingRow(
+    rowKey: String,
     funktion: String,
     name: String,
     locked: Boolean,
@@ -209,7 +224,7 @@ private fun MappingRow(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("nds_mapping_row_$rowKey"),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -229,14 +244,19 @@ private fun MappingRow(
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { Icon(Icons.Default.ExpandMore, contentDescription = null) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                        modifier = Modifier.menuAnchor().fillMaxWidth().testTag("tf_nds_mapping_$rowKey")
                     )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.testTagsAsResourceId()
+                    ) {
                         if (suggestionCandidates.isNotEmpty()) {
                             suggestionCandidates.forEach { c ->
                                 DropdownMenuItem(
                                     text = { Text(c.displayName) },
-                                    onClick = { onChoice(MappingChoice(action = "map", userId = c.userId)); expanded = false }
+                                    onClick = { onChoice(MappingChoice(action = "map", userId = c.userId)); expanded = false },
+                                    modifier = Modifier.testTag("menu_nds_map_${c.userId}")
                                 )
                             }
                             HorizontalDivider()
@@ -244,16 +264,19 @@ private fun MappingRow(
                         otherCandidates.forEach { c ->
                             DropdownMenuItem(
                                 text = { Text(c.displayName) },
-                                onClick = { onChoice(MappingChoice(action = "map", userId = c.userId)); expanded = false }
+                                onClick = { onChoice(MappingChoice(action = "map", userId = c.userId)); expanded = false },
+                                modifier = Modifier.testTag("menu_nds_map_${c.userId}")
                             )
                         }
                         DropdownMenuItem(
                             text = { Text("Neuen Nutzer erstellen") },
-                            onClick = { onChoice(MappingChoice(action = "create")); expanded = false }
+                            onClick = { onChoice(MappingChoice(action = "create")); expanded = false },
+                            modifier = Modifier.testTag("menu_nds_create")
                         )
                         DropdownMenuItem(
                             text = { Text("Überspringen") },
-                            onClick = { onChoice(MappingChoice(action = "skip")); expanded = false }
+                            onClick = { onChoice(MappingChoice(action = "skip")); expanded = false },
+                            modifier = Modifier.testTag("menu_nds_skip")
                         )
                     }
                 }
@@ -303,7 +326,7 @@ private fun NdsEventsStep(viewModel: NdsImportViewModel) {
         Button(
             onClick = { viewModel.proceedFromEvents() },
             enabled = viewModel.canProceedFromEvents(),
-            modifier = Modifier.fillMaxWidth().padding(20.dp).height(52.dp),
+            modifier = Modifier.fillMaxWidth().padding(20.dp).height(52.dp).testTag("btn_nds_events_next"),
             shape = PillShape
         ) {
             Text("Weiter", fontWeight = FontWeight.Bold)
@@ -336,7 +359,7 @@ private fun SeriesCard(
     var location by remember(series.seriesKey) { mutableStateOf(time?.location ?: "") }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("nds_series_${series.seriesKey}"),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         shape = RoundedCornerShape(20.dp)
     ) {
@@ -347,10 +370,16 @@ private fun SeriesCard(
                 fontWeight = FontWeight.Bold
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = { showStartPicker = true }, modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { showStartPicker = true },
+                    modifier = Modifier.weight(1f).testTag("btn_nds_start_time_${series.seriesKey}")
+                ) {
                     Text(time?.startTime ?: "Startzeit")
                 }
-                OutlinedButton(onClick = { showEndPicker = true }, modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { showEndPicker = true },
+                    modifier = Modifier.weight(1f).testTag("btn_nds_end_time_${series.seriesKey}")
+                ) {
                     Text(time?.endTime ?: "Endzeit")
                 }
             }
@@ -362,7 +391,7 @@ private fun SeriesCard(
                 },
                 label = { Text("Ort (optional)") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().testTag("tf_nds_location_${series.seriesKey}")
             )
 
             if (conflictGroup != null) {
@@ -371,14 +400,16 @@ private fun SeriesCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = resolution.keep == "teamorg",
-                        onClick = { onResolutionChange(resolution.copy(keep = "teamorg")) }
+                        onClick = { onResolutionChange(resolution.copy(keep = "teamorg")) },
+                        modifier = Modifier.testTag("radio_nds_keep_teamorg_${series.seriesKey}")
                     )
                     Text("TeamOrg behalten", modifier = Modifier.weight(1f))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = resolution.keep == "nds",
-                        onClick = { onResolutionChange(resolution.copy(keep = "nds")) }
+                        onClick = { onResolutionChange(resolution.copy(keep = "nds")) },
+                        modifier = Modifier.testTag("radio_nds_keep_nds_${series.seriesKey}")
                     )
                     Text("NDS übernehmen", modifier = Modifier.weight(1f))
                 }
@@ -392,7 +423,10 @@ private fun SeriesCard(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                TextButton(onClick = { expanded = !expanded }) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.testTag("btn_nds_toggle_dates_${series.seriesKey}")
+                ) {
                     Text(if (expanded) "Termine ausblenden" else "Einzelne Termine anzeigen (${conflictGroup.dates.size})")
                 }
                 if (expanded) {
@@ -416,14 +450,16 @@ private fun SeriesCard(
                                     selected = effective == "teamorg",
                                     onClick = {
                                         onResolutionChange(resolution.copy(overrides = resolution.overrides + (d.date to "teamorg")))
-                                    }
+                                    },
+                                    modifier = Modifier.testTag("radio_nds_date_teamorg_${d.date}")
                                 )
                                 Text("TeamOrg behalten", style = MaterialTheme.typography.bodySmall)
                                 RadioButton(
                                     selected = effective == "nds",
                                     onClick = {
                                         onResolutionChange(resolution.copy(overrides = resolution.overrides + (d.date to "nds")))
-                                    }
+                                    },
+                                    modifier = Modifier.testTag("radio_nds_date_nds_${d.date}")
                                 )
                                 Text("NDS übernehmen", style = MaterialTheme.typography.bodySmall)
                             }
@@ -463,17 +499,20 @@ private fun NdsTimePickerDialog(initial: String?, onTimeSelected: (String) -> Un
         is24Hour = true
     )
     AlertDialog(
+        modifier = Modifier.testTagsAsResourceId(),
         onDismissRequest = onDismiss,
         title = { Text("Zeit wählen") },
         text = { TimePicker(state = timePickerState) },
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.testTag("btn_nds_time_ok"), onClick = {
                 val hh = timePickerState.hour.toString().padStart(2, '0')
                 val mm = timePickerState.minute.toString().padStart(2, '0')
                 onTimeSelected("$hh:$mm")
             }) { Text("OK") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("btn_nds_time_cancel")) { Text("Abbrechen") }
+        }
     )
 }
 
@@ -496,7 +535,7 @@ private fun NdsConfirmStep(viewModel: NdsImportViewModel, clubId: String, teamId
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Zusammenfassung", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("$mapped zugeordnet · $created neu · $skipped übersprungen")
+                Text("$mapped zugeordnet · $created neu · $skipped übersprungen", modifier = Modifier.testTag("txt_nds_summary"))
                 if (state.parse?.anwesenheitsliste != null) {
                     Text("$eventsNew Events neu")
                     Text("$keepTeamorg Konflikte TeamOrg · $keepNds Konflikte NDS")
@@ -505,7 +544,11 @@ private fun NdsConfirmStep(viewModel: NdsImportViewModel, clubId: String, teamId
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Switch(checked = attendanceOn, onCheckedChange = { attendanceOn = it })
+            Switch(
+                checked = attendanceOn,
+                onCheckedChange = { attendanceOn = it },
+                modifier = Modifier.testTag("switch_nds_attendance")
+            )
             Spacer(modifier = Modifier.width(8.dp))
             Text("Anwesenheiten übernehmen")
         }
@@ -514,7 +557,7 @@ private fun NdsConfirmStep(viewModel: NdsImportViewModel, clubId: String, teamId
 
         Button(
             onClick = { viewModel.submitImport(clubId, teamId, if (attendanceOn) "keep" else "discard") },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).testTag("btn_nds_import_submit"),
             shape = PillShape
         ) {
             Text("Importieren", fontWeight = FontWeight.Bold)
@@ -539,10 +582,22 @@ private fun NdsImportResultStep(viewModel: NdsImportViewModel, onDone: () -> Uni
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-        Text("Import abgeschlossen", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text("${result.membersImported} Mitglieder · ${result.eventsCreated} Events · ${result.attendanceImported} Anwesenheiten")
+        Text(
+            "Import abgeschlossen",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.testTag("txt_nds_done")
+        )
+        Text(
+            "${result.membersImported} Mitglieder · ${result.eventsCreated} Events · ${result.attendanceImported} Anwesenheiten",
+            modifier = Modifier.testTag("txt_nds_result")
+        )
         Spacer(modifier = Modifier.weight(1f))
-        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(52.dp), shape = PillShape) {
+        Button(
+            onClick = onDone,
+            modifier = Modifier.fillMaxWidth().height(52.dp).testTag("btn_nds_done"),
+            shape = PillShape
+        ) {
             Text("Fertig", fontWeight = FontWeight.Bold)
         }
     }

@@ -1,5 +1,7 @@
 package ch.teamorg.ui.inbox
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,7 +38,8 @@ fun InboxScreen(
                     Text(
                         text = "Inbox",
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.testTag("txt_inbox_title")
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -45,7 +48,10 @@ fun InboxScreen(
                 actions = {
                     if (state.notifications.isNotEmpty()) {
                         if (state.hasUnread) {
-                            TextButton(onClick = { viewModel.markAllRead() }) {
+                            TextButton(
+                                onClick = { viewModel.markAllRead() },
+                                modifier = Modifier.testTag("btn_mark_all_read")
+                            ) {
                                 Text(
                                     text = "Mark all read",
                                     style = MaterialTheme.typography.labelMedium,
@@ -54,7 +60,10 @@ fun InboxScreen(
                                 )
                             }
                         } else {
-                            TextButton(onClick = { showDeleteConfirm = true }) {
+                            TextButton(
+                                onClick = { showDeleteConfirm = true },
+                                modifier = Modifier.testTag("btn_delete_all")
+                            ) {
                                 Text(
                                     text = "Delete all",
                                     style = MaterialTheme.typography.labelMedium,
@@ -64,7 +73,10 @@ fun InboxScreen(
                             }
                         }
                     }
-                    IconButton(onClick = { onNavigate(Screen.NotificationSettings) }) {
+                    IconButton(
+                        onClick = { onNavigate(Screen.NotificationSettings) },
+                        modifier = Modifier.testTag("btn_notification_settings")
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = "Notification settings",
@@ -77,20 +89,27 @@ fun InboxScreen(
     ) { padding ->
         if (showDeleteConfirm) {
             AlertDialog(
+                modifier = Modifier.testTagsAsResourceId(),
                 onDismissRequest = { showDeleteConfirm = false },
                 shape = MaterialTheme.shapes.extraLarge,
                 title = { Text("Delete all notifications?") },
                 text = { Text("This will permanently remove all notifications from your inbox.") },
                 confirmButton = {
-                    TextButton(onClick = {
-                        showDeleteConfirm = false
-                        viewModel.deleteAll()
-                    }) {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirm = false
+                            viewModel.deleteAll()
+                        },
+                        modifier = Modifier.testTag("btn_delete_all_confirm")
+                    ) {
                         Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = false }) {
+                    TextButton(
+                        onClick = { showDeleteConfirm = false },
+                        modifier = Modifier.testTag("btn_delete_all_cancel")
+                    ) {
                         Text("Cancel")
                     }
                 }
@@ -156,7 +175,8 @@ fun InboxScreen(
                                 Text(
                                     text = "Nothing here yet",
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.testTag("txt_inbox_empty")
                                 )
                                 Text(
                                     text = "New notifications will show up here.",
@@ -169,7 +189,7 @@ fun InboxScreen(
                 }
                 else -> {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testTag("list_inbox"),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {

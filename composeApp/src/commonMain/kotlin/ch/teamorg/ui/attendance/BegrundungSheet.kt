@@ -1,5 +1,7 @@
 package ch.teamorg.ui.attendance
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,6 +66,8 @@ fun BegrundungSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_begruendung")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp),
@@ -103,7 +107,7 @@ fun BegrundungSheet(
             TextField(
                 value = text,
                 onValueChange = { text = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("tf_reason"),
                 label = { Text("Begründung") },
                 minLines = 3,
                 maxLines = 6,
@@ -131,7 +135,7 @@ fun BegrundungSheet(
             val isEnabled = !reasonRequired || text.isNotBlank()
             Button(
                 onClick = { if (isEnabled) onConfirm(text.trim()) },
-                modifier = Modifier.fillMaxWidth().height(57.dp),
+                modifier = Modifier.fillMaxWidth().height(57.dp).testTag("btn_reason_submit"),
                 enabled = isEnabled,
                 shape = PillShape,
                 colors = ButtonDefaults.buttonColors(

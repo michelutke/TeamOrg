@@ -1,5 +1,6 @@
 package ch.teamorg.ui.attendance
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -48,7 +49,8 @@ fun AttendanceRsvpButtons(
             compact = compact,
             height = height,
             onClick = { if (!deadlinePassed) onSelect("confirmed") },
-            contentDesc = "Going"
+            contentDesc = "Going",
+            testTag = if (compact) "btn_rsvp_going_compact" else "btn_rsvp_going"
         )
 
         // Decline (selected = tonal declined container)
@@ -64,7 +66,8 @@ fun AttendanceRsvpButtons(
             compact = compact,
             height = height,
             onClick = { if (!deadlinePassed) onSelect("declined") },
-            contentDesc = "Can't Go"
+            contentDesc = "Can't Go",
+            testTag = if (compact) "btn_rsvp_declined_compact" else "btn_rsvp_declined"
         )
 
         // Unsure (selected = tonal unsure container)
@@ -80,7 +83,8 @@ fun AttendanceRsvpButtons(
             compact = compact,
             height = height,
             onClick = { if (!deadlinePassed) onSelect("unsure") },
-            contentDesc = "Maybe"
+            contentDesc = "Maybe",
+            testTag = if (compact) "btn_rsvp_unsure_compact" else "btn_rsvp_unsure"
         )
     }
 }
@@ -98,7 +102,8 @@ private fun RsvpPill(
     compact: Boolean,
     height: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
-    contentDesc: String
+    contentDesc: String,
+    testTag: String
 ) {
     val bg = if (isSelected) selectedBg else MaterialTheme.colorScheme.surfaceContainerHigh
     val textColor = if (isSelected) selectedText else MaterialTheme.colorScheme.onSurfaceVariant
@@ -111,7 +116,8 @@ private fun RsvpPill(
             .background(bg)
             .alpha(alpha)
             .then(if (!deadlinePassed) Modifier.clickable(onClick = onClick) else Modifier)
-            .semantics { contentDescription = contentDesc },
+            .semantics { contentDescription = contentDesc }
+            .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
         if (compact) {

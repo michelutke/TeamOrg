@@ -1,5 +1,7 @@
 package ch.teamorg.ui.events
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -101,7 +103,7 @@ fun EventDetailScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = onBack, modifier = Modifier.testTag("btn_back")) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -113,19 +115,32 @@ fun EventDetailScreen(
 
             if (state.isCoach) {
                 Box {
-                    IconButton(onClick = { showMenu = true }) {
+                    IconButton(onClick = { showMenu = true }, modifier = Modifier.testTag("btn_event_menu")) {
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
                             contentDescription = "More options",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier.testTagsAsResourceId()
+                    ) {
                         if (!isCancelled) {
-                            DropdownMenuItem(text = { Text("Edit") }, onClick = { showMenu = false; onEdit() })
-                            DropdownMenuItem(text = { Text("Duplicate") }, onClick = { showMenu = false; onDuplicate() })
+                            DropdownMenuItem(
+                                text = { Text("Edit") },
+                                onClick = { showMenu = false; onEdit() },
+                                modifier = Modifier.testTag("menu_edit_event")
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Duplicate") },
+                                onClick = { showMenu = false; onDuplicate() },
+                                modifier = Modifier.testTag("menu_duplicate_event")
+                            )
                             DropdownMenuItem(
                                 text = { Text("Cancel event", color = MaterialTheme.colorScheme.error) },
+                                modifier = Modifier.testTag("menu_cancel_event"),
                                 onClick = {
                                     showMenu = false
                                     if (isSeries) showCancelScopeSheet = true
@@ -135,13 +150,18 @@ fun EventDetailScreen(
                         } else {
                             DropdownMenuItem(
                                 text = { Text("Restore event", color = MaterialTheme.extendedColors.going) },
+                                modifier = Modifier.testTag("menu_restore_event"),
                                 onClick = {
                                     showMenu = false
                                     if (isSeries) showUncancelScopeSheet = true
                                     else viewModel.uncancelEvent("this_only")
                                 }
                             )
-                            DropdownMenuItem(text = { Text("Duplicate") }, onClick = { showMenu = false; onDuplicate() })
+                            DropdownMenuItem(
+                                text = { Text("Duplicate") },
+                                onClick = { showMenu = false; onDuplicate() },
+                                modifier = Modifier.testTag("menu_duplicate_event")
+                            )
                         }
                     }
                 }
@@ -177,7 +197,11 @@ fun EventDetailScreen(
                 TeamorgLoader()
             }
             state.error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(state.error ?: "Error", color = MaterialTheme.colorScheme.error)
+                Text(
+                    state.error ?: "Error",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag("txt_event_error")
+                )
             }
             state.event != null -> EventDetailBody(
                 ewt = state.event!!,
@@ -243,11 +267,12 @@ fun EventDetailScreen(
         val blocked = state.finalizeBlocked
         if (blocked != null) {
             AlertDialog(
+                modifier = Modifier.testTagsAsResourceId(),
                 onDismissRequest = { viewModel.dismissFinalizeBlocked() },
                 title = { Text("CheckIn konnte nicht abgeschlossen werden") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(blocked.reason)
+                        Text(blocked.reason, modifier = Modifier.testTag("txt_finalize_blocked_reason"))
                         if (blocked.memberNames.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             blocked.memberNames.forEach { name ->
@@ -261,7 +286,10 @@ fun EventDetailScreen(
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { viewModel.dismissFinalizeBlocked() }) {
+                    TextButton(
+                        onClick = { viewModel.dismissFinalizeBlocked() },
+                        modifier = Modifier.testTag("btn_finalize_blocked_ok")
+                    ) {
                         Text("OK")
                     }
                 }
@@ -303,6 +331,8 @@ private fun CoachEditSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_coach_edit")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
@@ -322,13 +352,13 @@ private fun CoachEditSheet(
                     selected = status == "confirmed",
                     onClick = { onStatusChange("confirmed") },
                     label = { Text("Anwesend") },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testTag("chip_coach_present")
                 )
                 FilterChip(
                     selected = status == "declined",
                     onClick = { onStatusChange("declined") },
                     label = { Text("Abgemeldet") },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testTag("chip_coach_absent")
                 )
             }
 
@@ -336,6 +366,7 @@ private fun CoachEditSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .testTag("row_coach_unexcused")
                         .clickable { onUnexcusedChange(!unexcused) }
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -347,14 +378,15 @@ private fun CoachEditSheet(
                     )
                     Switch(
                         checked = unexcused,
-                        onCheckedChange = onUnexcusedChange
+                        onCheckedChange = onUnexcusedChange,
+                        modifier = Modifier.testTag("switch_coach_unexcused")
                     )
                 }
             }
 
             Button(
                 onClick = onConfirm,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().testTag("btn_coach_edit_save")
             ) {
                 Text("Speichern")
             }
@@ -407,6 +439,7 @@ private fun EventDetailBody(
             ) {
                 Text(
                     "This event has been cancelled",
+                    modifier = Modifier.testTag("txt_event_cancelled"),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
@@ -455,7 +488,7 @@ private fun EventDetailBody(
                     Button(
                         onClick = onFinalize,
                         enabled = !isFinalizingOrReopening,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("btn_finalize_checkin")
                     ) {
                         if (isFinalizingOrReopening) {
                             TeamorgLoader(size = 36.dp, color = MaterialTheme.colorScheme.onPrimary)
@@ -468,7 +501,7 @@ private fun EventDetailBody(
                     OutlinedButton(
                         onClick = onReopen,
                         enabled = !isFinalizingOrReopening,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("btn_reopen_checkin")
                     ) {
                         if (isFinalizingOrReopening) {
                             TeamorgLoader(size = 36.dp)
@@ -517,6 +550,7 @@ private fun EventDetailBody(
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .testTag("row_reminder")
                 .clickable { onReminderTap() }
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -537,7 +571,8 @@ private fun EventDetailBody(
             Text(
                 reminderText,
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("txt_reminder_value")
             )
             Spacer(Modifier.width(4.dp))
             Icon(
@@ -612,7 +647,8 @@ private fun HeroCard(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag("txt_event_title")
         )
 
         if (isCoach) {

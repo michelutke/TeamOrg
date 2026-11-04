@@ -46,6 +46,7 @@
 		D4E5F6A7B8C9D0E1F2A3B4C5F /* RegisterFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* RegisterFlowTests.swift */; };
 		426FB15805AAB0203DE904CA /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = F5B343CD00C29B95C6E269F4 /* StripePaymentSheet */; };
 		7A1B2C3D4E5F60718293A4B5 /* OneSignalFramework in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1B2C3D4E5F60718293A4B6 /* OneSignalFramework */; };
+		7A1B2C3D4E5F60718293A4B8 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1B2C3D4E5F60718293A4B9 /* Sentry */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +56,7 @@
 			files = (
 				426FB15805AAB0203DE904CA /* StripePaymentSheet in Frameworks */,
 				7A1B2C3D4E5F60718293A4B5 /* OneSignalFramework in Frameworks */,
+				7A1B2C3D4E5F60718293A4B8 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,6 +122,7 @@
 			packageProductDependencies = (
 				F5B343CD00C29B95C6E269F4 /* StripePaymentSheet */,
 				7A1B2C3D4E5F60718293A4B6 /* OneSignalFramework */,
+				7A1B2C3D4E5F60718293A4B9 /* Sentry */,
 			);
 			productName = iosApp;
 			productReference = 65C1056FB91CCCC1B0897A04 /* teamorg.app */;
@@ -192,6 +195,7 @@
 			packageReferences = (
 				5291F0314F2EDAC0067DB90B /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
 				7A1B2C3D4E5F60718293A4B7 /* XCRemoteSwiftPackageReference "OneSignal-XCFramework" */,
+				7A1B2C3D4E5F60718293A4BA /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BED009C1F2A8B791D1AEFEF3 /* Products */;
@@ -280,6 +284,14 @@
 				version = 5.7.0;
 			};
 		};
+		7A1B2C3D4E5F60718293A4BA /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = exactVersion;
+				version = 9.30.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -292,6 +304,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A1B2C3D4E5F60718293A4B7 /* XCRemoteSwiftPackageReference "OneSignal-XCFramework" */;
 			productName = OneSignalFramework;
+		};
+		7A1B2C3D4E5F60718293A4B9 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A1B2C3D4E5F60718293A4BA /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 

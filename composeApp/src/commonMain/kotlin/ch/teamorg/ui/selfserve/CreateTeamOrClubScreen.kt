@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import ch.teamorg.data.repository.SelfServeCreated
 import ch.teamorg.ui.components.TeamorgTextField
-import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,7 +36,6 @@ fun CreateTeamOrClubScreen(
     }
 
     Scaffold(
-        modifier = Modifier.testTagsAsResourceId(),
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(

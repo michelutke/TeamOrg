@@ -39,7 +39,12 @@ fun Application.configureAuth() {
                 // files read the principal directly and never call authenticateUser, so a
                 // check placed there would leave them reachable with a deleted user's token.
                 // Cost is one indexed primary-key lookup per authenticated request.
-                if (isUserDeleted(userId)) return@validate null
+                // The same lookup enforces password-reset revocation: a reset bumps the user's
+                // token version, so tokens minted before it no longer match. Impersonation
+                // tokens are minted by an admin for a target and are revoked via their session.
+                val tokenVersion = credential.payload.getClaim(TOKEN_VERSION_CLAIM).asInt() ?: 0
+                val isImpersonation = !credential.payload.getClaim("impersonator_id").isMissing
+                if (!isSessionValid(userId, tokenVersion, isImpersonation)) return@validate null
                 JWTPrincipal(credential.payload)
             }
             challenge { _, _ ->
@@ -49,9 +54,12 @@ fun Application.configureAuth() {
     }
 }
 
-private fun isUserDeleted(userId: UUID): Boolean = transaction {
-    UsersTable.select(UsersTable.deletedAt)
+const val TOKEN_VERSION_CLAIM = "tv"
+
+private fun isSessionValid(userId: UUID, tokenVersion: Int, isImpersonation: Boolean): Boolean = transaction {
+    val row = UsersTable.select(UsersTable.deletedAt, UsersTable.tokenVersion)
         .where { UsersTable.id eq userId }
         .singleOrNull()
-        ?.get(UsersTable.deletedAt) != null
+        ?: return@transaction true
+    row[UsersTable.deletedAt] == null && (isImpersonation || row[UsersTable.tokenVersion] == tokenVersion)
 }

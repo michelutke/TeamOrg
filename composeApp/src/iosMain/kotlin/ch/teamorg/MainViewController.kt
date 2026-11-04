@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.ComposeUIViewController
+import ch.teamorg.crash.initCrashReporting
 import ch.teamorg.di.sharedModule
 import ch.teamorg.di.uiModule
 import org.koin.core.context.startKoin
+
+fun startCrashReporting(dsn: String, environment: String, release: String) {
+    initCrashReporting(dsn, environment, release)
+}
 
 private var koinInitialized = false
 

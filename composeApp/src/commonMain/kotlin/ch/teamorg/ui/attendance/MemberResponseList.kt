@@ -1,5 +1,6 @@
 package ch.teamorg.ui.attendance
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -96,6 +97,7 @@ private fun ResponseSectionCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag("section_${label.lowercase().replace(' ', '_')}")
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(horizontal = 16.dp, vertical = 12.dp)
