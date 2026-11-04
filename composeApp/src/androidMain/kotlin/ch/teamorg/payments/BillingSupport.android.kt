@@ -1,3 +1,3 @@
 package ch.teamorg.payments
 
-actual val isBillingSupported: Boolean = true
+actual val isBillingSupported: Boolean = false

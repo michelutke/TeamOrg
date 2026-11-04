@@ -9,7 +9,7 @@ class HttpClientBaseUrlTest {
 
     @Test
     fun `https url is accepted and returned unchanged`() {
-        assertEquals("https://api.teamorg.app", requireSecureBaseUrl("https://api.teamorg.app"))
+        assertEquals("https://server.teamorg.ch", requireSecureBaseUrl("https://server.teamorg.ch"))
     }
 
     @Test
@@ -29,7 +29,7 @@ class HttpClientBaseUrlTest {
 
     @Test
     fun `remote host over http is rejected`() {
-        assertFailsWith<IllegalArgumentException> { requireSecureBaseUrl("http://api.teamorg.app") }
+        assertFailsWith<IllegalArgumentException> { requireSecureBaseUrl("http://server.teamorg.ch") }
     }
 
     @Test

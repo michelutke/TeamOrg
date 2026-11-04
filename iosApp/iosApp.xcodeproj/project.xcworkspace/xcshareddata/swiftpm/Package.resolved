@@ -1,6 +1,15 @@
 {
-  "originHash" : "1f06cf3c639532d286c470e81158af666944da378de62a4c136590c22991b051",
+  "originHash" : "5758ee0720f04ffb2309fdd2da8c1e8e897724b6a5a71a4f947aed75110702e8",
   "pins" : [
+    {
+      "identity" : "onesignal-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/OneSignal/OneSignal-XCFramework",
+      "state" : {
+        "revision" : "c57e23b501cee0a988342a384a4c3ed0dc75ff56",
+        "version" : "5.7.0"
+      }
+    },
     {
       "identity" : "stripe-ios-spm",
       "kind" : "remoteSourceControl",

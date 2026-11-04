@@ -21,6 +21,7 @@ class FakeAuthRepository : AuthRepository {
     )
     var loggedIn: Boolean = false
     var hasTeamResult: Boolean = false
+    var onHasTeam: (() -> Unit)? = null
     var deleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
     var deleteAccountPasswords: MutableList<String> = mutableListOf()
     var deleteAccountGate: CompletableDeferred<Unit>? = null
@@ -41,6 +42,7 @@ class FakeAuthRepository : AuthRepository {
         )
         loggedIn = false
         hasTeamResult = false
+        onHasTeam = null
         deleteAccountResult = DeleteAccountResult.Success
         deleteAccountPasswords = mutableListOf()
         deleteAccountGate = null
@@ -70,7 +72,10 @@ class FakeAuthRepository : AuthRepository {
 
     override suspend fun getMe(): Result<AuthUser> = getMeResult
 
-    override suspend fun hasTeam(): Boolean = hasTeamResult
+    override suspend fun hasTeam(): Boolean {
+        onHasTeam?.invoke()
+        return hasTeamResult
+    }
 
     override suspend fun deleteAccount(password: String): DeleteAccountResult {
         deleteAccountPasswords.add(password)

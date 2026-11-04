@@ -51,6 +51,19 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun init_whenSessionExpiresDuringHasTeam_endsUnauthenticated() = runTest(testDispatcher) {
+        val notifier = SessionExpiredNotifier()
+        fakeAuth.loggedIn = true
+        fakeAuth.onHasTeam = {
+            fakeAuth.loggedIn = false
+            notifier.notifyExpired()
+        }
+        viewModel = AuthViewModel(fakeAuth, notifier)
+
+        viewModel.state.value.shouldBeInstanceOf<AuthState.Unauthenticated>()
+    }
+
+    @Test
     fun init_whenLoggedInButGetMeFails_emitsUnauthenticated() = runTest(testDispatcher) {
         fakeAuth.loggedIn = true
         fakeAuth.getMeResult = Result.failure(Exception("401"))

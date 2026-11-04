@@ -9,13 +9,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    sessionExpiredNotifier: SessionExpiredNotifier = SessionExpiredNotifier()
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<AuthState>(AuthState.Loading)
     val state: StateFlow<AuthState> = _state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            sessionExpiredNotifier.events.collect { _state.value = AuthState.Unauthenticated }
+        }
         checkAuthState()
     }
 
@@ -26,6 +30,10 @@ class AuthViewModel(
                 authRepository.getMe().fold(
                     onSuccess = { user ->
                         val hasTeam = authRepository.hasTeam()
+                        if (!authRepository.isLoggedIn()) {
+                            _state.value = AuthState.Unauthenticated
+                            return@fold
+                        }
                         _state.value = AuthState.Authenticated(user, hasTeam = hasTeam)
                     },
                     onFailure = {

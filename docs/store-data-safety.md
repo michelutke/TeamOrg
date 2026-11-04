@@ -13,8 +13,8 @@ Same answer for both stores.
 
 | Claim | Where to verify |
 |---|---|
-| Android release builds use an HTTPS base URL | `shared/build.gradle.kts` — release `buildConfigField` defaults to `https://api.teamorg.app` |
-| iOS builds use an HTTPS base URL | `iosApp/Configuration/Config.xcconfig` — `API_BASE_URL` defaults to `https://api.teamorg.app`, read via `iosApp/iosApp/Info.plist` in `shared/src/iosMain/kotlin/ch/teamorg/data/network/ApiConfig.ios.kt`; the code fallback for a missing plist key is the same HTTPS URL. CI TestFlight builds have the value injected from the `API_BASE_URL` secret (`fastlane/Fastfile` `ios_testflight`); local Xcode builds use the xcconfig default. |
+| Android release builds use an HTTPS base URL | `shared/build.gradle.kts` — release `buildConfigField` defaults to `https://server.teamorg.ch` |
+| iOS builds use an HTTPS base URL | `iosApp/Configuration/Config.xcconfig` — `API_BASE_URL` defaults to `https://server.teamorg.ch`, read via `iosApp/iosApp/Info.plist` in `shared/src/iosMain/kotlin/ch/teamorg/data/network/ApiConfig.ios.kt`; the code fallback for a missing plist key is the same HTTPS URL. CI TestFlight builds have the value injected from the `API_BASE_URL` secret (`fastlane/Fastfile` `ios_testflight`); local Xcode builds use the xcconfig default. |
 | A non-HTTPS base URL cannot ship silently | `shared/src/commonMain/kotlin/ch/teamorg/data/network/HttpClientFactory.kt` — `requireSecureBaseUrl` throws unless the URL is HTTPS or a local dev host |
 | Android release builds cannot speak cleartext | `composeApp/src/androidMain/res/xml/network_security_config.xml` — `base-config cleartextTrafficPermitted="false"`; `AndroidManifest.xml` — `android:usesCleartextTraffic="false"` |
 | iOS ships no ATS exception | `iosApp/iosApp/Info.plist` — no `NSAppTransportSecurity` key |
@@ -29,6 +29,13 @@ Same answer for both stores.
   platform applies only when `android:debuggable="true"`.
 - **Server → Postgres** travels the internal Docker network. See `docs/security-runbook.md` §6
   for the `sslmode` decision and its justification.
+
+## Data collected
+
+Declared in `iosApp/iosApp/PrivacyInfo.xcprivacy`, all linked to the user, none used for
+tracking, purpose App Functionality: Name, Email Address, Photos (profile avatar), Other User
+Content (absence reasons, event responses), Health (optional injury and body-part details on
+absences), User ID, Device ID (OneSignal push token).
 
 ## Certificate pinning
 
@@ -51,7 +58,7 @@ initiated **inside the app**; Google Play additionally wants a URL.
 outright — absence rules, attendance responses, notifications and their settings, notification
 reminders, event reminder overrides, subgroup memberships, team roles, club roles. The imported
 roster link (`nds_members.user_id`) is detached rather than deleted, so a re-import can re-link
-it later. The avatar file is deleted from storage. The `users` row itself is retained in
+it later. The avatar file is deleted from storage on a best-effort basis (a failed deletion does not block the account deletion). The `users` row itself is retained in
 anonymized form (`deleted-<uuid>@deleted.invalid`, display name "Gelöschtes Konto", an unusable
 password hash, `deleted_at` set) because event authorship, recorded attendance and the audit log
 reference it under `ON DELETE RESTRICT`. The account cannot be logged into (the old address

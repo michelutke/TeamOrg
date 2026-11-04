@@ -50,8 +50,8 @@ class AuthFlowTest {
             composeRule.onNodeWithTag("btn_create_account").performClick()
 
             // A brand-new user has no team, so navigation lands on EmptyState.
-            awaitTag("btn_create_team_or_club")
-            composeRule.onNodeWithTag("btn_create_team_or_club").assertIsDisplayed()
+            awaitTag("btn_join_team")
+            composeRule.onNodeWithTag("btn_join_team").assertIsDisplayed()
         }
     }
 
@@ -67,8 +67,8 @@ class AuthFlowTest {
             composeRule.onNodeWithTag("tf_password").performTextInput(password)
             composeRule.onNodeWithTag("btn_sign_in").performClick()
 
-            awaitTag("btn_create_team_or_club")
-            composeRule.onNodeWithTag("btn_create_team_or_club").assertIsDisplayed()
+            awaitTag("btn_join_team")
+            composeRule.onNodeWithTag("btn_join_team").assertIsDisplayed()
         }
     }
 }

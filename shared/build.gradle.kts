@@ -95,14 +95,14 @@ android {
     }
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
-        buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("https://api.teamorg.app")}\"")
+        buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("https://server.teamorg.ch")}\"")
     }
     buildTypes {
         debug {
             buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("http://10.0.2.2:8080")}\"")
         }
         release {
-            buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("https://api.teamorg.app")}\"")
+            buildConfigField("String", "API_BASE_URL", "\"${resolveApiBaseUrl("https://server.teamorg.ch")}\"")
         }
     }
     buildFeatures {

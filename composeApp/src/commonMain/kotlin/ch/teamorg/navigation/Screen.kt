@@ -33,9 +33,6 @@ sealed class Screen(val route: String) {
     data object EmptyState : Screen("empty_state")
 
     @Serializable
-    data object ClubSetup : Screen("club_setup")
-
-    @Serializable
     data object CreateTeamOrClub : Screen("create_team_or_club")
 
     @Serializable
