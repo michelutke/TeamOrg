@@ -1,13 +1,13 @@
 import * as Sentry from '@sentry/sveltekit';
 
-const dsn = process.env.SENTRY_DSN;
-const environment = process.env.SENTRY_ENVIRONMENT || 'production';
+// Same PUBLIC_ vars as the browser side: the DSN is not a secret, so one setting covers both.
+const dsn = process.env.PUBLIC_SENTRY_DSN;
+const environment = process.env.PUBLIC_SENTRY_ENVIRONMENT || 'production';
 
 Sentry.init({
 	dsn: dsn || undefined,
 	enabled: Boolean(dsn),
 	environment,
-	release: process.env.SENTRY_RELEASE || undefined,
 	tracesSampleRate: environment === 'development' ? 1.0 : 0.2,
 	dataCollection: {
 		userInfo: false,

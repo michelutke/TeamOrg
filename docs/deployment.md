@@ -53,10 +53,7 @@ Coolify builds from:
    | `SENTRY_DSN` | server | optional (error monitoring; blank disables) |
    | `SENTRY_ENVIRONMENT` | server | optional, defaults to `production` |
    | `SENTRY_RELEASE` | server | optional (release identifier) |
-   | `ADMIN_SENTRY_DSN` | admin | optional (error monitoring, project `teamorg-admin`; blank disables); passed to the container as `SENTRY_DSN` |
-   | `ADMIN_SENTRY_ENVIRONMENT` | admin | optional, defaults to `production`; passed as `SENTRY_ENVIRONMENT` |
-   | `ADMIN_SENTRY_RELEASE` | admin | optional; passed as `SENTRY_RELEASE` |
-   | `PUBLIC_SENTRY_DSN` | admin | optional (browser-side, same DSN as above) |
+   | `PUBLIC_SENTRY_DSN` | admin | optional (error monitoring for server and browser side, project `teamorg-admin`; blank disables) |
    | `PUBLIC_SENTRY_ENVIRONMENT` | admin | optional, defaults to `production` |
    | `SENTRY_AUTH_TOKEN` | admin (build only) | optional; enables source map upload during the Docker build |
    | `API_URL` | admin | backend base URL (e.g. `http://server:8080` on the compose network) |

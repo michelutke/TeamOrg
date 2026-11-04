@@ -66,11 +66,7 @@ services:
       # by SvelteKit form actions behind a proxy).
       API_URL: ${API_URL}
       ORIGIN: ${ORIGIN}
-      # Sentry (admin project). Host vars are ADMIN_-prefixed because the server service
-      # already uses SENTRY_DSN with a different Sentry project. Blank DSN disables Sentry.
-      SENTRY_DSN: ${ADMIN_SENTRY_DSN}
-      SENTRY_ENVIRONMENT: ${ADMIN_SENTRY_ENVIRONMENT}
-      SENTRY_RELEASE: ${ADMIN_SENTRY_RELEASE}
+      # Sentry (admin project), used by both server and browser side. Blank DSN disables Sentry.
       PUBLIC_SENTRY_DSN: ${PUBLIC_SENTRY_DSN}
       PUBLIC_SENTRY_ENVIRONMENT: ${PUBLIC_SENTRY_ENVIRONMENT}
     ports:
