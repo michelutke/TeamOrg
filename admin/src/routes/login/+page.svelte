@@ -54,6 +54,10 @@
 				/>
 			</label>
 
+			<a href="/forgot-password" class="text-center text-[13px] font-bold text-primary hover:underline">
+				{m.forgotPassword}
+			</a>
+
 			{#if form?.error}
 				<p class="text-center text-[12px] font-medium text-error">{form.error}</p>
 			{/if}

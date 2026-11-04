@@ -60,6 +60,7 @@ fun appModule(environment: ApplicationEnvironment) = module {
     single { SwissVolleySyncService(get(), get(), get(), get(), get(), get()) }
     single<AuditLogRepository> { AuditLogRepositoryImpl() }
     single<UserDeletionRepository> { UserDeletionRepositoryImpl(get()) }
+    single<PasswordResetRepository> { PasswordResetRepositoryImpl() }
     single<AdminRepository> { AdminRepositoryImpl() }
     single<BillingRepository> { BillingRepositoryImpl() }
     single<MailService> { MailServiceImpl(environment.config) }

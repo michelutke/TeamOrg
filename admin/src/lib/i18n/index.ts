@@ -34,6 +34,27 @@ export interface Dict {
 		errRequired: string;
 		newHere: string;
 		startCta: string;
+		forgotPassword: string;
+	};
+	passwordReset: {
+		forgotTitle: string;
+		forgotIntro: string;
+		forgotSubmit: string;
+		email: string;
+		forgotConfirmation: string;
+		errEmail: string;
+		backToLogin: string;
+		resetTitle: string;
+		newPassword: string;
+		confirmPassword: string;
+		resetSubmit: string;
+		errMismatch: string;
+		errTooShort: string;
+		errTooLong: string;
+		errInvalidLink: string;
+		errGeneric: string;
+		success: string;
+		requestNewLink: string;
 	};
 	home: {
 		greeting: string; // prefix before first name, e.g. "Hallo"
@@ -440,7 +461,29 @@ const de: Dict = {
 		submit: 'Anmelden',
 		errRequired: 'E-Mail und Passwort erforderlich',
 		newHere: 'Neu hier?',
-		startCta: 'Jetzt starten'
+		startCta: 'Jetzt starten',
+		forgotPassword: 'Passwort vergessen?'
+	},
+	passwordReset: {
+		forgotTitle: 'Passwort vergessen?',
+		forgotIntro: 'Gib deine E-Mail-Adresse ein. Wir senden dir einen Link zum Zurücksetzen.',
+		forgotSubmit: 'Link senden',
+		email: 'E-Mail',
+		forgotConfirmation:
+			'Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir dir einen Link zum Zurücksetzen des Passworts gesendet.',
+		errEmail: 'Bitte gib eine gültige E-Mail-Adresse ein',
+		backToLogin: 'Zurück zur Anmeldung',
+		resetTitle: 'Neues Passwort setzen',
+		newPassword: 'Neues Passwort',
+		confirmPassword: 'Passwort bestätigen',
+		resetSubmit: 'Passwort speichern',
+		errMismatch: 'Die Passwörter stimmen nicht überein',
+		errTooShort: 'Das Passwort muss mindestens 8 Zeichen lang sein',
+		errTooLong: 'Das Passwort darf höchstens 72 Zeichen lang sein',
+		errInvalidLink: 'Dieser Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.',
+		errGeneric: 'Etwas ist schiefgelaufen. Bitte versuche es später erneut.',
+		success: 'Dein Passwort wurde geändert. Du kannst dich jetzt anmelden.',
+		requestNewLink: 'Neuen Link anfordern'
 	},
 	home: {
 		greeting: 'Hallo',
@@ -858,7 +901,29 @@ const en: Dict = {
 		submit: 'Sign in',
 		errRequired: 'Email and password required',
 		newHere: 'New here?',
-		startCta: 'Get started'
+		startCta: 'Get started',
+		forgotPassword: 'Forgot password?'
+	},
+	passwordReset: {
+		forgotTitle: 'Forgot password?',
+		forgotIntro: "Enter your email address. We'll send you a link to reset your password.",
+		forgotSubmit: 'Send link',
+		email: 'Email',
+		forgotConfirmation:
+			'If an account exists for this email address, we have sent you a link to reset your password.',
+		errEmail: 'Please enter a valid email address',
+		backToLogin: 'Back to sign in',
+		resetTitle: 'Set a new password',
+		newPassword: 'New password',
+		confirmPassword: 'Confirm password',
+		resetSubmit: 'Save password',
+		errMismatch: 'The passwords do not match',
+		errTooShort: 'The password must be at least 8 characters',
+		errTooLong: 'The password must be at most 72 characters',
+		errInvalidLink: 'This link is invalid or has expired. Please request a new one.',
+		errGeneric: 'Something went wrong. Please try again later.',
+		success: 'Your password has been changed. You can now sign in.',
+		requestNewLink: 'Request a new link'
 	},
 	home: {
 		greeting: 'Hi',
