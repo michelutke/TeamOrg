@@ -73,6 +73,7 @@ Feature docs live in [docs/](docs/) — e.g. [unified attendance](docs/unified-a
 | `SENTRY_ENVIRONMENT` | Sentry environment tag for the server (default: `production`) |
 | `SENTRY_RELEASE` | Optional Sentry release identifier for the server |
 | `API_BASE_URL` | Server base URL used by clients (default: `https://server.teamorg.ch`) |
+| `SENTRY_DSN` | Optional Sentry DSN for mobile crash reporting (env var or `local.properties`). Empty disables Sentry (default for debug and local builds) |
 | `API_URL` | Server base URL the **admin web app** proxies to (default: `http://localhost:8080`) |
 | `PUBLIC_SENTRY_DSN` | Admin Sentry DSN (project `teamorg-admin`), used by both server and browser side; blank disables Sentry |
 | `PUBLIC_SENTRY_ENVIRONMENT` | Admin Sentry environment (default: `production`; `development` samples 100% of traces, otherwise 20%) |
