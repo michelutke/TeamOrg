@@ -52,7 +52,7 @@ class PasswordResetTest : IntegrationTestBase() {
 
     private fun withApp(block: suspend io.ktor.server.testing.ApplicationTestBuilder.() -> Unit) {
         mail.sent.clear()
-        withTeamorgTestApplication(fakeMailModule, block)
+        withTeamorgTestApplication(fakeMailModule, block = block)
     }
 
     private suspend fun register(client: HttpClient, email: String, password: String = "password123"): AuthResponse =
