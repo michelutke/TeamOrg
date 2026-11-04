@@ -10,6 +10,3 @@ MARKETING_VERSION=1.0
 // API base URL, read at runtime via Info.plist. CI overrides this from the API_BASE_URL
 // secret for TestFlight builds. $() breaks up "//" so xcconfig does not parse it as a comment.
 API_BASE_URL=https:/$()/server.teamorg.ch
-
-// Sentry DSN (public, not a secret). Read at runtime via Info.plist. Blank disables Sentry.
-SENTRY_DSN=https:/$()/6f03ff7df5b664b7e38fc7eea35ec54c@o4512351145099264.ingest.de.sentry.io/4512371913392208
