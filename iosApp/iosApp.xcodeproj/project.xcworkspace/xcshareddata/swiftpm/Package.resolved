@@ -1,5 +1,5 @@
 {
-  "originHash" : "5758ee0720f04ffb2309fdd2da8c1e8e897724b6a5a71a4f947aed75110702e8",
+  "originHash" : "c9ce8941fbcb807fc405ec699938199e4d2a93d68b4040c0871eda09133bc29f",
   "pins" : [
     {
       "identity" : "onesignal-xcframework",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "c57e23b501cee0a988342a384a4c3ed0dc75ff56",
         "version" : "5.7.0"
+      }
+    },
+    {
+      "identity" : "sentry-cocoa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/getsentry/sentry-cocoa",
+      "state" : {
+        "revision" : "4bb2282661ee6ca2212aa01d19a1214394cd3c45",
+        "version" : "9.30.2"
       }
     },
     {

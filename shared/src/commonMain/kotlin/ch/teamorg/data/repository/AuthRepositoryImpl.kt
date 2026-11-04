@@ -1,5 +1,7 @@
 package ch.teamorg.data.repository
 
+import ch.teamorg.crash.CrashReporting
+import ch.teamorg.crash.CrashReportingBridge
 import ch.teamorg.data.PushBridge
 import ch.teamorg.data.PushRegistration
 import ch.teamorg.domain.AuthResponse
@@ -25,7 +27,8 @@ import io.ktor.http.HttpStatusCode
 class AuthRepositoryImpl(
     private val client: HttpClient,
     private val userPreferences: UserPreferences,
-    private val push: PushBridge = PushRegistration
+    private val push: PushBridge = PushRegistration,
+    private val crashReporting: CrashReportingBridge = CrashReporting
 ) : AuthRepository {
 
     override suspend fun register(request: RegisterRequest): Result<AuthResponse> {
@@ -38,6 +41,7 @@ class AuthRepositoryImpl(
                 userPreferences.saveToken(authResponse.token)
                 userPreferences.saveUserId(authResponse.userId)
                 push.login(authResponse.userId)
+                crashReporting.setUser(authResponse.userId)
                 Result.success(authResponse)
             } else if (response.status == HttpStatusCode.Conflict) {
                 Result.failure(EmailAlreadyRegisteredException())
@@ -59,6 +63,7 @@ class AuthRepositoryImpl(
                 userPreferences.saveToken(authResponse.token)
                 userPreferences.saveUserId(authResponse.userId)
                 push.login(authResponse.userId)
+                crashReporting.setUser(authResponse.userId)
                 Result.success(authResponse)
             } else {
                 Result.failure(Exception("Login failed: ${response.status}"))
@@ -85,6 +90,7 @@ class AuthRepositoryImpl(
 
     override fun logout() {
         push.logout()
+        crashReporting.clearUser()
         userPreferences.clearToken()
     }
 
@@ -112,6 +118,7 @@ class AuthRepositoryImpl(
             if (response.status == HttpStatusCode.OK) {
                 val user = response.body<AuthUser>()
                 push.login(user.userId)
+                crashReporting.setUser(user.userId)
                 Result.success(user)
             } else {
                 if (response.status == HttpStatusCode.Unauthorized) {
