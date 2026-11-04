@@ -1,5 +1,7 @@
 package ch.teamorg.ui.club
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -116,16 +118,20 @@ fun ClubMembersScreen(
                     Text(
                         "Club Members",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.testTag("txt_club_members_title")
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("btn_back")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    TextButton(onClick = { showInviteSheet = true }) {
+                    TextButton(
+                        onClick = { showInviteSheet = true },
+                        modifier = Modifier.testTag("btn_club_invite")
+                    ) {
                         Text("Invite")
                     }
                 },
@@ -143,12 +149,16 @@ fun ClubMembersScreen(
                 placeholder = { Text("Filter by name or email") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag("tf_club_filter"),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 trailingIcon = {
                     if (state.filter.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.setFilter("") }) {
+                        IconButton(
+                            onClick = { viewModel.setFilter("") },
+                            modifier = Modifier.testTag("btn_club_filter_clear")
+                        ) {
                             Icon(Icons.Default.Close, contentDescription = "Clear filter")
                         }
                     }
@@ -174,7 +184,7 @@ fun ClubMembersScreen(
                     Box(modifier = Modifier.fillMaxSize()) {
                         Text(
                             text = if (state.filter.isBlank()) "No members found" else "No matches for \"${state.filter}\"",
-                            modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                            modifier = Modifier.align(Alignment.Center).padding(16.dp).testTag("txt_club_members_empty"),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -183,7 +193,7 @@ fun ClubMembersScreen(
                 else -> {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testTag("list_club_members"),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -215,6 +225,7 @@ private fun MemberRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag("club_member_${user.userId}")
             .clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -247,12 +258,14 @@ private fun MemberRow(
                 text = user.displayName,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.testTag("txt_club_member_name_${user.userId}")
             )
             Text(
                 text = user.email,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("txt_club_member_email_${user.userId}")
             )
             if (user.teamRoles.isNotEmpty()) {
                 Row(
@@ -274,7 +287,10 @@ private fun MemberRow(
             }
         }
 
-        IconButton(onClick = onMenuClick) {
+        IconButton(
+            onClick = onMenuClick,
+            modifier = Modifier.testTag("btn_member_actions_${user.userId}")
+        ) {
             Icon(
                 Icons.Default.MoreVert,
                 contentDescription = "Member actions",
@@ -341,6 +357,8 @@ private fun MemberActionSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_member_actions")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp),
@@ -378,7 +396,8 @@ private fun MemberActionSheet(
                             selected = selectedTeamId == team.id,
                             onClick = { selectedTeamId = team.id },
                             label = { Text(team.name, style = MaterialTheme.typography.labelSmall) },
-                            shape = PillShape
+                            shape = PillShape,
+                            modifier = Modifier.testTag("chip_action_team_${team.id}")
                         )
                     }
                 }
@@ -393,7 +412,8 @@ private fun MemberActionSheet(
                             selected = selectedRole == value,
                             onClick = { selectedRole = value },
                             label = { Text(label) },
-                            shape = PillShape
+                            shape = PillShape,
+                            modifier = Modifier.testTag("chip_action_role_$value")
                         )
                     }
                 }
@@ -401,7 +421,7 @@ private fun MemberActionSheet(
                 Button(
                     onClick = { if (selectedTeamId.isNotEmpty()) onAddToTeam(selectedTeamId, selectedRole) },
                     enabled = selectedTeamId.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp).testTag("btn_add_to_team"),
                     shape = PillShape
                 ) {
                     Text("Add to team", fontWeight = FontWeight.Bold)
@@ -446,26 +466,33 @@ private fun TeamMembershipRow(
             text = ref.teamName,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).testTag("txt_membership_team_${ref.teamId}")
         )
         // Current role chip with dropdown to change
         Box {
             SuggestionChip(
                 onClick = { expanded = true },
                 label = { Text(ref.role.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall) },
-                shape = PillShape
+                shape = PillShape,
+                modifier = Modifier.testTag("btn_membership_role_${ref.teamId}")
             )
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.testTagsAsResourceId()
+            ) {
                 ROLES.forEach { (value, label) ->
                     DropdownMenuItem(
                         text = { Text(label) },
-                        onClick = { expanded = false; onChangeRole(value) }
+                        onClick = { expanded = false; onChangeRole(value) },
+                        modifier = Modifier.testTag("menu_role_${ref.teamId}_$value")
                     )
                 }
             }
         }
         TextButton(
             onClick = onRemove,
+            modifier = Modifier.testTag("btn_membership_remove_${ref.teamId}"),
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
         ) {
             Text("Remove", style = MaterialTheme.typography.labelMedium)
@@ -501,6 +528,8 @@ private fun InviteByEmailSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_invite_by_email")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp),
@@ -516,7 +545,7 @@ private fun InviteByEmailSheet(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email address") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("tf_invite_email"),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp)
             )
@@ -534,7 +563,8 @@ private fun InviteByEmailSheet(
                             selected = selectedTeamId == team.id,
                             onClick = { selectedTeamId = team.id },
                             label = { Text(team.name, style = MaterialTheme.typography.labelSmall) },
-                            shape = PillShape
+                            shape = PillShape,
+                            modifier = Modifier.testTag("chip_invite_team_${team.id}")
                         )
                     }
                 }
@@ -551,7 +581,8 @@ private fun InviteByEmailSheet(
                         selected = selectedRole == value,
                         onClick = { selectedRole = value },
                         label = { Text(label) },
-                        shape = PillShape
+                        shape = PillShape,
+                        modifier = Modifier.testTag("chip_invite_role_$value")
                     )
                 }
             }
@@ -563,7 +594,7 @@ private fun InviteByEmailSheet(
                     }
                 },
                 enabled = email.isNotBlank() && selectedTeamId.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp).testTag("btn_send_invite"),
                 shape = PillShape
             ) {
                 Text("Send Invite", fontWeight = FontWeight.Bold)

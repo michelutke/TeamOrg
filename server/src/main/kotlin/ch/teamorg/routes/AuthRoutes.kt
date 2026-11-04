@@ -2,12 +2,17 @@ package ch.teamorg.routes
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import ch.teamorg.domain.repositories.AuditLogRepository
 import ch.teamorg.domain.repositories.DeleteAccountOutcome
+import ch.teamorg.domain.repositories.PasswordResetRepository
 import ch.teamorg.domain.repositories.TeamRepository
 import ch.teamorg.domain.repositories.UserDeletionRepository
 import ch.teamorg.domain.repositories.UserRepository
+import ch.teamorg.mail.MailService
+import ch.teamorg.mail.buildPasswordResetEmail
 import ch.teamorg.middleware.authenticateUser
 import ch.teamorg.plugins.RateLimits
+import ch.teamorg.plugins.TOKEN_VERSION_CLAIM
 import ch.teamorg.storage.FileStorageService
 import ch.teamorg.storage.FileType
 import ch.teamorg.storage.ImageValidation
@@ -20,10 +25,15 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.utils.io.readRemaining
+import kotlinx.coroutines.launch
 import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
 import org.mindrot.jbcrypt.BCrypt
 import org.koin.ktor.ext.inject
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 
 @Serializable
@@ -48,6 +58,12 @@ data class AuthResponse(val token: String, val userId: String, val displayName: 
 data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
 
 @Serializable
+data class ForgotPasswordRequest(val email: String)
+
+@Serializable
+data class ResetPasswordRequest(val token: String, val newPassword: String)
+
+@Serializable
 data class DeleteAccountRequest(val password: String)
 
 @Serializable
@@ -58,6 +74,13 @@ fun Route.authRoutes() {
     val teamRepository by inject<TeamRepository>()
     val userDeletionRepository by inject<UserDeletionRepository>()
     val fileStorageService by inject<FileStorageService>()
+    val passwordResetRepository by inject<PasswordResetRepository>()
+    val auditLogRepository by inject<AuditLogRepository>()
+    val mailService by inject<MailService>()
+
+    val appBaseUrl = application.environment.config
+        .propertyOrNull("app.base-url")?.getString()?.trim()?.trimEnd('/')
+        ?.ifBlank { null } ?: "https://app.teamorg.ch"
 
     val jwtSecret = application.environment.config.property("jwt.secret").getString()
     val jwtIssuer = application.environment.config.property("jwt.issuer").getString()
@@ -66,6 +89,7 @@ fun Route.authRoutes() {
 
     fun generateToken(userId: String): String {
         return JWT.create()
+            .withClaim(TOKEN_VERSION_CLAIM, userRepository.getTokenVersion(UUID.fromString(userId)))
             .withAudience(jwtAudience)
             .withIssuer(jwtIssuer)
             .withSubject(userId)
@@ -125,6 +149,67 @@ fun Route.authRoutes() {
                 ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid email or password")
             val token = generateToken(user.id)
             call.respond(AuthResponse(token, user.id, user.displayName, user.avatarUrl))
+        }
+      }
+
+      rateLimit(RateLimits.PASSWORD_RESET) {
+        post("/forgot-password") {
+            val request = call.receive<ForgotPasswordRequest>()
+            val email = request.email.trim()
+            // Always 204, whether or not the account exists, so this is no enumeration oracle.
+            // Everything past the lookup runs in the background so known and unknown
+            // addresses answer after the same work.
+            val user = if (isValidEmail(email)) userRepository.findByEmail(email) else null
+            if (user != null) {
+                call.application.launch {
+                    runCatching {
+                        val token = generateResetToken()
+                        val now = Instant.now()
+                        passwordResetRepository.createToken(
+                            userId = UUID.fromString(user.id),
+                            tokenHash = hashResetToken(token),
+                            expiresAt = now.plus(PASSWORD_RESET_VALIDITY),
+                            now = now
+                        )
+                        val content = buildPasswordResetEmail("$appBaseUrl/reset/$token")
+                        mailService.send(
+                            to = user.email,
+                            subject = content.subject,
+                            plainText = content.plainText,
+                            html = content.html
+                        )
+                    }.onFailure { call.application.log.error("Password reset email failed", it) }
+                }
+            }
+            call.respond(HttpStatusCode.NoContent)
+        }
+
+        post("/reset-password") {
+            val request = call.receive<ResetPasswordRequest>()
+            val passwordError = validatePassword(request.newPassword)
+            if (passwordError != null) {
+                return@post call.respond(HttpStatusCode.BadRequest, passwordError)
+            }
+            if (request.token.length > MAX_RESET_TOKEN_LENGTH) {
+                return@post call.respond(HttpStatusCode.BadRequest, INVALID_RESET_TOKEN)
+            }
+            // Claim before hashing so garbage tokens never cost a bcrypt round. A crash after
+            // the claim only burns the token.
+            val result = passwordResetRepository.claimToken(hashResetToken(request.token), Instant.now())
+                ?: return@post call.respond(HttpStatusCode.BadRequest, INVALID_RESET_TOKEN)
+            val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(12))
+            passwordResetRepository.setPassword(result.userId, newHash)
+
+            runCatching {
+                auditLogRepository.log(
+                    actorId = result.userId,
+                    actorEmail = result.email,
+                    action = "password.reset",
+                    targetType = "user",
+                    targetId = result.userId.toString()
+                )
+            }.onFailure { call.application.log.error("Password reset audit entry failed for ${result.userId}", it) }
+            call.respond(HttpStatusCode.NoContent)
         }
       }
 
@@ -241,6 +326,20 @@ fun Route.authRoutes() {
 }
 
 private const val MAX_DISPLAY_NAME_LENGTH = 100
+
+private const val INVALID_RESET_TOKEN = "invalid_or_expired_token"
+private const val MAX_RESET_TOKEN_LENGTH = 128
+private const val RESET_TOKEN_BYTES = 32
+private val PASSWORD_RESET_VALIDITY: Duration = Duration.ofHours(1)
+private val secureRandom = SecureRandom()
+
+private fun generateResetToken(): String {
+    val bytes = ByteArray(RESET_TOKEN_BYTES).also(secureRandom::nextBytes)
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+}
+
+private fun hashResetToken(token: String): String =
+    MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }
 
 /**
  * bcrypt silently ignores everything past 72 bytes, so an unbounded password field is

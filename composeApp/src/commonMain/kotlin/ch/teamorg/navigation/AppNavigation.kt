@@ -26,6 +26,8 @@ import ch.teamorg.ui.events.EventListViewModel
 import ch.teamorg.ui.events.EventViewMode
 import ch.teamorg.ui.invite.InviteScreen
 import ch.teamorg.ui.invite.InviteViewModel
+import ch.teamorg.ui.login.ForgotPasswordScreen
+import ch.teamorg.ui.login.ForgotPasswordViewModel
 import ch.teamorg.ui.login.LoginScreen
 import ch.teamorg.ui.login.LoginViewModel
 import ch.teamorg.ui.inbox.InboxScreen
@@ -87,7 +89,15 @@ fun AppNavigation(
                 LoginScreen(
                     viewModel = viewModel,
                     onLoginSuccess = { onAuthSuccess() },
-                    onNavigateToRegister = { backStack.add(Screen.Register) }
+                    onNavigateToRegister = { backStack.add(Screen.Register) },
+                    onNavigateToForgotPassword = { backStack.add(Screen.ForgotPassword) }
+                )
+            }
+            Screen.ForgotPassword -> {
+                val viewModel: ForgotPasswordViewModel = viewModel { KoinPlatform.getKoin().get() }
+                ForgotPasswordScreen(
+                    viewModel = viewModel,
+                    onBackToLogin = { backStack.add(Screen.Login) }
                 )
             }
             Screen.Register -> {
@@ -290,6 +300,7 @@ fun AppNavigation(
                         backStack.add(Screen.Teams)
                     },
                     onAccountDeleted = onLogout,
+                    onLogout = onLogout,
                     isNavProfile = true
                 )
             }
@@ -301,7 +312,8 @@ fun AppNavigation(
                     userId = screen.userId,
                     viewModel = viewModel,
                     onBack = { backStack.removeAt(backStack.lastIndex) },
-                    onLeftTeam = { backStack.removeAt(backStack.lastIndex) }
+                    onLeftTeam = { backStack.removeAt(backStack.lastIndex) },
+                    onLogout = onLogout
                 )
             }
             is Screen.ClubMembers -> {

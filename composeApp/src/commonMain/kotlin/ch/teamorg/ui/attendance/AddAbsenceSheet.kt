@@ -1,5 +1,7 @@
 package ch.teamorg.ui.attendance
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -92,6 +94,8 @@ fun AddAbsenceSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_add_absence")
                 .fillMaxWidth()
                 .fillMaxHeight()
         ) {
@@ -111,7 +115,7 @@ fun AddAbsenceSheet(
                 )
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.semantics { contentDescription = "Close" }
+                    modifier = Modifier.semantics { contentDescription = "Close" }.testTag("btn_absence_close")
                 ) {
                     Icon(
                         Icons.Default.Close,
@@ -146,7 +150,7 @@ fun AddAbsenceSheet(
                                 icon = preset.icon,
                                 selected = selectedReason == preset.key,
                                 onClick = { selectedReason = preset.key },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("tile_reason_${preset.key}")
                             )
                         }
                     }
@@ -182,13 +186,15 @@ fun AddAbsenceSheet(
                         selected = ruleType == "recurring",
                         onClick = { ruleType = "recurring" },
                         label = { Text("Recurring weekly") },
-                        shape = PillShape
+                        shape = PillShape,
+                        modifier = Modifier.testTag("chip_rule_recurring")
                     )
                     FilterChip(
                         selected = ruleType == "period",
                         onClick = { ruleType = "period" },
                         label = { Text("Period") },
-                        shape = PillShape
+                        shape = PillShape,
+                        modifier = Modifier.testTag("chip_rule_period")
                     )
                 }
 
@@ -211,7 +217,8 @@ fun AddAbsenceSheet(
                     DatePickerField(
                         value = endDate,
                         placeholder = "Select end date",
-                        onClick = { showEndDatePicker = true }
+                        onClick = { showEndDatePicker = true },
+                        modifier = Modifier.testTag("field_absence_end_date")
                     )
                 } else {
                     Row(
@@ -222,13 +229,13 @@ fun AddAbsenceSheet(
                             value = startDate,
                             placeholder = "From",
                             onClick = { showStartDatePicker = true },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).testTag("field_absence_start_date")
                         )
                         DatePickerField(
                             value = endDate,
                             placeholder = "Until",
                             onClick = { showEndDatePicker = true },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).testTag("field_absence_end_date")
                         )
                     }
                 }
@@ -256,7 +263,8 @@ fun AddAbsenceSheet(
                     enabled = selectedReason.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(57.dp),
+                        .height(57.dp)
+                        .testTag("btn_absence_save"),
                     shape = PillShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -345,9 +353,10 @@ private fun AbsenceDatePickerDialog(
 ) {
     val datePickerState = rememberDatePickerState()
     DatePickerDialog(
+        modifier = Modifier.testTagsAsResourceId(),
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.testTag("btn_absence_date_ok"), onClick = {
                 val millis = datePickerState.selectedDateMillis
                 if (millis != null) {
                     val epochDays = (millis / (24L * 60 * 60 * 1000)).toInt()
@@ -359,7 +368,7 @@ private fun AbsenceDatePickerDialog(
             }) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("btn_absence_date_cancel")) { Text("Cancel") }
         }
     ) {
         DatePicker(state = datePickerState)
