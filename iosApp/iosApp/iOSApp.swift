@@ -41,6 +41,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        SentrySetup.start()
         MainViewControllerKt.doInitKoin()
         StripeSetupBridge.register()
         PushBridgeSetup.register()
@@ -56,6 +57,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         #endif
 
         return true
+    }
+}
+
+enum SentrySetup {
+    static func start() {
+        let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String ?? ""
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? ""
+        let build = info?["CFBundleVersion"] as? String ?? ""
+        #if DEBUG
+        let environment = "development"
+        #else
+        let environment = "production"
+        #endif
+        SentryInitKt.doInitSentry(
+            dsn: dsn,
+            environment: environment,
+            release: "\(Bundle.main.bundleIdentifier ?? "ch.teamorg")@\(version)+\(build)"
+        )
     }
 }
 

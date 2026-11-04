@@ -3,6 +3,7 @@ package ch.teamorg
 import android.app.Application
 import ch.teamorg.di.sharedModule
 import ch.teamorg.di.uiModule
+import ch.teamorg.monitoring.initSentry
 import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
 import com.onesignal.notifications.INotificationClickEvent
@@ -13,6 +14,12 @@ import org.koin.core.context.startKoin
 class TeamorgApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+
+        initSentry(
+            dsn = BuildConfig.SENTRY_DSN,
+            environment = if (BuildConfig.DEBUG) "development" else "production",
+            release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}"
+        )
 
         startKoin {
             androidContext(this@TeamorgApplication)

@@ -1,3 +1,4 @@
+import io.sentry.kotlin.multiplatform.gradle.AppleDependencyProvider
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.googleServices)
+    alias(libs.plugins.sentryKmp)
 }
 
 kotlin {
@@ -93,6 +95,10 @@ kotlin {
     }
 }
 
+sentryKmp {
+    autoInstall.apple.provider = AppleDependencyProvider.NONE
+}
+
 // kotlinx-datetime 0.7.x typealiases cause Kotlin/Native IR ClassCastException with CMP 1.10.1
 configurations.all {
     resolutionStrategy.force("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
@@ -117,6 +123,8 @@ android {
             props
         }
         buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
+        val sentryDsn = providers.gradleProperty("sentry.dsn.android").orNull ?: ""
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
     }
 
     signingConfigs {
