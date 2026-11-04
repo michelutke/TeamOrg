@@ -58,6 +58,9 @@ services:
     build:
       context: ./admin
       dockerfile: Dockerfile
+      args:
+        # Build-time only: uploads source maps to Sentry. Absent token skips the upload.
+        SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
     environment:
       # API_URL points at the backend; ORIGIN is the public admin URL (required
       # by SvelteKit form actions behind a proxy).
