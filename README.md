@@ -69,8 +69,17 @@ Feature docs live in [docs/](docs/) — e.g. [unified attendance](docs/unified-a
 |---|---|
 | `DATABASE_URL` | PostgreSQL JDBC URL, e.g. `jdbc:postgresql://localhost:5432/teamorg` |
 | `JWT_SECRET` | Secret string for signing JWT tokens |
+| `SENTRY_DSN` | Server Sentry DSN; unset or blank disables error reporting (local dev and tests send nothing) |
+| `SENTRY_ENVIRONMENT` | Sentry environment tag for the server (default: `production`) |
+| `SENTRY_RELEASE` | Optional Sentry release identifier for the server |
 | `API_BASE_URL` | Server base URL used by clients (default: `https://server.teamorg.ch`) |
 | `API_URL` | Server base URL the **admin web app** proxies to (default: `http://localhost:8080`) |
+| `SENTRY_DSN` (admin) | Admin web app server-side Sentry DSN (project `teamorg-admin`); blank disables Sentry. In `docker-compose.yml` fed from `ADMIN_SENTRY_DSN` |
+| `SENTRY_ENVIRONMENT` (admin) | Admin server-side Sentry environment (default: `production`; `development` samples 100% of traces, otherwise 20%). Compose: `ADMIN_SENTRY_ENVIRONMENT` |
+| `SENTRY_RELEASE` (admin) | Optional Sentry release identifier for the admin server. Compose: `ADMIN_SENTRY_RELEASE` |
+| `PUBLIC_SENTRY_DSN` | Admin browser-side Sentry DSN, same `teamorg-admin` project; blank disables it |
+| `PUBLIC_SENTRY_ENVIRONMENT` | Admin browser-side Sentry environment (default: `production`) |
+| `SENTRY_AUTH_TOKEN` (admin, build time only) | Optional; when set during `npm run build` / Docker build, source maps are uploaded to Sentry. Never set at runtime |
 | `invite.base-url` (server config) | Base URL for generated invite links (default: `https://teamorg.ch`, whose `/i/*` landing forwards to the app) |
 
 E2E test variables (`E2E_BASE_URL`, `E2E_EMAIL`, …) are documented in

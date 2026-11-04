@@ -9,6 +9,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+# Optional: enables Sentry source map upload during the build. Build stage only, the
+# runtime image is a separate stage and never receives it.
+ARG SENTRY_AUTH_TOKEN
 RUN npm run build && npm prune --omit=dev
 
 # ── Runtime stage ─────────────────────────────────────────────
