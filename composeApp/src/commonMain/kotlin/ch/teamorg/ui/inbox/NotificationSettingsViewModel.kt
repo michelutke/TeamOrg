@@ -34,7 +34,7 @@ class NotificationSettingsViewModel(
     private val _state = MutableStateFlow(SettingsState())
     val state = _state.asStateFlow()
 
-    private var debounceJob: Job? = null
+    private val debounceJobs = mutableMapOf<Pair<String, String>, Job>()
 
     init {
         loadTeams()
@@ -113,8 +113,9 @@ class NotificationSettingsViewModel(
         }
         _state.update { it.copy(settings = updated) }
 
-        debounceJob?.cancel()
-        debounceJob = viewModelScope.launch {
+        val debounceKey = teamId to field
+        debounceJobs[debounceKey]?.cancel()
+        debounceJobs[debounceKey] = viewModelScope.launch {
             delay(300)
             val request = buildRequest(field, value)
             notificationRepository.updateSettings(teamId, request)
