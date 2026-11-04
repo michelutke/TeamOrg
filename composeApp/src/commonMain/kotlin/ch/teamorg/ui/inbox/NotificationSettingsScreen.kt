@@ -1,5 +1,6 @@
 package ch.teamorg.ui.inbox
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,14 +36,15 @@ fun NotificationSettingsScreen(
                     Text(
                         text = "Notifications",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.testTag("txt_notification_settings_title")
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 ),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("btn_back")) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -82,7 +84,8 @@ fun NotificationSettingsScreen(
                             selected = state.selectedTeamId == team.teamId,
                             onClick = { viewModel.selectTeam(team.teamId) },
                             label = { Text(team.teamName) },
-                            shape = PillShape
+                            shape = PillShape,
+                            modifier = Modifier.testTag("chip_team_${team.teamId}")
                         )
                     }
                 }
@@ -94,16 +97,19 @@ fun NotificationSettingsScreen(
                 SettingsCard {
                     ToggleRow(
                         label = "New events",
+                        testTag = "switch_events_new",
                         checked = settings.eventsNew,
                         onCheckedChange = { viewModel.updateSetting("eventsNew", it) }
                     )
                     ToggleRow(
                         label = "Event changes",
+                        testTag = "switch_events_edit",
                         checked = settings.eventsEdit,
                         onCheckedChange = { viewModel.updateSetting("eventsEdit", it) }
                     )
                     ToggleRow(
                         label = "Event cancellations",
+                        testTag = "switch_events_cancel",
                         checked = settings.eventsCancel,
                         onCheckedChange = { viewModel.updateSetting("eventsCancel", it) }
                     )
@@ -114,6 +120,7 @@ fun NotificationSettingsScreen(
                 SettingsCard {
                     ToggleRow(
                         label = "Event reminders",
+                        testTag = "switch_reminders_enabled",
                         checked = settings.remindersEnabled,
                         onCheckedChange = { viewModel.updateSetting("remindersEnabled", it) }
                     )
@@ -131,18 +138,21 @@ fun NotificationSettingsScreen(
                     SettingsCard {
                         RadioRow(
                             title = "Every response",
+                            testTag = "radio_coach_per_response",
                             subtitle = "Get notified on each confirm / decline / unsure",
                             selected = settings.coachResponseMode == "per_response",
                             onClick = { viewModel.updateSetting("coachResponseMode", "per_response") }
                         )
                         RadioRow(
                             title = "Summary before event",
+                            testTag = "radio_coach_summary",
                             subtitle = "One list of missing responses before each event",
                             selected = settings.coachResponseMode == "summary",
                             onClick = { viewModel.updateSetting("coachResponseMode", "summary") }
                         )
                         ToggleRow(
                             label = "Player absences",
+                            testTag = "switch_absences_enabled",
                             subtitle = "Notify me when an absence affects an event",
                             checked = settings.absencesEnabled,
                             onCheckedChange = { viewModel.updateSetting("absencesEnabled", it) }
@@ -199,6 +209,7 @@ private fun ToggleRow(
     label: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    testTag: String,
     subtitle: String? = null
 ) {
     Row(
@@ -225,7 +236,8 @@ private fun ToggleRow(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag(testTag)
         )
     }
 }
@@ -235,11 +247,13 @@ private fun RadioRow(
     title: String,
     subtitle: String,
     selected: Boolean,
+    testTag: String,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(testTag)
             .clickable { onClick() }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -281,6 +295,7 @@ private fun LeadTimeRow(leadMinutes: Int, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSecondaryContainer,
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.secondaryContainer, PillShape)
+                .testTag("btn_lead_time")
                 .clickable { onClick() }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )

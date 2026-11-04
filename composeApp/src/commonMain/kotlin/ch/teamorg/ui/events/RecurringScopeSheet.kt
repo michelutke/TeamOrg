@@ -1,5 +1,7 @@
 package ch.teamorg.ui.events
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,6 +34,8 @@ fun RecurringScopeSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_recurring_scope")
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
@@ -66,17 +70,20 @@ fun RecurringScopeSheet(
             ScopeOptionCard(
                 label = "This event only",
                 selected = selectedScope == "this_only",
-                onClick = { selectedScope = "this_only" }
+                onClick = { selectedScope = "this_only" },
+                testTag = "scope_this_only"
             )
             ScopeOptionCard(
                 label = "This and future events",
                 selected = selectedScope == "this_and_future",
-                onClick = { selectedScope = "this_and_future" }
+                onClick = { selectedScope = "this_and_future" },
+                testTag = "scope_this_and_future"
             )
             ScopeOptionCard(
                 label = "All events in the series",
                 selected = selectedScope == "all",
-                onClick = { selectedScope = "all" }
+                onClick = { selectedScope = "all" },
+                testTag = "scope_all"
             )
 
             Spacer(Modifier.height(4.dp))
@@ -88,14 +95,14 @@ fun RecurringScopeSheet(
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f).height(57.dp),
+                    modifier = Modifier.weight(1f).height(57.dp).testTag("btn_scope_cancel"),
                     shape = PillShape
                 ) {
                     Text("Cancel", fontWeight = FontWeight.SemiBold)
                 }
                 Button(
                     onClick = { onContinue(selectedScope) },
-                    modifier = Modifier.weight(1f).height(57.dp),
+                    modifier = Modifier.weight(1f).height(57.dp).testTag("btn_scope_continue"),
                     shape = PillShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -121,7 +128,8 @@ fun RecurringScopeSheet(
 private fun ScopeOptionCard(
     label: String,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    testTag: String
 ) {
     val bg = if (selected) MaterialTheme.colorScheme.primaryContainer
     else MaterialTheme.colorScheme.surfaceContainerHigh
@@ -130,6 +138,7 @@ private fun ScopeOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .testTag(testTag)
             .clip(PillShape)
             .background(bg)
             .clickable(onClick = onClick)

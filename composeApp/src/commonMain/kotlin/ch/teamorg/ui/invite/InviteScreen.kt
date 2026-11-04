@@ -11,7 +11,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ch.teamorg.domain.InviteDetails
 import ch.teamorg.ui.components.TeamorgLoader
-import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,8 +41,7 @@ fun InviteScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
-            .padding(24.dp)
-            .testTagsAsResourceId(),
+            .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
         if (state.isLoading) {
