@@ -20,14 +20,14 @@ import androidx.compose.ui.unit.dp
 import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.components.TeamorgMark
 import ch.teamorg.ui.components.TeamorgTextField
-import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
@@ -41,7 +41,6 @@ fun LoginScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
-            .testTagsAsResourceId()
     ) {
         Column(
             modifier = Modifier
@@ -99,7 +98,17 @@ fun LoginScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = onNavigateToForgotPassword,
+                enabled = !state.isLoading,
+                modifier = Modifier.align(Alignment.End).testTag("forgot_password_link")
+            ) {
+                Text(
+                    "Forgot password?",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             Button(
                 onClick = { viewModel.onLoginClick() },

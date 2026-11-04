@@ -1,5 +1,6 @@
 package ch.teamorg.ui.team
 
+import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -78,21 +79,30 @@ fun TeamsListScreen(
                                     text = "Teams",
                                     style = MaterialTheme.typography.headlineLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).testTag("txt_teams_title")
                                 )
                                 if (state.isClubManager) {
                                     val clubId = state.clubId
                                     if (clubId != null && onMembersClick != null) {
-                                        TextButton(onClick = { onMembersClick(clubId) }) {
+                                        TextButton(
+                                            onClick = { onMembersClick(clubId) },
+                                            modifier = Modifier.testTag("btn_club_members")
+                                        ) {
                                             Text("Members")
                                         }
                                     }
                                     if (clubId != null && onBillingClick != null) {
-                                        TextButton(onClick = { onBillingClick(clubId) }) {
+                                        TextButton(
+                                            onClick = { onBillingClick(clubId) },
+                                            modifier = Modifier.testTag("btn_club_billing")
+                                        ) {
                                             Text("Billing")
                                         }
                                     }
-                                    IconButton(onClick = { viewModel.showEditClubSheet() }) {
+                                    IconButton(
+                                        onClick = { viewModel.showEditClubSheet() },
+                                        modifier = Modifier.testTag("btn_edit_club")
+                                    ) {
                                         Icon(
                                             Icons.Default.Edit,
                                             contentDescription = "Edit Club",
@@ -130,7 +140,8 @@ fun TeamsListScreen(
                                     text = "No teams yet. Create your first team.",
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 48.dp),
+                                        .padding(vertical = 48.dp)
+                                        .testTag("txt_teams_empty"),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -138,6 +149,7 @@ fun TeamsListScreen(
                         } else {
                             items(state.teams, key = { it.id }) { team ->
                                 TeamCard(
+                                    teamId = team.id,
                                     name = team.name,
                                     memberCount = team.memberCount,
                                     onClick = { onTeamClick(team.id) }
@@ -256,6 +268,8 @@ private fun ClubEditSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_club_edit")
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp),
@@ -271,7 +285,7 @@ private fun ClubEditSheet(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Club name") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("tf_club_name"),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp)
             )
@@ -280,7 +294,7 @@ private fun ClubEditSheet(
                 value = location,
                 onValueChange = { location = it },
                 label = { Text("Location (optional)") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("tf_club_location"),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp)
             )
@@ -294,7 +308,8 @@ private fun ClubEditSheet(
                 enabled = name.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(57.dp),
+                    .height(57.dp)
+                    .testTag("btn_club_save"),
                 shape = PillShape
             ) {
                 Text("Save", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -305,6 +320,7 @@ private fun ClubEditSheet(
 
 @Composable
 private fun TeamCard(
+    teamId: String,
     name: String,
     memberCount: Int,
     onClick: () -> Unit
@@ -312,6 +328,7 @@ private fun TeamCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag("team_card_$teamId")
             .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(onClick = onClick)

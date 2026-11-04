@@ -1,5 +1,6 @@
 package ch.teamorg.ui.attendance
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,7 +36,8 @@ fun MemberResponseRow(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .testTag("member_response_row_${response.userId}"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val initials = displayName
@@ -68,7 +70,8 @@ fun MemberResponseRow(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("txt_member_name_${response.userId}")
             )
 
             val isAutoDeclined = response.abwesenheitRuleId != null
@@ -85,7 +88,8 @@ fun MemberResponseRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("txt_member_annotation_${response.userId}")
                 )
             }
 
@@ -109,7 +113,8 @@ fun MemberResponseRow(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .clickable(onClick = onEditTap)
-                    .semantics { contentDescription = "Edit attendance" },
+                    .semantics { contentDescription = "Edit attendance" }
+                    .testTag("btn_edit_attendance_${response.userId}"),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
