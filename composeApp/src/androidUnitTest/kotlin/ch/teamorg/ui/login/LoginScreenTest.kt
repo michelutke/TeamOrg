@@ -30,6 +30,7 @@ class LoginScreenTest {
     private fun launchScreen(
         onLoginSuccess: () -> Unit = {},
         onNavigateToRegister: () -> Unit = {},
+        onNavigateToForgotPassword: () -> Unit = {},
     ): LoginViewModel {
         val viewModel = LoginViewModel(authRepository = FakeAuthRepository())
         composeTestRule.setContent {
@@ -37,6 +38,7 @@ class LoginScreenTest {
                 viewModel = viewModel,
                 onLoginSuccess = onLoginSuccess,
                 onNavigateToRegister = onNavigateToRegister,
+                onNavigateToForgotPassword = onNavigateToForgotPassword,
             )
         }
         return viewModel

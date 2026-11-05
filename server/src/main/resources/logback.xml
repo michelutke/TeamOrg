@@ -4,10 +4,20 @@
             <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+    <!-- Events are sent only when the SDK was initialised in code (configureSentry, which needs
+         SENTRY_DSN). The *_IS_UNDEFINED dsn stops the appender from initialising Sentry itself. -->
+    <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+        <options>
+            <dsn>SENTRY_INIT_IN_CODE_IS_UNDEFINED</dsn>
+        </options>
+        <minimumEventLevel>ERROR</minimumEventLevel>
+        <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
+    </appender>
     <!-- Defaults to INFO; set LOG_LEVEL=DEBUG (or TRACE) in the environment to get
          SQL statements and route-resolution traces back when debugging. -->
     <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="SENTRY"/>
     </root>
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>

@@ -14,6 +14,9 @@ import io.ktor.server.testing.*
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -42,6 +45,10 @@ private data class CreateEventPayloadAttn(
 )
 
 class AttendanceRoutesTest : IntegrationTestBase() {
+
+    private val futureDay: LocalDate = LocalDate.now().plusDays(30)
+    private val periodStart: LocalDate = LocalDate.now().plusDays(14)
+
 
     private suspend fun ApplicationTestBuilder.registerAndLogin(
         email: String,
@@ -79,8 +86,8 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         title: String,
         responseDeadline: String? = null,
         teamIds: List<String> = emptyList(),
-        startAt: String = "2026-09-01T10:00:00Z",
-        endAt: String = "2026-09-01T12:00:00Z"
+        startAt: String = "${futureDay}T10:00:00Z",
+        endAt: String = "${futureDay}T12:00:00Z"
     ): Event {
         val client = createJsonClient()
         return client.post("/events") {
@@ -318,7 +325,7 @@ class AttendanceRoutesTest : IntegrationTestBase() {
         val (_, teamId) = setupClubAndTeam(coachAuth.token)
         invitePlayerToTeam(coachAuth.token, teamId, playerAuth.token)
 
-        // Player creates a period absence rule covering October 2026
+        // Player creates a period absence rule covering the coming weeks
         client.post("/users/me/abwesenheit") {
             header(HttpHeaders.Authorization, "Bearer ${playerAuth.token}")
             contentType(ContentType.Application.Json)
@@ -326,18 +333,18 @@ class AttendanceRoutesTest : IntegrationTestBase() {
                 presetType = "other",
                 label = "October sick",
                 ruleType = "period",
-                startDate = "2026-10-01",
-                endDate = "2026-10-31"
+                startDate = periodStart.toString(),
+                endDate = periodStart.plusDays(30).toString()
             ))
         }
 
         // Coach creates event in October linked to the team
         val event = createEvent(
             coachAuth.token,
-            "October Training",
+            "Period Training",
             teamIds = listOf(teamId),
-            startAt = "2026-10-15T10:00:00Z",
-            endAt = "2026-10-15T12:00:00Z"
+            startAt = "${periodStart.plusDays(14)}T10:00:00Z",
+            endAt = "${periodStart.plusDays(14)}T12:00:00Z"
         )
 
         val response = client.get("/events/${event.id}/attendance") {
@@ -374,13 +381,13 @@ class AttendanceRoutesTest : IntegrationTestBase() {
             ))
         }
 
-        // 2026-09-02 is a Wednesday
+        val wednesday = LocalDate.now().plusDays(7).with(TemporalAdjusters.next(DayOfWeek.WEDNESDAY))
         val event = createEvent(
             coachAuth.token,
             "Wednesday Training",
             teamIds = listOf(teamId),
-            startAt = "2026-09-02T10:00:00Z",
-            endAt = "2026-09-02T12:00:00Z"
+            startAt = "${wednesday}T10:00:00Z",
+            endAt = "${wednesday}T12:00:00Z"
         )
 
         val response = client.get("/events/${event.id}/attendance") {
@@ -412,17 +419,17 @@ class AttendanceRoutesTest : IntegrationTestBase() {
                 presetType = "other",
                 label = "Holiday",
                 ruleType = "period",
-                startDate = "2026-11-01",
-                endDate = "2026-11-30"
+                startDate = periodStart.toString(),
+                endDate = periodStart.plusDays(29).toString()
             ))
         }
 
         val event = createEvent(
             coachAuth.token,
-            "November Training",
+            "Holiday Training",
             teamIds = listOf(teamId),
-            startAt = "2026-11-10T10:00:00Z",
-            endAt = "2026-11-10T12:00:00Z"
+            startAt = "${periodStart.plusDays(9)}T10:00:00Z",
+            endAt = "${periodStart.plusDays(9)}T12:00:00Z"
         )
 
         // Verify auto-declined first

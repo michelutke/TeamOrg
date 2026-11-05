@@ -33,12 +33,13 @@ kotest = "5.9.1"
 robolectric = "4.14"
 androidx-test-ext-junit = "1.2.1"
 androidx-test-runner = "1.6.2"
-testcontainers = "1.21.0"
+testcontainers = "1.21.4"
 kizitonwose-calendar = "2.7.0"
 onesignal = "5.7.6"
 googleServices = "4.4.2"
 stripe = "29.2.0"
 stripeAndroid = "23.13.1"
+sentryKmp = "0.29.0"
 
 [libraries]
 # Kotlin
@@ -145,3 +146,4 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+sentryKmp = { id = "io.sentry.kotlin.multiplatform.gradle", version.ref = "sentryKmp" }

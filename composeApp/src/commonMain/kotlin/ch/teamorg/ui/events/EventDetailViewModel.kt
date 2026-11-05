@@ -124,6 +124,7 @@ class EventDetailViewModel(
 
     fun submitResponse(status: String, reason: String?) {
         val eventId = _state.value.event?.event?.id ?: return
+        val previousResponse = _state.value.myResponse
         _state.update { it.copy(myResponse = status) }
         viewModelScope.launch {
             val request = SubmitResponseRequest(status = status, reason = reason)
@@ -133,7 +134,7 @@ class EventDetailViewModel(
                     loadAttendance(eventId)
                 }
                 .onFailure {
-                    _state.update { it.copy(myResponse = null) }
+                    _state.update { it.copy(myResponse = previousResponse) }
                 }
         }
     }

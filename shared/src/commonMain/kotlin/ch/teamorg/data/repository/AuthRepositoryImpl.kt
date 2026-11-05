@@ -1,11 +1,15 @@
 package ch.teamorg.data.repository
 
+import ch.teamorg.crash.CrashReporting
+import ch.teamorg.crash.CrashReportingBridge
+import ch.teamorg.data.PushBridge
 import ch.teamorg.data.PushRegistration
 import ch.teamorg.domain.AuthResponse
 import ch.teamorg.domain.AuthUser
 import ch.teamorg.domain.DeleteAccountConflict
 import ch.teamorg.domain.DeleteAccountRequest
 import ch.teamorg.domain.DeleteAccountResult
+import ch.teamorg.domain.ForgotPasswordRequest
 import ch.teamorg.domain.LoginRequest
 import ch.teamorg.domain.RegisterRequest
 import ch.teamorg.domain.UserRoles
@@ -22,7 +26,9 @@ import io.ktor.http.HttpStatusCode
 
 class AuthRepositoryImpl(
     private val client: HttpClient,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val push: PushBridge = PushRegistration,
+    private val crashReporting: CrashReportingBridge = CrashReporting
 ) : AuthRepository {
 
     override suspend fun register(request: RegisterRequest): Result<AuthResponse> {
@@ -34,7 +40,8 @@ class AuthRepositoryImpl(
                 val authResponse = response.body<AuthResponse>()
                 userPreferences.saveToken(authResponse.token)
                 userPreferences.saveUserId(authResponse.userId)
-                PushRegistration.login(authResponse.userId)
+                push.login(authResponse.userId)
+                crashReporting.setUser(authResponse.userId)
                 Result.success(authResponse)
             } else if (response.status == HttpStatusCode.Conflict) {
                 Result.failure(EmailAlreadyRegisteredException())
@@ -55,7 +62,8 @@ class AuthRepositoryImpl(
                 val authResponse = response.body<AuthResponse>()
                 userPreferences.saveToken(authResponse.token)
                 userPreferences.saveUserId(authResponse.userId)
-                PushRegistration.login(authResponse.userId)
+                push.login(authResponse.userId)
+                crashReporting.setUser(authResponse.userId)
                 Result.success(authResponse)
             } else {
                 Result.failure(Exception("Login failed: ${response.status}"))
@@ -65,8 +73,24 @@ class AuthRepositoryImpl(
         }
     }
 
+    override suspend fun forgotPassword(email: String): Result<Unit> {
+        return try {
+            val response = client.post("/auth/forgot-password") {
+                setBody(ForgotPasswordRequest(email))
+            }
+            if (response.status == HttpStatusCode.NoContent) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Password reset request failed: ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override fun logout() {
-        PushRegistration.logout()
+        push.logout()
+        crashReporting.clearUser()
         userPreferences.clearToken()
     }
 
@@ -92,7 +116,10 @@ class AuthRepositoryImpl(
         return try {
             val response = client.get("/auth/me")
             if (response.status == HttpStatusCode.OK) {
-                Result.success(response.body<AuthUser>())
+                val user = response.body<AuthUser>()
+                push.login(user.userId)
+                crashReporting.setUser(user.userId)
+                Result.success(user)
             } else {
                 if (response.status == HttpStatusCode.Unauthorized) {
                     logout()

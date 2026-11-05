@@ -1,5 +1,7 @@
 package ch.teamorg.ui.events
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -85,6 +87,8 @@ fun RecurringPatternSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
+                .testTag("sheet_recurring_pattern")
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
@@ -136,6 +140,7 @@ fun RecurringPatternSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
+                            .testTag("tf_recurring_interval")
                     )
                 }
 
@@ -145,6 +150,7 @@ fun RecurringPatternSheet(
                         val selected = frequencyUnit == value
                         Box(
                             modifier = Modifier
+                                .testTag("chip_recurring_unit_$value")
                                 .clip(PillShape)
                                 .background(
                                     if (selected) MaterialTheme.colorScheme.primaryContainer
@@ -188,6 +194,7 @@ fun RecurringPatternSheet(
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
+                                .testTag("btn_recurring_weekday_$index")
                                 .clip(CircleShape)
                                 .background(
                                     if (selected) MaterialTheme.colorScheme.primary
@@ -222,6 +229,7 @@ fun RecurringPatternSheet(
                 Column(
                     modifier = Modifier
                         .weight(1f)
+                        .testTag("row_recurring_end_date")
                         .clickable {
                             if (hasEndDate) showEndDatePicker = true
                         }
@@ -246,7 +254,8 @@ fun RecurringPatternSheet(
                     onCheckedChange = {
                         hasEndDate = it
                         if (it && endDate == null) showEndDatePicker = true
-                    }
+                    },
+                    modifier = Modifier.testTag("switch_recurring_has_end")
                 )
             }
 
@@ -257,7 +266,7 @@ fun RecurringPatternSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().testTag("txt_recurring_summary")
             )
 
             // Done button
@@ -281,7 +290,8 @@ fun RecurringPatternSheet(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(57.dp),
+                    .height(57.dp)
+                    .testTag("btn_recurring_done"),
                 shape = PillShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -323,9 +333,10 @@ private fun RecurringEndDatePickerDialog(
     } ?: (today.toEpochDays() * 24L * 60 * 60 * 1000)
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initMillis)
     DatePickerDialog(
+        modifier = Modifier.testTagsAsResourceId(),
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.testTag("btn_recurring_date_ok"), onClick = {
                 val millis = datePickerState.selectedDateMillis
                 if (millis != null) {
                     val epochDays = (millis / (24L * 60 * 60 * 1000)).toInt()
@@ -336,7 +347,7 @@ private fun RecurringEndDatePickerDialog(
             }) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("btn_recurring_date_cancel")) { Text("Cancel") }
         }
     ) {
         DatePicker(state = datePickerState)

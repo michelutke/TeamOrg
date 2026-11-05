@@ -1,5 +1,6 @@
 package ch.teamorg.ui.events
 
+import ch.teamorg.ui.testTagsAsResourceId
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -79,7 +80,7 @@ fun CreateEditEventScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = onBack, modifier = Modifier.testTag("btn_back")) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Back",
@@ -91,7 +92,7 @@ fun CreateEditEventScreen(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).testTag("txt_event_form_title")
             )
         }
 
@@ -105,6 +106,7 @@ fun CreateEditEventScreen(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.errorContainer)
                     .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .testTag("txt_event_save_error")
             )
         }
 
@@ -122,20 +124,21 @@ fun CreateEditEventScreen(
                 FieldTextInput(
                     value = state.title,
                     onValueChange = viewModel::setTitle,
-                    placeholder = "Event title"
+                    placeholder = "Event title",
+                    modifier = Modifier.testTag("tf_event_title")
                 )
             }
             if (state.titleError != null) {
-                FieldError(state.titleError!!)
+                FieldError(state.titleError!!, modifier = Modifier.testTag("txt_event_title_error"))
             }
 
             // ===== TYPE =====
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionLabel("Type")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypePill("Training", state.type == "training") { viewModel.setType("training") }
-                    TypePill("Match", state.type == "match") { viewModel.setType("match") }
-                    TypePill("Other", state.type == "other") { viewModel.setType("other") }
+                    TypePill("Training", state.type == "training", Modifier.testTag("pill_type_training")) { viewModel.setType("training") }
+                    TypePill("Match", state.type == "match", Modifier.testTag("pill_type_match")) { viewModel.setType("match") }
+                    TypePill("Other", state.type == "other", Modifier.testTag("pill_type_other")) { viewModel.setType("other") }
                 }
             }
 
@@ -147,7 +150,7 @@ fun CreateEditEventScreen(
                 FilledField(
                     label = "Start date",
                     onClick = { showStartDatePicker = true },
-                    modifier = Modifier.weight(1.4f)
+                    modifier = Modifier.weight(1.4f).testTag("field_start_date")
                 ) {
                     Text(
                         formatShortDate(state.startDate),
@@ -158,7 +161,7 @@ fun CreateEditEventScreen(
                 FilledField(
                     label = "Start time",
                     onClick = { showStartTimePicker = true },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testTag("field_start_time")
                 ) {
                     Text(
                         formatTime(state.startTime),
@@ -174,7 +177,7 @@ fun CreateEditEventScreen(
                 FilledField(
                     label = "End date",
                     onClick = { showEndDatePicker = true },
-                    modifier = Modifier.weight(1.4f)
+                    modifier = Modifier.weight(1.4f).testTag("field_end_date")
                 ) {
                     Text(
                         formatShortDate(state.endDate),
@@ -185,7 +188,7 @@ fun CreateEditEventScreen(
                 FilledField(
                     label = "End time",
                     onClick = { showEndTimePicker = true },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testTag("field_end_time")
                 ) {
                     Text(
                         formatTime(state.endTime),
@@ -195,7 +198,7 @@ fun CreateEditEventScreen(
                 }
             }
             if (state.endTimeError != null) {
-                FieldError(state.endTimeError!!)
+                FieldError(state.endTimeError!!, modifier = Modifier.testTag("txt_event_end_time_error"))
             }
 
             // Meetup time
@@ -204,7 +207,8 @@ fun CreateEditEventScreen(
                 onClick = {
                     if (!state.meetupEnabled) viewModel.toggleMeetup(true)
                     showMeetupTimePicker = true
-                }
+                },
+                modifier = Modifier.testTag("field_meetup_time")
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -219,7 +223,7 @@ fun CreateEditEventScreen(
                             "✕",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.clickable { viewModel.toggleMeetup(false) }
+                            modifier = Modifier.testTag("btn_meetup_clear").clickable { viewModel.toggleMeetup(false) }
                         )
                     }
                 }
@@ -230,7 +234,8 @@ fun CreateEditEventScreen(
                 FieldTextInput(
                     value = state.location,
                     onValueChange = viewModel::setLocation,
-                    placeholder = "Venue or address"
+                    placeholder = "Venue or address",
+                    modifier = Modifier.testTag("tf_event_location")
                 )
             }
 
@@ -241,7 +246,8 @@ fun CreateEditEventScreen(
                     onValueChange = viewModel::setDescription,
                     placeholder = "Add details for your team...",
                     singleLine = false,
-                    minLines = 2
+                    minLines = 2,
+                    modifier = Modifier.testTag("tf_event_description")
                 )
             }
 
@@ -260,13 +266,14 @@ fun CreateEditEventScreen(
                             TypePill(
                                 label = team.name,
                                 selected = team.id in state.selectedTeamIds,
+                                modifier = Modifier.testTag("pill_team_${team.id}"),
                                 onClick = { viewModel.toggleTeam(team.id) }
                             )
                         }
                     }
                 }
                 if (state.teamError != null) {
-                    FieldError(state.teamError!!)
+                    FieldError(state.teamError!!, modifier = Modifier.testTag("txt_event_team_error"))
                 }
 
                 // Sub-groups selector
@@ -314,6 +321,7 @@ fun CreateEditEventScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
+                        .testTag("row_recurring")
                         .then(
                             if (!isSeriesLocked && state.recurringEnabled)
                                 Modifier.clickable { showRecurringSheet = true }
@@ -327,7 +335,8 @@ fun CreateEditEventScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        when {
+                        modifier = Modifier.testTag("txt_recurring_state"),
+                        text = when {
                             isSeriesLocked -> "Part of a series"
                             state.recurringEnabled && recurringPattern != null ->
                                 buildRecurringSummary(recurringPattern)
@@ -340,7 +349,8 @@ fun CreateEditEventScreen(
                 if (!isSeriesLocked) {
                     Switch(
                         checked = state.recurringEnabled,
-                        onCheckedChange = viewModel::setRecurringEnabled
+                        onCheckedChange = viewModel::setRecurringEnabled,
+                        modifier = Modifier.testTag("switch_recurring")
                     )
                 }
             }
@@ -374,7 +384,7 @@ fun CreateEditEventScreen(
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.clickable {
+                                modifier = Modifier.testTag("btn_min_attendees_minus").clickable {
                                     if (state.minAttendees > 1) viewModel.setMinAttendees(state.minAttendees - 1)
                                 }
                             )
@@ -382,14 +392,15 @@ fun CreateEditEventScreen(
                                 state.minAttendees.toString(),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.testTag("txt_min_attendees")
                             )
                             Text(
                                 "+",
                                 color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.clickable {
+                                modifier = Modifier.testTag("btn_min_attendees_plus").clickable {
                                     viewModel.setMinAttendees(state.minAttendees + 1)
                                 }
                             )
@@ -398,7 +409,8 @@ fun CreateEditEventScreen(
                 }
                 Switch(
                     checked = state.minAttendeesEnabled,
-                    onCheckedChange = viewModel::toggleMinAttendees
+                    onCheckedChange = viewModel::toggleMinAttendees,
+                    modifier = Modifier.testTag("switch_min_attendees")
                 )
             }
 
@@ -409,16 +421,19 @@ fun CreateEditEventScreen(
                     TypePill(
                         label = "Keine Vorgabe",
                         selected = state.defaultResponse == "none",
+                        modifier = Modifier.testTag("pill_default_none"),
                         onClick = { viewModel.setDefaultResponse("none") }
                     )
                     TypePill(
                         label = "Anwesend",
                         selected = state.defaultResponse == "accepted",
+                        modifier = Modifier.testTag("pill_default_accepted"),
                         onClick = { viewModel.setDefaultResponse("accepted") }
                     )
                     TypePill(
                         label = "Abgemeldet",
                         selected = state.defaultResponse == "declined",
+                        modifier = Modifier.testTag("pill_default_declined"),
                         onClick = { viewModel.setDefaultResponse("declined") }
                     )
                 }
@@ -459,7 +474,8 @@ fun CreateEditEventScreen(
                 enabled = !state.isSaving,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(57.dp),
+                    .height(57.dp)
+                    .testTag("btn_save_event"),
                 shape = PillShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -589,11 +605,12 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun FieldError(text: String) {
+private fun FieldError(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.bodySmall
+        style = MaterialTheme.typography.bodySmall,
+        modifier = modifier
     )
 }
 
@@ -628,6 +645,7 @@ private fun FieldTextInput(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    modifier: Modifier = Modifier,
     singleLine: Boolean = true,
     minLines: Int = 1
 ) {
@@ -641,7 +659,7 @@ private fun FieldTextInput(
             fontSize = MaterialTheme.typography.bodyLarge.fontSize
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         decorationBox = { innerTextField ->
             Box {
                 if (value.isEmpty()) {
@@ -662,10 +680,11 @@ private fun FieldTextInput(
 private fun TypePill(
     label: String,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .clip(PillShape)
             .background(
                 if (selected) MaterialTheme.colorScheme.primaryContainer
@@ -748,9 +767,10 @@ private fun EventDatePickerDialog(
         }
     )
     DatePickerDialog(
+        modifier = Modifier.testTagsAsResourceId(),
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.testTag("btn_date_ok"), onClick = {
                 val millis = datePickerState.selectedDateMillis
                 if (millis != null) {
                     val epochDays = (millis / (24L * 60 * 60 * 1000)).toInt()
@@ -761,7 +781,7 @@ private fun EventDatePickerDialog(
             }) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("btn_date_cancel")) { Text("Cancel") }
         }
     ) {
         DatePicker(state = datePickerState)
@@ -781,18 +801,19 @@ private fun EventTimePickerDialog(
         is24Hour = true
     )
     AlertDialog(
+        modifier = Modifier.testTagsAsResourceId(),
         onDismissRequest = onDismiss,
         title = { Text("Select time") },
         text = {
             TimePicker(state = timePickerState)
         },
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.testTag("btn_time_ok"), onClick = {
                 onTimeSelected(LocalTime(timePickerState.hour, timePickerState.minute))
             }) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("btn_time_cancel")) { Text("Cancel") }
         }
     )
 }
@@ -814,6 +835,7 @@ private fun SubgroupsSheet(
     ) {
         Column(
             modifier = Modifier
+                .testTagsAsResourceId()
                 .fillMaxWidth()
                 .testTag("subgroup_sheet")
                 .padding(horizontal = 20.dp)
@@ -840,6 +862,7 @@ private fun SubgroupsSheet(
                 label = "All players",
                 count = subgroups.sumOf { it.memberCount },
                 selected = allSelected,
+                modifier = Modifier.testTag("subgroup_item_all"),
                 onClick = {
                     // Deselect all sub-groups to mean "all players"
                     selectedIds.forEach { id -> onToggle(id) }
@@ -852,6 +875,7 @@ private fun SubgroupsSheet(
                     label = subgroup.name,
                     count = subgroup.memberCount,
                     selected = subgroup.id in selectedIds,
+                    modifier = Modifier.testTag("subgroup_item_${subgroup.id}"),
                     onClick = { onToggle(subgroup.id) }
                 )
             }
@@ -861,7 +885,8 @@ private fun SubgroupsSheet(
                 onClick = onDismiss,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(57.dp),
+                    .height(57.dp)
+                    .testTag("btn_subgroups_done"),
                 shape = PillShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -883,10 +908,11 @@ private fun SubgroupListItem(
     label: String,
     count: Int,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(PillShape)
             .background(

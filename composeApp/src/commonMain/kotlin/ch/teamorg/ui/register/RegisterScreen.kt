@@ -19,7 +19,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import ch.teamorg.ui.components.TeamorgLoader
 import ch.teamorg.ui.components.TeamorgTextField
-import ch.teamorg.ui.testTagsAsResourceId
 import ch.teamorg.ui.theme.PillShape
 
 @Composable
@@ -40,7 +39,6 @@ fun RegisterScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
-            .testTagsAsResourceId()
     ) {
         Column(
             modifier = Modifier

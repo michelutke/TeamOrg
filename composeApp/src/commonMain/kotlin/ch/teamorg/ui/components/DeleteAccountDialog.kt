@@ -1,5 +1,7 @@
 package ch.teamorg.ui.components
 
+import ch.teamorg.ui.testTagsAsResourceId
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,6 +56,7 @@ fun DeleteAccountDialog(
     var disclosureExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
+        modifier = Modifier.testTagsAsResourceId(),
         onDismissRequest = { if (!deleteInProgress) onDismiss() },
         shape = RoundedCornerShape(28.dp),
         title = { Text("Delete account", fontWeight = FontWeight.Bold) },
@@ -64,7 +67,10 @@ fun DeleteAccountDialog(
                         "This permanently deletes your personal data.",
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = { disclosureExpanded = !disclosureExpanded }) {
+                    IconButton(
+                        onClick = { disclosureExpanded = !disclosureExpanded },
+                        modifier = Modifier.testTag("btn_delete_account_info")
+                    ) {
                         Icon(Icons.Outlined.Info, contentDescription = "What gets deleted")
                     }
                 }
@@ -88,11 +94,15 @@ fun DeleteAccountDialog(
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     enabled = !deleteInProgress,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("tf_delete_account_password")
                 )
                 deleteError?.let { error ->
                     Spacer(Modifier.height(8.dp))
-                    Text(error, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        error,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag("txt_delete_account_error")
+                    )
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("This cannot be undone.", fontWeight = FontWeight.Bold)
@@ -101,7 +111,8 @@ fun DeleteAccountDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(password) },
-                enabled = password.isNotBlank() && !deleteInProgress
+                enabled = password.isNotBlank() && !deleteInProgress,
+                modifier = Modifier.testTag("btn_delete_account_confirm")
             ) {
                 Text("Delete", color = MaterialTheme.colorScheme.error)
             }
@@ -109,7 +120,8 @@ fun DeleteAccountDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                enabled = !deleteInProgress
+                enabled = !deleteInProgress,
+                modifier = Modifier.testTag("btn_delete_account_cancel")
             ) { Text("Cancel") }
         }
     )

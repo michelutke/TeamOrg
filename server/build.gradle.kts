@@ -45,6 +45,8 @@ dependencies {
     implementation(libs.simple.javaMail)
     implementation(libs.poi.ooxml)
     implementation("org.mindrot:jbcrypt:0.4")
+    implementation("io.sentry:sentry:8.62.0")
+    implementation("io.sentry:sentry-logback:8.62.0")
     implementation(libs.ktor.clientCio)
     implementation(libs.ktor.clientContentNegotiation)
     implementation(libs.stripe.java)

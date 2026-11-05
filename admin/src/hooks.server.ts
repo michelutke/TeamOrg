@@ -6,9 +6,11 @@ import {
 	endImpersonation,
 	ORIGINAL_TOKEN_COOKIE
 } from '$lib/server/impersonation';
+import * as Sentry from '@sentry/sveltekit';
+import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 
-export const handle: Handle = async ({ event, resolve }) => {
+const appHandle: Handle = async ({ event, resolve }) => {
 	const user = await getSession(event.cookies);
 	event.locals.user = user ?? undefined;
 	event.locals.token = getToken(event.cookies) ?? undefined;
@@ -36,6 +38,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	applySecurityHeaders(response.headers);
 	return response;
 };
+
+export const handle: Handle = sequence(Sentry.sentryHandle(), appHandle);
+
+export const handleError = Sentry.handleErrorWithSentry();
 
 /**
  * Baseline response headers for every page.

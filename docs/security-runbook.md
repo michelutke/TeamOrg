@@ -126,7 +126,7 @@ redirect is enforced in Traefik for all three domains, a first-ever plain-HTTP r
 answered over cleartext. Confirm with:
 
 ```bash
-curl -sSI http://api.teamorg.app | head -1   # expect 301/308
+curl -sSI http://server.teamorg.ch | head -1   # expect 301/308
 ```
 
 ## 7. Secret hygiene

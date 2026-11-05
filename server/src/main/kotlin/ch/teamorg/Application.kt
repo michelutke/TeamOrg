@@ -11,6 +11,7 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.sentry.Sentry
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
@@ -19,6 +20,7 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 private val logger = LoggerFactory.getLogger("Application")
 
 fun Application.module() {
+    configureSentry()
     verifyJwtSecretStrength()
     DatabaseFactory.init(environment.config)
 
@@ -28,7 +30,10 @@ fun Application.module() {
             // ever putting exception type, message or stack trace on the wire — those leak
             // library versions, file paths, SQL fragments and occasionally secrets.
             val errorId = UUID.randomUUID().toString()
-            logger.error("Unhandled exception [errorId=$errorId] ${call.request.local.method.value} ${call.request.path()}", cause)
+            Sentry.withScope { scope ->
+                scope.setTag("errorId", errorId)
+                logger.error("Unhandled exception [errorId=$errorId] ${call.request.local.method.value} ${call.request.path()}", cause)
+            }
             call.respondText(
                 text = "Internal server error (ref: $errorId)",
                 status = HttpStatusCode.InternalServerError

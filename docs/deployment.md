@@ -50,6 +50,12 @@ Coolify builds from:
    | `JWT_SECRET` | server | strong random secret |
    | `ONESIGNAL_APP_ID` | server | optional (push) |
    | `ONESIGNAL_API_KEY` | server | optional (push) |
+   | `SENTRY_DSN` | server | optional (error monitoring; blank disables) |
+   | `SENTRY_ENVIRONMENT` | server | optional, defaults to `production` |
+   | `SENTRY_RELEASE` | server | optional (release identifier) |
+   | `PUBLIC_SENTRY_DSN` | admin | optional (error monitoring for server and browser side, project `teamorg-admin`; blank disables) |
+   | `PUBLIC_SENTRY_ENVIRONMENT` | admin | optional, defaults to `production` |
+   | `SENTRY_AUTH_TOKEN` | admin (build only) | optional; enables source map upload during the Docker build |
    | `API_URL` | admin | backend base URL (e.g. `http://server:8080` on the compose network) |
    | `ORIGIN` | admin | public admin URL (e.g. `https://admin.teamorg.app`) — required by SvelteKit form actions |
 
