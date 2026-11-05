@@ -14,8 +14,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
-    "@sveltejs/adapter-node": "^5.5.4",
-    "@sveltejs/kit": "^2.0.0",
+    "@sveltejs/adapter-node": "^5.5.7",
+    "@sveltejs/kit": "^2.70.3",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/adm-zip": "^0.5.8",
@@ -28,8 +28,14 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
+    "@sentry/sveltekit": "11.10.0",
     "@stripe/stripe-js": "^9.12.1",
     "lucide-svelte": "^0.468.0"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "@sentry/bundler-plugins": {
+      "glob": "14.0.3"
+    }
+  }
 }
