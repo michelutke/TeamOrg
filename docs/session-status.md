@@ -1,206 +1,115 @@
-# Session Status — 2026-08-05/06 (store compliance: transport encryption + account deletion)
+# Session Status: 2026-11-04 to 2026-11-05 (Sentry, password reset, store readiness)
 
-Snapshot of the latest development window. The previous window (prod QA + security hardening,
-PRs #83/#84) is in git history; its QA report is `docs/testing/2026-07-31-prod-live-qa.md`.
-Older feature docs: `docs/self-serve-onboarding.md`, `docs/landing-status.md`,
-`docs/nds-import-export-design.md`. Infrastructure steps owed to a human:
+Snapshot of the latest development window. The previous window (store compliance: transport
+encryption and account deletion, PRs #85 to #88) is in git history at `871cb46`; its open items
+are still valid unless listed as done below. Infrastructure steps owed to a human:
 `docs/security-runbook.md`. Store questionnaire answers: `docs/store-data-safety.md`.
 
 ## Merge policy (ACTIVE)
 
 PRs are **queued open, not merged**. On the user's "merge window" call: merge all queued PRs
-into `main`, then promote `main → production` ONCE (one Coolify web redeploy + one "Release to
-Stores" run). Also in auto-memory (`teamorg-bulk-merge-policy`).
+into `main`, then promote `main` to `production` ONCE (one Coolify web redeploy and one "Release
+to Stores" run). Also in auto-memory (`teamorg-bulk-merge-policy`).
 
-## Released this window — `main` `095d0bf` → `production` `8276e08`
+## Released this window: `production` `59f4add` to `bc4072a`
 
-Four PRs, all merged, one promote, **Release to Stores run 31021128217 green** (Play internal
-track + TestFlight build **13**, version 1.0.13).
+All merged into `main`, one promote (#104). **Release to Stores run 42042636115 (run number 15)
+green**: Play internal track and TestFlight, build 15.
 
 | PR | What |
 |---|---|
-| #85 | NDS duplicate merge — generically-joined accounts can be merged into imported roster rows (server, web, mobile) |
-| #86 | Store compliance — transport-encryption hardening + in-app account deletion |
-| #87 | Time-bomb test fix (unblocked CI on everything) |
-| #88 | Android release-lint fix + CI pipeline optimization + landing pricing correction |
+| #96 | Password reset (server, web, mobile): `POST /auth/forgot-password`, `POST /auth/reset-password`, migration `V20__password_reset.sql`, sessions revoked via `token_version` |
+| #97 | Testability groundwork: test tags, `e2e/seed/seed.sh`, `POST /e2e/seed/club` (only with `E2E_SEED_ENABLED=true`), iOS simulator E2E build, logout button on own profile, iOS push prompt moved after login |
+| #98 | Mobile crash reporting with Sentry (Android and iOS) |
+| #99 | ViewModel, offline queue and cache tests; three bugs fixed (notification settings debounce, RSVP failure restore, duplicate queue flush) |
+| #101 | Sentry error reporting for server and admin; admin SvelteKit 2.56.1 to 2.70.3 (one high and several moderate advisories); transitive `nanoid`, `postcss` and `glob` fixes |
+| #102 | Fix server test compile on `main` (#96 and #97 together broke `PasswordResetTest`) |
+| #103 | Landing: same SvelteKit 2.70.3 and `nanoid` security bump |
+| #104 | Promote `main` to `production` (replaces #95, closed unmerged) |
 
-Specs/plans for #86: `docs/superpowers/specs/2026-08-05-transport-encryption-design.md`,
-`docs/superpowers/specs/2026-08-05-account-deletion-design.md`, plus the matching plans under
-`docs/superpowers/plans/`.
+PR descriptions hold the full change and test lists.
 
-## What shipped
+## Sentry setup
 
-### Account deletion (the store blocker)
+Org `teamorg-46`, **EU region** (`https://de.sentry.io`), team `teamorg`. One project per app:
 
-`DELETE /auth/me`, password in the body, auth rate-limit bucket. **204** success, **401** wrong
-password, **409** `{"reason":"owns_clubs","clubs":[…]}` when the caller still owns a live club.
+| Project | App | DSN configured in |
+|---|---|---|
+| `teamorg-server` | Ktor server | Coolify env `SENTRY_DSN` |
+| `teamorg-admin` | SvelteKit web app (server and browser side) | Coolify env `PUBLIC_SENTRY_DSN` |
+| `teamorg-mobile` | Android and iOS | GitHub `production` environment secret `SENTRY_DSN` |
 
-Deletion is an **anonymization, not a row delete**: six FKs reference `users(id)` with
-`ON DELETE RESTRICT` (event authorship, `attendance_records.set_by`, invites,
-`audit_log.actor_id`), so any user who ever created an event cannot be physically removed. One
-transaction deletes the personal rows (absence rules, attendance responses, notifications +
-settings + reminders, event reminder overrides, subgroup/team/club memberships), detaches
-`nds_members.user_id`, clears the address from `invite_links.invited_email` (matched
-case-insensitively against the real email read **before** the scrub), revokes impersonation
-sessions where the user is actor or target, and scrubs the `users` row to
-`deleted-<uuid>@deleted.invalid` / `Gelöschtes Konto` / unusable hash / `deleted_at`. The audit
-entry logs the **scrubbed** email — writing the real one would re-add the PII just removed. The
-avatar file is deleted best-effort **outside** the transaction (an orphaned file is a lesser harm
-than a rolled-back deletion).
+Landing has no Sentry (static marketing site, deliberately skipped).
 
-**Session invalidation is in the JWT `validate` block** (`server/.../plugins/Auth.kt`), NOT in
-`authenticateUser`. Eleven of sixteen route files read the principal directly and never call it,
-so a check there would leave all of them reachable with a deleted user's token. Cost is one
-indexed PK lookup per authenticated request — do not "optimize" it away.
+`teamorg-mobile` was created as `teamorg-android` and renamed; the DSN is unchanged because it is
+keyed on the project id. Android and iOS share it since the release workflow passes one secret to
+both jobs; filter by OS inside Sentry. The separate `teamorg-ios` project is unused and should be
+removed (Settings, General, Remove Project).
 
-UI: web at `/app/profile/delete`, reached by a **link** rather than an inline button so a
-mis-click is never one step from deletion; mobile on the profile tab **and** on
-`EmptyStateScreen`, both using the shared `DeleteAccountDialog` with its expandable
-deleted/kept disclosure.
+### How each app reports
 
-### Transport encryption
+- **Server:** `server/.../plugins/Sentry.kt` initializes first in `Application.module`. Blank
+  `SENTRY_DSN` disables it, so local dev and tests send nothing. `SENTRY_ENVIRONMENT` defaults to
+  `production`, `SENTRY_RELEASE` is optional. Logback `SentryAppender` sends `ERROR` logs as
+  events and `INFO` and above as breadcrumbs. Unhandled exceptions in StatusPages carry the
+  `errorId` tag, which matches the id returned to the client, so a user report can be found in
+  Sentry by that id.
+- **Admin:** `@sentry/sveltekit` 11.10.0. `src/instrumentation.server.ts` (server),
+  `src/hooks.client.ts` (browser), `sentryHandle` and `handleErrorWithSentry` in the hooks. Traces
+  sample at 20% (100% when `PUBLIC_SENTRY_ENVIRONMENT=development`). The CSP `connect-src` allows
+  `https://*.ingest.de.sentry.io`. One `PUBLIC_` variable serves both sides because SvelteKit
+  exposes only `PUBLIC_` variables to the browser and Coolify shares env vars across the compose
+  file. Source maps upload during the Docker build only when the build arg `SENTRY_AUTH_TOKEN` is
+  set.
+- **Mobile:** Sentry Kotlin Multiplatform 0.29.0 and sentry-cocoa 9.30.2 (SPM). DSN baked in at
+  build time (Android `BuildConfig`, iOS `Info.plist` via `Config.xcconfig`, injected by
+  fastlane) and validated (must be https and contain `@`). Release store builds only; debug,
+  local and Updraft builds have an empty DSN and never start Sentry.
 
-Production already had TLS (Traefik terminates, server emits HSTS, releases use HTTPS). Four gaps
-closed: Android release builds could speak cleartext (the permissive `domain-config` sat outside
-`debug-overrides`); iOS shipped an ATS exception for `localhost`; a wrong `API_BASE_URL` shipped
-silently (now `requireSecureBaseUrl` throws unless HTTPS or a local dev host, anchored on the host
-boundary so `localhost.evil.example` cannot pass); and **iOS never received `API_BASE_URL` at
-all** — `ApiConfig.ios.kt` read an Info.plist key nothing set, so every build including TestFlight
-resolved `http://localhost:8080`, which the new guard allow-lists. Now wired through
-`Config.xcconfig` → `Info.plist` (the mechanism `MARKETING_VERSION` already uses) with fail-loud
-CI injection.
+### Privacy
 
-**No certificate pinning** — deliberate: a Let's Encrypt chain rotation would brick every
-installed app with no server-side remedy, and neither store requires it.
+`sendDefaultPii` off everywhere. No session replay, screenshots or view hierarchy. Admin sends no
+user info, cookies or request bodies. Mobile sends the user id only (no email or name) and drops
+HTTP breadcrumbs because request paths carry invite tokens. Store answers in
+`docs/store-data-safety.md`.
 
-### CI pipeline
+### Verified
 
-Concurrency groups with `cancel-in-progress` on the test suite and both `main` deploys. Store
-releases deliberately **queue instead of cancelling** — killing a Play/ASC upload mid-flight can
-leave a half-ingested build and burn a version code that cannot be reused. Path filters so a docs,
-server or web commit no longer spends an Android or `macos-15` build. `test.yml` now also runs on
-push to `main`. Android unit tests no longer sit behind `needs` (it reported *skipping* instead of
-a verdict and hid Android-only breakage). `timeout-minutes` on every job. Suite wall-clock ~11 min
-→ ~6 min.
+A test event from each app (server, admin, Android, iOS) arrived in its project, then the four
+test issues were resolved. The production store builds (run 15) are the first with a DSN.
 
-## Verified
+## CI change
 
-- `:server:test` **373 tests, 0 failures** on the integrated tree (357 base + #85 + #86).
-- `:shared:jvmTest` 48/0; `:composeApp:testDebugUnitTest` 250/0; Android and both iOS frameworks
-  compile; `admin && npm run check` 0 errors / 47 pre-existing warnings; `landing && npm run check`
-  0/0.
-- `main` CI green on all five checks; `production` store release green on both jobs.
-- **Deletion endpoint confirmed live on prod** by method/path discrimination against
-  `https://server.teamorg.ch`: unknown path → 404, wrong method → 405, `DELETE /auth/me` → 401.
-- **Mobile deletion tested by the user on TestFlight build 13 — works.**
-
-## Owed verification
-
-Nothing here is a known defect; it is unexercised surface.
-
-- **Web deletion flow never walked by a human.** `/app/profile/delete` is its own code path
-  (SvelteKit action, `apiDeleteJson`, `ApiError.payload` parse, cookie clear + redirect).
-- **The NDS duplicate merge (#85) has no human walkthrough either**, and each merge is
-  irreversible. Import a roster, join with a generic link, confirm the banner appears and that the
-  merge carries attendance, subgroups and absence rules.
-- **Teamless deletion path on mobile**, if the tested one was the profile tab: register fresh,
-  never join a team, delete from `EmptyStateScreen`. That is the path an App Review tester hits,
-  and it nearly shipped missing.
-- An Updraft release build installed and confirmed to load data over HTTPS; a debug build still
-  reaching a local server at `10.0.2.2:8080`.
-- **Store questionnaires are not filled in.** Answers are recorded in `docs/store-data-safety.md`
-  but nobody has entered them. Play Data Safety needs "encrypted in transit: yes" plus the
-  deletion URL `https://app.teamorg.ch/app/profile/delete`; Apple App Privacy needs the same.
+Dependency Review (`.github/workflows/test.yml`) now fails on **moderate and above** instead of
+low. Two low SvelteKit advisories (GHSA-27mw-82g8-phjj, GHSA-pfhg-q3qv-9q6r) are only fixed in
+SvelteKit 3. Restore the default when admin and landing move to SvelteKit 3.
 
 ## Open items
 
-### Correctness / accuracy
-- **`api.teamorg.app` is a host that does not exist.** The real API is `server.teamorg.ch`
-  (`docs/deployment-status.md:17`). The fictional host is hardcoded as the release *default* in
-  `shared/build.gradle.kts`, as the iOS default in `iosApp/Configuration/Config.xcconfig`, and —
-  worst — cited as evidence in `docs/store-data-safety.md`, which is what gets read when filling in
-  the store forms. Release builds are unaffected (CI injects the secret), but a local build without
-  the secret silently points at a dead host. **Fix owed.**
-- `docs/store-data-safety.md` states "the avatar file is deleted from storage" as an unconditional
-  guarantee; it is best-effort outside the transaction and only logs on failure. Safe for the form
-  (it over-discloses deletion rather than hiding retention), but worth softening.
-- `docs/deployment.md` carries a stale generic example (`admin.teamorg.app`) that does not match the
-  real deployment.
-- The pricing figure corrected in #88 still survives in
-  `docs/superpowers/plans/2026-07-30-landing-final-redesign.md` — left as a historical record, but
-  that file is where the typo was copied from.
-- Carried over and still true: **NDS timezone bug**, re-import preview counts, **billing never
-  exercised end-to-end** (no invoice has ever been produced; the CHF 2 × members charge and the
-  subscription quantity are unverified — worth a Stripe test clock), and billed count excluding
-  provisional members.
-
-### Deferred, from this window's reviews
-- `Event.presentCount` is player-visible and still counts provisional confirmations.
-- The NDS import wizard's `map` action should route through the merge path when the target row's
-  current user is provisional.
-- A partial unique index on `nds_members (team_id, user_id) WHERE user_id IS NOT NULL` would make
-  the double-link 409 a real constraint instead of check-then-act.
-- `audit_log.actor_email` retains historical real addresses (that table is deliberately immutable).
-- Admin user listings still show scrubbed rows as "Gelöschtes Konto" — arguably intended.
-- Registering the literal `deleted-<uuid>@deleted.invalid` address would 500 on the unique
-  constraint (contrived).
-- The HTTPS base-URL guard is case-sensitive and does not allow-list IPv6 `::1`; no build config
-  uses either form.
-- Nothing documents how a developer points the iOS app at a local server now that the fallback is a
-  production URL — editing the checked-in xcconfig is the only route, which is a commit hazard.
-
-### Infrastructure (see `docs/security-runbook.md`)
-- **HTTP → HTTPS redirect on all three domains — unconfirmed.** HSTS only protects a client that
-  has already completed one successful HTTPS request.
-- **Postgres `sslmode` decision — open.** Server → Postgres is plaintext over the internal Docker
-  network; the privacy answer needs a recorded position rather than an open question.
-- **Web/server deploys still stack.** Coolify builds them from its own git integration, so GitHub
-  concurrency cannot reach them. Options: Coolify's own queue behaviour and/or a dedicated Build
-  Server; or disable Coolify auto-deploy and trigger its webhook from a workflow with `paths` +
-  `cancel-in-progress` + a test gate — which would also stop Coolify shipping a red `main`. Full
-  write-up in the PR #88 comment thread.
-- Carried over: server container still root (needs the uploads volume chowned first); published
-  container ports likely bypass Traefik; production Stripe still on test keys; `www` → apex
-  redirect missing.
-
-### Cleanup owed
-- Any throwaway accounts created while testing deletion — they are anonymized, not removed; look
-  for `deleted-*@deleted.invalid` rows.
-- Carried over: club **QA Prod 0731** `5b97b6a5-8aeb-4428-af40-fe9215540fd5` and its data, its
-  Stripe test customer/subscription/cards, plus `utke.michel+ccdebug@gmail.com` and the pending club
-  "Claude Debug Club DELETE ME". Delete via `/admin/login` → Clubs (no owner-facing delete exists).
+- **Store questionnaires:** add crash data to Play Data Safety and Apple App Privacy (answers in
+  `docs/store-data-safety.md`), on top of the items carried from the previous window.
+- **Sentry "Prevent Storing of IP Addresses"** is not yet enabled on the admin and mobile
+  projects.
+- **Delete `teamorg-ios`** in Sentry (unused).
+- **Symbolication:** no dSYM (iOS) or R8 mapping (Android) upload yet, so release stack traces may
+  show addresses or obfuscated names. Needs a GitHub secret `SENTRY_AUTH_TOKEN` and an upload step
+  in the store lanes.
+- **Password reset in production:** check that the SMTP env vars are set on the server (same
+  `contact.*` config as invite mails) and walk the flow once on web and mobile.
+- **SvelteKit 3 migration** for admin and landing, then restore the Dependency Review threshold.
+- Draft #100 untouched.
 
 ## Gotchas learned this window
 
-1. **Four tests were failing on `main` for days, invisibly.** `test.yml` ran only
-   `on: pull_request`, so pushes to `main` never ran the suite and the red surfaced as an inherited
-   failure on unrelated PRs. `NdsTestFixtures` hardcoded August 2026 dates and asserted behaviour
-   that only holds while they are in the future. Fixture dates now derive from `LocalDate.now()`.
-   **Never hardcode a date that "is in the future".**
-2. **`assembleDebug` does not run lint; `lintVitalRelease` does.** An invalid
-   `network_security_config.xml` (a `<domain-config>` nested inside `<debug-overrides>`, which the
-   schema forbids) passed every local gate and failed only in the deploy, after merge. Run
-   `./gradlew :composeApp:lintVitalRelease` — about a second — on any manifest or resource change.
-3. **Variant-specific Android resources live in `src/androidDebug/res`** in this KMP module, not
-   `src/debug/res` (both are registered; the former matches the `androidMain` convention). Prove an
-   override actually lands by reading `composeApp/build/intermediates/packaged_res/debug/…` — a
-   wrong directory fails silently and breaks only local development.
-4. **A plan that cites another branch's files sends implementers chasing ghosts.** The
-   account-deletion plan referenced `LinkMemberResult` and `TeamRepositoryLinkResultTest`, which
-   existed only on the then-unmerged #85 branch.
-5. `attendance_records` was dropped by `V15__unified_attendance.sql`; attendance lives entirely in
-   `attendance_responses`. Several docs still implied otherwise.
-6. **Version codes are fine, contrary to an earlier worry of mine.** `ANDROID_VERSION_CODE` is
-   `github.run_number`, which is per-workflow, but Play only ever receives `release-stores` builds
-   (monotonic within that workflow), so the two counters never collide. It would only matter if an
-   Updraft-built APK were uploaded to Play.
-7. Concurrent Gradle/Testcontainers runs wedged the Docker daemon (`orb stop && orb start`
-   recovered it). Run server suites in the foreground, one at a time.
-8. 1Password commit signing stalls reliably here; every commit this window used
-   `git -c commit.gpgsign=false commit`, so they are unsigned.
-
-## Carried over
-- `feat/merch-badge` branch: unmerged, intentionally kept.
-- Local dev DB holds throwaway NDS-E2E data (`e2e.nds.*@example.com`, "E2E NDS Club").
-- Merged branches not deleted: `docs/nds-member-merge-spec`, `feat/store-compliance`,
-  `fix/time-bomb-tests`, `fix/android-release-lint`.
+1. **Two PRs green alone, red together.** #97 added a parameter before the trailing lambda of
+   `withTeamorgTestApplication`; #96's new test passed the block positionally. Each PR's CI was
+   green, `main` broke after both merged (fixed in #102). When merging a batch, rerun CI on
+   `main` after each merge or merge `main` into the remaining PRs first.
+2. **Local Testcontainers on OrbStack** needs:
+   `JAVA_TOOL_OPTIONS="-Dapi.version=1.44" DOCKER_HOST=unix:///Users/miggi/.orbstack/run/docker.sock TESTCONTAINERS_DOCKER_CLIENT_STRATEGY=org.testcontainers.dockerclient.EnvironmentAndSystemPropertyClientProviderStrategy TESTCONTAINERS_RYUK_DISABLED=true`.
+3. **Robolectric dependency downloads flake in CI** (`MavenArtifactFetcher`). Rerun the failed job
+   before debugging.
+4. **Dependency Review checks transitive packages too.** Fixing #101 took four rounds (SvelteKit,
+   `nanoid`, `postcss`, then `glob` and `minimatch` under `@sentry/bundler-plugins`, solved with
+   an npm `overrides` entry). Run `npm audit` locally before pushing a dependency change.
+5. A Docker build `ARG` does nothing unless `docker-compose.yml` passes it under `build.args`.
